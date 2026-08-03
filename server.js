@@ -1,82 +1,79 @@
 const express = require('express');
-const multer = require('multer');
-const path = require('path');
+const mongoose = require('mongoose');
 const cors = require('cors');
-const fs = require('fs');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json());
+app.use(cors()); // Blogger se Requests Allow karne ke liye
 
-// Ensure uploads folder exists in root directory
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+// 1. MongoDB Database Connection (Securely using Environment Variable)
+const MONGO_URI = process.env.MONGO_URI;
+
+if (!MONGO_URI) {
+  console.error("Error: MONGO_URI environment variable is not defined!");
 }
 
-// Serve static frontend files directly from root and uploads folder
-app.use(express.static(__dirname));
-app.use('/uploads', express.static(uploadsDir));
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('MongoDB Connected Successfully!'))
+  .catch((err) => console.error('MongoDB Connection Error:', err));
 
-// Multer Storage Configuration
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
-  }
+// 2. Note Schema (Data Structure)
+const noteSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  content: { type: String, required: true },
+  subject: { type: String, default: 'NEET' },
+  isPrivate: { type: Boolean, default: true },
+  createdAt: { type: String, default: () => new Date().toLocaleString() }
 });
 
-// File filter
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|gif|mp4|webm|ogg|pdf|html|css|js/;
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedTypes.test(file.mimetype);
+const Note = mongoose.model('Note', noteSchema);
 
-  if (extname || mimetype) {
-    return cb(null, true);
-  } else {
-    cb(new Error('File format not supported!'));
-  }
-};
+// 3. API Routes
 
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB Limit
-  fileFilter: fileFilter
-});
-
-// API Endpoints
-app.post('/api/upload', upload.single('file'), (req, res) => {
+// GET: Sabhi Public Notes Fetch Karne Ke Liye (All Users)
+app.get('/api/notes/public', async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'Please upload a file' });
-    }
-    const fileUrl = `/uploads/${req.file.filename}`;
-    res.json({
-      success: true,
-      message: 'File uploaded successfully!',
-      fileUrl: fileUrl,
-      fileName: req.file.originalname
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const publicNotes = await Note.find({ isPrivate: false }).sort({ _id: -1 });
+    res.json(publicNotes);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Serve index.html directly from root directory
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+// POST: Naya Note Create Karne Ke Liye
+app.post('/api/notes', async (req, res) => {
+  try {
+    const { title, content, subject, isPrivate, createdAt } = req.body;
+    const newNote = new Note({ title, content, subject, isPrivate, createdAt });
+    await newNote.save();
+    res.status(201).json(newNote);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+// PUT: Note Update Karne Ke Liye (Edit ya Public/Private Change)
+app.put('/api/notes/:id', async (req, res) => {
+  try {
+    const updatedNote = await Note.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(updatedNote);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
+
+// DELETE: Note Permanently Delete Karne Ke Liye
+app.delete('/api/notes/:id', async (req, res) => {
+  try {
+    await Note.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Note deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Server Start
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
