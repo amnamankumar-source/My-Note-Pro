@@ -1,5 +1,5 @@
 const express = require('express');
-const multer = require('multer'); // Fixed: 'multar' ki jagah 'multer'
+const multer = require('multer');
 const path = require('path');
 const cors = require('cors');
 const fs = require('fs');
@@ -12,14 +12,14 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Ensure uploads folder exists
-const uploadsDir = path.join(__dirname, 'public', 'uploads');
+// Ensure uploads folder exists in root directory
+const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Serve static frontend files and uploads
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve static frontend files directly from root and uploads folder
+app.use(express.static(__dirname));
 app.use('/uploads', express.static(uploadsDir));
 
 // Multer Storage Configuration
@@ -36,7 +36,6 @@ const storage = multer.diskStorage({
 
 // File filter
 const fileFilter = (req, file, cb) => {
-  // Fixed: Sahi regex syntax (dono taraf slashes)
   const allowedTypes = /jpeg|jpg|png|gif|mp4|webm|ogg|pdf|html|css|js/;
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
   const mimetype = allowedTypes.test(file.mimetype);
@@ -72,9 +71,9 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
   }
 });
 
-// Serve index.html for all other routes
+// Serve index.html directly from root directory
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Start Server
