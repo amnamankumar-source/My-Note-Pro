@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://my-note-pro-1.onrender.com/api';
+const API_BASE_URL = 'https://my-note-pro-1.onrender.com/api/notes';
 
 // 1. Fetch All Notes from Server
 async function loadNotesFromDB() {
