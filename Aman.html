@@ -2,38 +2,41 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Note Pro</title>
-      <title>My Note Pro</title>
-    <!-- Google Fonts for Classic Premium Look -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght=300;400;500;600;700&amp;family=Playfair+Display:ital,wght@1,500&amp;display=swap" rel="stylesheet"></link>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+    <title>My Note Pro - NEET Edition</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght=300;400;500;600;700&family=Playfair+Display:ital,wght@1,500&display=swap" rel="stylesheet">
     <!-- FontAwesome for Icons -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"></link>
-    <!-- html2pdf Library for instant PDF generation -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- html2pdf Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Custom CSS Link -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
     <div class="app-container">
         <!-- Header & Profile -->
         <div class="top-header-wrapper">
             <div class="header-left">
                 <div class="logo-area" onclick="goHome()" title="Go Home">
                     <div class="logo-icon"><i class="fas fa-book-open"></i></div>
-                    <h1>My Note Pro</h1>
+                    <h1 class="app-title">My Note Pro</h1>
                 </div>
             </div>
             
             <div class="profile-section">
                 <div class="profile-img-wrapper" onclick="document.getElementById('profile-img-upload').click()" title="Change Profile Picture">
-                    <img alt="Profile" id="profile-img" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&amp;fit=crop&amp;w=150&amp;h=150&amp;q=80" />
+                    <img alt="Profile" id="profile-img" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80" />
                     <input accept="image/*" id="profile-img-upload" onchange="updateProfileImg(event)" style="display: none;" type="file" />
                 </div>
-                <div class="profile-name" contenteditable="true" id="profile-name" onblur="saveProfileName()" title="Click to edit name">Pro User</div>
+                <div class="profile-name" contenteditable="true" id="profile-name" onblur="saveProfileName()" title="Click to edit name">NEET Aspirant</div>
             </div>
 
             <div class="header-actions">
-                <button class="theme-toggle-btn" id="theme-toggle" title="Toggle Dark/Light Mode">
-                    <i class="fas fa-moon"></i>
+                <button class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+                    <i class="fas fa-moon" id="theme-icon"></i>
                 </button>
                 <div class="live-clock">
                     <div class="time" id="live-time">00:00:00 AM</div>
@@ -46,14 +49,14 @@
         <div class="toolbar">
             <div class="search-wrapper">
                 <i class="fas fa-search"></i>
-                <input id="search-input" placeholder="Search notes, text, or dates..." type="text" />
+                <input id="search-input" oninput="filterNotes()" placeholder="Search notes, NEET topics..." type="text" />
                 <div class="filter-tools">
                     <button class="clear-date-btn" id="clear-date-btn" onclick="clearDateFilter()" title="Clear Date Filter">
                         <i class="fas fa-times"></i>
                     </button>
                     <div class="calendar-btn" title="Search notes by Date">
                         <i class="fas fa-calendar-alt"></i>
-                        <input id="date-search-input" type="date" />
+                        <input id="date-search-input" onchange="filterByDate()" type="date" />
                     </div>
                 </div>
             </div>
@@ -63,41 +66,41 @@
             </button>
         </div>
 
-        <!-- Quick Subject Horizontal Grid/Slider Section -->
+        <!-- Quick Subject Slider -->
         <div class="quick-subjects-wrapper" id="quick-subjects-slider">
-            <div class="subject-circle-item" onclick="filterBySubject('Biology')" title="Filter Notes by Biology">
+            <div class="subject-circle-item" onclick="filterBySubject('Biology')">
                 <div class="subject-ring bio-ring">
-                    <img alt="Biology" src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&amp;fit=crop&amp;w=150&amp;h=150&amp;q=80" />
+                    <img alt="Biology" src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=150&h=150&q=80" />
                 </div>
                 <span>Biology</span>
             </div>
-            <div class="subject-circle-item" onclick="filterBySubject('Zoology')" title="Filter Notes by Zoology">
+            <div class="subject-circle-item" onclick="filterBySubject('Zoology')">
                 <div class="subject-ring zoo-ring">
-                    <img alt="Zoology" src="https://images.unsplash.com/photo-1530026405186-ed1ea0ac7a63?auto=format&amp;fit=crop&amp;w=150&amp;h=150&amp;q=80" />
+                    <img alt="Zoology" src="https://images.unsplash.com/photo-1530026405186-ed1ea0ac7a63?auto=format&fit=crop&w=150&h=150&q=80" />
                 </div>
                 <span>Zoology</span>
             </div>
-            <div class="subject-circle-item" onclick="filterBySubject('Physics')" title="Filter Notes by Physics">
+            <div class="subject-circle-item" onclick="filterBySubject('Physics')">
                 <div class="subject-ring phy-ring">
-                    <img alt="Physics" src="https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&amp;fit=crop&amp;w=120&amp;h=120&amp;q=80" />
+                    <img alt="Physics" src="https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=120&120&q=80" />
                 </div>
                 <span>Physics</span>
             </div>
-            <div class="subject-circle-item" onclick="filterBySubject('Chemistry')" title="Filter Notes by Chemistry">
+            <div class="subject-circle-item" onclick="filterBySubject('Chemistry')">
                 <div class="subject-ring chem-ring">
-                    <img alt="Chemistry" src="https://images.unsplash.com/photo-1532187863486-abf9d39d66e8?auto=format&amp;fit=crop&amp;w=120&amp;h=120&amp;q=80" />
+                    <img alt="Chemistry" src="https://images.unsplash.com/photo-1532187863486-abf9d39d66e8?auto=format&fit=crop&w=120&120&q=80" />
                 </div>
                 <span>Chemistry</span>
             </div>
-            <div class="subject-circle-item" onclick="filterBySubject('Trash')" title="View Recycle Bin">
+            <div class="subject-circle-item" onclick="filterBySubject('Trash')">
                 <div class="subject-ring trash-ring" style="align-items: center; background: var(--surface-color); display: flex; justify-content: center;">
                     <i class="fas fa-trash-alt" style="color: var(--danger-color); font-size: 26px;"></i>
                 </div>
                 <span style="color: var(--danger-color);">Recycle Bin</span>
             </div>
-            <div class="subject-circle-item" onclick="filterBySubject('')" title="Show All Notes">
+            <div class="subject-circle-item" onclick="filterBySubject('')">
                 <div class="subject-ring all-ring">
-                    <img alt="All Notes" src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&amp;fit=crop&amp;w=120&amp;h=120&amp;q=80" />
+                    <img alt="All Notes" src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&w=120&120&q=80" />
                 </div>
                 <span>All Notes</span>
             </div>
@@ -107,512 +110,79 @@
         <div class="notes-grid" id="notes-container"></div>
     </div>
 
-    <!-- Floating Action Button (FAB) -->
+    <!-- Floating Action Button -->
     <button class="fab-add-btn" id="fab-add-btn" onclick="openModal()" title="Add New Note">
         <i class="fas fa-plus"></i>
     </button>
 
-    <!-- 1. FULL SCREEN EDITOR MODAL -->
-    <div class="modal-overlay" id="editor-modal">
+    <!-- READ-ONLY VIEW MODAL -->
+    <div class="modal-overlay" id="view-modal">
         <div class="modal-content full-screen">
-            <!-- Shifting the Edit Note Header with Date Stamp placed directly under the title in left column -->
             <div class="modal-header">
                 <div class="header-left-group" style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
-                    <h2 id="modal-heading" style="margin: 0;"><i class="fas fa-edit"></i> Create New Note</h2>
-                    <div class="date-stamp" id="editor-date-stamp" style="align-items: center; background: transparent; border: none; color: var(--text-muted); display: flex; font-size: 12px; font-weight: 500; gap: 6px; padding: 0;">
+                    <h2><i class="fas fa-book-open"></i> Note Viewer</h2>
+                    <div class="date-stamp" id="view-date-stamp" style="color: var(--text-muted); font-size: 12px;"></div>
+                </div>
+                <div class="header-column-controls">
+                    <button class="header-save-btn" id="view-edit-btn" onclick=""><i class="fas fa-pen"></i> Edit Note</button>
+                    <button class="close-modal-btn" onclick="closeViewModal()"><i class="fas fa-times"></i> Close</button>
+                </div>
+            </div>
+            
+            <div class="modal-body" id="view-modal-body">
+                <div class="view-note-title" id="view-note-title"></div>
+                <div class="view-note-body" id="view-note-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FULL SCREEN EDITOR MODAL -->
+    <div class="modal-overlay" id="editor-modal">
+        <div class="modal-content full-screen">
+            <div class="modal-header">
+                <div class="header-left-group" style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+                    <h2 id="modal-heading"><i class="fas fa-edit"></i> Create New Note</h2>
+                    <div class="date-stamp" id="editor-date-stamp" style="color: var(--text-muted); font-size: 12px;">
                         <i class="fas fa-clock"></i> <span id="current-entry-time"></span>
                     </div>
                 </div>
                 <div class="header-column-controls">
+                    <button class="pin-toggle-btn is-private" id="modal-pin-btn" onclick="toggleModalPrivacy()">
+                        <i class="fas fa-lock" id="modal-pin-icon"></i> <span id="modal-pin-text">Private Note</span>
+                    </button>
                     <button class="close-modal-btn" onclick="closeModal()"><i class="fas fa-times"></i> Close</button>
-                    <div class="header-save-row">
-                        <!-- Standard Save -->
-                        <button class="header-save-btn" onclick="saveNoteAndClose()"><i class="fas fa-check-circle"></i> Save Note</button>
-                    </div>
+                    <button class="header-save-btn" onclick="saveNoteAndClose()"><i class="fas fa-check-circle"></i> Save Note</button>
                 </div>
             </div>
             
             <div class="modal-body">
-                <!-- Date stamp div has been successfully moved to header area -->
                 <div class="editor-header-with-logo">
-                    <div class="editor-logo-changer" id="editor-logo-view" onclick="openStatusManagerModal()" title="Click to Manage Logo &amp; Status Stories">
-                        <!-- Loaded dynamically -->
+                    <div class="editor-logo-changer">
+                        <i class="fas fa-sticky-note" style="font-size: 22px; color: var(--primary-color);"></i>
                     </div>
-                    
-                    <!-- Shifted slider button to top right of title wrapper container -->
-                    <div class="editor-title-container" style="display: flex; flex-direction: column; flex: 1; gap: 4px; position: relative;">
-                        <button class="slider-switch-btn" id="slider-switch-config" onclick="toggleSliderConfig()" style="align-self: flex-end; font-size: 11px; height: auto; line-height: 1; margin: 0; padding: 4px 10px;" title="Toggle Media Slider Section">
-                            <i class="fas fa-sliders-h"></i> <span>Enable Slider</span>
-                        </button>
-                        <input class="editor-title" id="note-title-input" placeholder="Note Title..." style="width: 100%;" type="text" />
-                    </div>
+                    <input class="editor-title" id="note-title" placeholder="Note Title..." type="text">
                 </div>
-                
-                <!-- Advanced Scrollable Toolbar -->
+
                 <div class="editor-toolbar">
-                    <div class="toolbar-group">
-                        <button onclick="execCmd('formatBlock', 'H3')" title="Heading"><i class="fas fa-heading"></i></button>
-                        <button onclick="execCmd('formatBlock', 'P')" title="Normal Text"><i class="fas fa-paragraph"></i></button>
-                    </div>
-                    <div class="divider"></div>
-                    <div class="toolbar-group">
-                        <button onclick="execCmd('bold')" title="Bold"><i class="fas fa-bold"></i></button>
-                        <button onclick="execCmd('italic')" title="Italic"><i class="fas fa-italic"></i></button>
-                        <button onclick="execCmd('underline')" title="Underline"><i class="fas fa-underline"></i></button>
-                    </div>
-                    <div class="divider"></div>
-                    <div class="toolbar-group">
-                        <button onclick="execCmd('insertUnorderedList')" title="Bullet Points"><i class="fas fa-list-ul"></i></button>
-                        <button onclick="execCmd('insertOrderedList')" title="Numbered List"><i class="fas fa-list-ol"></i></button>
-                    </div>
-                    
-                    <div class="divider"></div>
-                    
-                    <!-- Typographic Style Selector Button (Choose from 11 stylish layouts) -->
-                    <div class="toolbar-group">
-                        <button id="toolbar-style-btn" onclick="toggleStyleMenu()" style="background: rgba(79,70,229,0.1); color: var(--primary-color); font-weight: bold;" title="Choose Writing Style">
-                            <i class="fas fa-font"></i> Styles
-                        </button>
-                        <div class="plus-dropdown" id="style-dropdown-menu" style="max-height: 340px; min-width: 250px; overflow-y: auto;">
-                            <button onclick="changeSelectionFontStyle('Georgia, serif')" style="font-family: Georgia, serif;"><i class="fas fa-feather"></i> Classic Serif</button>
-                            <button onclick="changeSelectionFontStyle('\'Poppins\', sans-serif')" style="font-family: 'Poppins', sans-serif;"><i class="fas fa-check"></i> Modern Sans</button>
-                            <button onclick="changeSelectionFontStyle('\'Courier New\', Courier, monospace')" style="font-family: 'Courier New', Courier, monospace;"><i class="fas fa-keyboard"></i> Retro Typewriter</button>
-                            <button onclick="changeSelectionFontStyle('\'Brush Script MT\', cursive, sans-serif')" style="font-family: 'Brush Script MT', cursive, sans-serif; font-size: 18px;"><i class="fas fa-signature"></i> Elegant Script</button>
-                            <button onclick="changeSelectionFontStyle('Garamond, serif')" style="font-family: Garamond, serif;"><i class="fas fa-book"></i> Editorial Garamond</button>
-                            <button onclick="changeSelectionFontStyle('\'Lucida Handwriting\', cursive, sans-serif')" style="font-family: 'Lucida Handwriting', cursive, sans-serif; font-size: 13px;"><i class="fas fa-pen-nib"></i> Handwritten</button>
-                            <button onclick="changeSelectionFontStyle('Impact, sans-serif')" style="font-family: Impact, sans-serif;"><i class="fas fa-heading"></i> Impact Bold</button>
-                            <button onclick="changeSelectionFontStyle('\'Trebuchet MS\', sans-serif')" style="font-family: 'Trebuchet MS', sans-serif;"><i class="fas fa-mobile-alt"></i> Modern Trebuchet</button>
-                            <button onclick="changeSelectionFontStyle('Gothic, serif')" style="font-family: Gothic, serif;"><i class="fas fa-crown"></i> Royal Gothic</button>
-                            <button onclick="changeSelectionFontStyle('monospace')" style="font-family: monospace;"><i class="fas fa-code"></i> Tech Monospace</button>
-                            <!-- 2. Beautiful Slanted Artistic Font Style -->
-                            <button onclick="changeSelectionFontStyle('\'Playfair Display\', Georgia, serif; font-style: italic; font-weight: 500;')" style="font-family: 'Playfair Display', Georgia, serif; font-style: italic;"><i class="fas fa-italic"></i> Slanted Artistic</button>
-                        </div>
-                    </div>
-                    
-                    <div class="divider"></div>
-                    <div class="toolbar-group">
-                        <div class="font-size-container" title="Change Font Size">
-                            <label for="fontSizeSelect"><i class="fas fa-text-height"></i></label>
-                            <select class="font-size-select" id="fontSizeSelect" onchange="changeSelectionFontSize(this.value)">
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="divider"></div>
-                    <div class="toolbar-group">
-                        <button onclick="insertLink()" title="Add Link"><i class="fas fa-link"></i></button>
-                        <button onclick="insertUrlButton()" title="Insert URL Button"><i class="fas fa-external-link-square-alt"></i> Button</button>
-                        <button onclick="insertAssignmentUrl()" title="Add PDF/Assignment Link">
-                            <i class="fas fa-file-pdf" style="color: var(--danger-color);"></i> Asgmnt
-                        </button>
-                    </div>
-                    <div class="divider"></div>
-                    
-                    <div class="toolbar-group" style="gap: 8px;">
-                        <input id="foreColorPicker" onchange="execCmd('foreColor', this.value)" title="Text Color" type="color" />
-                        <input id="hiliteColorPicker" onchange="execCmd('hiliteColor', this.value)" title="Highlight Color" type="color" value="#ffff00" />
-                    </div>
-                    
-                    <div class="divider"></div>
-                    <div class="toolbar-group" style="gap: 10px; padding: 0 5px;">
-                        <div class="color-dot dot-yellow" onmousedown="event.preventDefault(); setQuickHighlight('#fef08a')" title="Highlight Yellow"></div>
-                        <div class="color-dot dot-red" onmousedown="event.preventDefault(); setQuickHighlight('#fecaca')" title="Highlight Red"></div>
-                        <div class="color-dot dot-green" onmousedown="event.preventDefault(); setQuickHighlight('#bbf7d0')" title="Highlight Green"></div>
-                        <div class="color-dot dot-blue" onmousedown="event.preventDefault(); setQuickHighlight('#bfdbfe')" title="Highlight Blue"></div>
-                    </div>
-                    
-                    <div class="divider"></div>
-                    <div class="toolbar-group">
-                        <button id="toolbar-plus-btn" onclick="togglePlusMenu()" style="background: rgba(79,70,229,0.1); color: var(--primary-color); font-weight: bold;" title="Add Media/Code">
-                            <i class="fas fa-plus-circle"></i> Insert
-                        </button>
-                        
-                        <!-- Responsive Positioned Insert Dropdown Modal Box -->
-                        <div class="plus-dropdown" id="plus-dropdown-menu">
-                            <button onclick="triggerMediaUpload('image')"><i class="fas fa-image" style="color: var(--primary-color);"></i> Upload Image</button>
-                            <button onclick="triggerMediaUpload('video')"><i class="fas fa-video" style="color: var(--danger-color);"></i> Upload Video</button>
-                            <button onclick="triggerMediaUpload('pdf')"><i class="fas fa-file-pdf" style="color: #f97316;"></i> Upload PDF</button>
-                            <button onclick="insertPdfEmbed()"><i class="fas fa-file-contract" style="color: #8b5cf6;"></i> Embed PDF / Image</button>
-                            <button onclick="insertYouTubeEmbed()"><i class="fab fa-youtube" style="color: red;"></i> Embed YouTube</button>
-                            <button onclick="openCodeSnippetModal()"><i class="fas fa-code" style="color: #059669;"></i> HTML/CSS/JS Code</button>
-                        </div>
-                        
-                        <button onclick="copyEditorContent()" title="Copy Note Content"><i class="far fa-copy"></i></button>
-                        <button onclick="execCmd('removeFormat')" title="Clear Formatting"><i class="fas fa-eraser"></i></button>
-                    </div>
+                    <button onclick="execCmd('bold')" title="Bold"><i class="fas fa-bold"></i></button>
+                    <button onclick="execCmd('italic')" title="Italic"><i class="fas fa-italic"></i></button>
+                    <button onclick="execCmd('underline')" title="Underline"><i class="fas fa-underline"></i></button>
+                    <button onclick="execCmd('insertUnorderedList')" title="Bullet List"><i class="fas fa-list-ul"></i></button>
+                    <button onclick="execCmd('insertOrderedList')" title="Numbered List"><i class="fas fa-list-ol"></i></button>
+                    <input type="color" onchange="execCmd('foreColor', this.value)" title="Text Color">
                 </div>
 
                 <div class="editor-container">
-                    <div class="rich-editor-area" contenteditable="true" data-placeholder="Start typing your classic note here..." id="note-content-input"></div>
-                </div>
-            </div>
-            <div class="modal-footer" style="display: none;"></div>
-        </div>
-    </div>
-
-    <!-- 2. FULL SCREEN VIEW MODAL -->
-    <div class="modal-overlay" id="view-modal">
-        <div class="modal-content full-screen">
-            <!-- Repositioning Date Stamp inside the Header columns directly under the Title -->
-            <div class="modal-header">
-                <div class="header-left-group" style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
-                    <h2 id="view-modal-title" style="margin: 0;"><i class="fas fa-book-reader"></i> Note Title</h2>
-                    <div class="date-stamp" id="view-date-stamp" style="align-items: center; background: transparent; border: none; color: var(--text-muted); display: flex; font-size: 12px; font-weight: 500; gap: 6px; padding: 0;">
-                        <i class="fas fa-clock"></i> <span id="view-modal-date"></span>
-                    </div>
-                </div>
-                <div class="header-column-controls">
-                    <button class="close-modal-btn" onclick="closeViewModal()"><i class="fas fa-times"></i> Close</button>
-                </div>
-            </div>
-            <div class="modal-body">
-                <!-- Date stamp shifted up into the modal header dynamically -->
-                <div class="editor-container">
-                    <div class="rich-editor-area" contenteditable="false" id="view-modal-content"></div>
+                    <div class="rich-editor-area" contenteditable="true" id="note-editor" data-placeholder="Start typing your note here..."></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 3. CODE EDITOR MODAL WITH LOCAL CODE UPLOADER -->
-    <div class="modal-overlay" id="code-snippet-modal" style="z-index: 1050;">
-        <div class="modal-content full-screen" style="display: flex; flex-direction: column;">
-            <div class="modal-header">
-                <h2 style="font-size: 20px;"><i class="fas fa-code"></i> Developer Code Editor</h2>
-                <div class="header-column-controls">
-                    <button class="close-modal-btn" onclick="closeCodeSnippetModal()"><i class="fas fa-times"></i> Close</button>
-                    <button class="header-save-btn" onclick="insertCodeIntoEditor()"><i class="fas fa-bolt"></i> Run</button>
-                </div>
-            </div>
-            <div class="modal-body" style="display: flex; flex-direction: column; flex: 1; padding: 20px;">
-                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 5px;">
-                    <i class="fas fa-info-circle"></i> Paste HTML/CSS/JS. It will be automatically optimized and made responsive for all devices.
-                </p>
-                <textarea id="code-textarea" placeholder="<!-- Write or Paste your HTML, CSS, JS code here... -->" style="background: #1e293b; border-radius: var(--radius-md); border: 2px solid var(--border-color); box-shadow: inset 0 2px 10px rgba(0,0,0,0.2); color: #e2e8f0; flex: 1; font-family: 'Courier New', Courier, monospace; font-size: 15px; outline: none; padding: 20px; resize: none; width: 100%;"></textarea>
-                
-                <!-- Premium Local File Upload Button for Code Interface -->
-                <div class="code-upload-btn" onclick="document.getElementById('code-file-uploader').click()">
-                    <i class="fas fa-cloud-upload-alt"></i> Upload Code File (HTML/CSS/JS)
-                </div>
-                <input accept=".html,.css,.js,.txt" id="code-file-uploader" onchange="handleCodeFileUpload(event)" style="display: none;" type="file" />
-            </div>
-        </div>
-    </div>
-
-    <!-- 4. FULL SCREEN LIVE CODE PREVIEW LAYER -->
-    <div class="fs-viewer-overlay" id="fullscreen-code-viewer">
-        <div class="fs-header" id="fs-viewer-header">
-            <div class="fs-title"><i class="fas fa-satellite-dish fa-spin"></i> Live Preview</div>
-            <div class="fs-actions">
-                <button class="fs-btn fs-edit-btn" onclick="editFullscreenCode()" title="Return to Editor">
-                    <i class="fas fa-code"></i> <span>Edit Source</span>
-                </button>
-                <button class="fs-btn fs-exit-btn" onclick="exitFullscreenCode()" title="Close Full Screen">
-                    <i class="fas fa-compress-arrows-alt"></i> <span>Exit</span>
-                </button>
-            </div>
-        </div>
-        <iframe class="fs-iframe" id="fs-viewer-iframe"></iframe>
-    </div>
-
-    <!-- 5. FULL SCREEN LOGO & STATUS MEDIA MANAGER MODAL -->
-    <div class="modal-overlay" id="status-manager-modal" style="z-index: 1500;">
-        <div class="modal-content full-screen">
-            <!-- 1. Fixed Header Area remains fully fixed in DOM hierarchy -->
-            <div class="modal-header">
-                <h2><i class="fas fa-photo-film"></i> Note Cover &amp; Media Manager</h2>
-                <div class="header-column-controls">
-                    <button class="close-modal-btn" onclick="closeStatusManagerModal()"><i class="fas fa-times"></i> Close</button>
-                    <button class="header-save-btn" onclick="closeStatusManagerModal()"><i class="fas fa-check-circle"></i> Save &amp; Finish</button>
-                </div>
-            </div>
-            
-            <!-- Modal Body scroll wrapper contains everything else below the header -->
-            <div class="modal-body">
-                <div class="status-manager-split">
-                    <!-- Left Control Panel -->
-                    <div class="status-left-panel">
-                        <h3 style="color: var(--text-main); font-size: 16px; font-weight: 700;"><i class="fas fa-cog"></i> Config Controls</h3>
-                        <p style="color: var(--text-muted); font-size: 13px; line-height: 1.5;">
-                            Set the master display logo and upload horizontal frames, vertical shorts, Pinterest pins, X/Twitter posts, Telegram posts, or Facebook posts.
-                        </p>
-                        
-                        <div style="align-items: center; background: var(--surface-color); border-radius: var(--radius-md); border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 12px; padding: 15px; text-align: center;">
-                            <div class="editor-logo-changer" id="status-main-cover-preview" onclick="document.getElementById('note-logo-upload-input').click()" style="height: 75px; width: 75px;" title="Change Main Note Logo">
-                                <!-- Cover Logo Image -->
-                            </div>
-                            <div>
-                                <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 5px;">Note Display Cover</h4>
-                                <button class="read-more-btn" onclick="document.getElementById('note-logo-upload-input').click()" style="font-size: 11px; margin: 0; padding: 4px 12px;">Change Image</button>
-                            </div>
-                        </div>
-
-                        <div style="border-top: 1px solid var(--border-color); color: var(--text-muted); font-size: 12px; line-height: 1.6; padding-top: 15px;">
-                            <strong style="color: var(--text-main); display: block; margin-bottom: 5px;"><i class="fas fa-info-circle"></i> View Styles:</strong>
-                            • <strong>Normal:</strong> WhatsApp styled timed slides.<br />
-                            • <strong>Shorts:</strong> Vertically scrolling TikTok-style feed.<br />
-                            • <strong>Pins:</strong> Dynamic Masonry board card layout.<br />
-                            • <strong>Social:</strong> X / Telegram / Facebook timeline feeds.
-                        </div>
-                    </div>
-
-                    <!-- Right Storage Showcase Grid -->
-                    <div class="status-right-panel">
-                        <div style="align-items: center; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between;">
-                            <div>
-                                <h3 style="color: var(--text-main); font-size: 18px; font-weight: 700;">Uploaded Media Items (<span id="status-count-lbl">0</span>)</h3>
-                                <p style="color: var(--text-muted); font-size: 13px;">Manage media sequences linked to this note's dashboard logo.</p>
-                            </div>
-                            
-                            <div style="align-items: center; display: flex; flex-wrap: wrap; gap: 10px;">
-                                <button class="btn-save" onclick="document.getElementById('facebook-media-uploader').click()" style="background: linear-gradient(135deg, var(--fb-color), var(--fb-hover)); box-shadow: 0 4px 15px rgba(8, 102, 255, 0.3); font-size: 13px; gap: 6px; margin: 0; padding: 10px 18px;" title="Upload Facebook Posts">
-                                    <i class="fab fa-facebook"></i> + Add Facebook
-                                </button>
-                                <button class="btn-save" onclick="document.getElementById('telegram-media-uploader').click()" style="background: linear-gradient(135deg, var(--telegram-color), var(--telegram-hover)); font-size: 13px; gap: 6px; margin: 0; padding: 10px 18px;" title="Upload Telegram Channel Posts">
-                                    <i class="fab fa-telegram"></i> + Add Telegram
-                                </button>
-                                <button class="btn-save" onclick="document.getElementById('twitter-media-uploader').click()" style="background: linear-gradient(135deg, var(--twitter-color), var(--twitter-hover)); font-size: 13px; gap: 6px; margin: 0; padding: 10px 18px;" title="Upload Twitter/X Posts">
-                                    <i class="fab fa-twitter"></i> + Add X Post
-                                </button>
-                                <button class="btn-save" onclick="document.getElementById('pinterest-media-uploader').click()" style="background: linear-gradient(135deg, var(--pinterest-color), var(--pinterest-hover)); font-size: 13px; gap: 6px; margin: 0; padding: 10px 18px;" title="Upload Pinterest Board Pin Cards">
-                                    <i class="fab fa-pinterest"></i> + Add Pin
-                                </button>
-                                <button class="btn-save" onclick="document.getElementById('shorts-media-uploader').click()" style="background: linear-gradient(135deg, var(--voice-color), #f43f5e); font-size: 13px; gap: 6px; margin: 0; padding: 10px 18px;" title="Upload Vertical YouTube Shorts Reels">
-                                    <i class="fas fa-bold"></i> + Add Shorts
-                                </button>
-                                <button class="btn-save" onclick="openLiveStudio()" style="animation: blink 2s infinite; background: linear-gradient(135deg, #ff0055, #ff5500); font-size: 13px; gap: 6px; margin: 0; padding: 10px 18px;" title="Go Live &amp; Record/Snap Studio Media">
-                                    <i class="fas fa-video"></i> Live Studio
-                                </button>
-                                <button class="btn-save" onclick="document.getElementById('status-media-uploader').click()" style="font-size: 13px; gap: 6px; margin: 0; padding: 10px 18px;" title="Upload Standard Instagram/WhatsApp Status">
-                                    <i class="fas fa-image"></i> + Add Frame
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="status-items-grid" id="status-items-thumbnail-container">
-                            <!-- Populated dynamically via JS -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 6. CHOOSE PLAY MODE DIALOG -->
-    <div class="mode-choose-overlay" id="mode-choose-dialog">
-        <div class="mode-choose-card">
-            <h3 style="color: var(--text-main); font-size: 18px; font-weight: 700;"><i class="fas fa-play-circle" style="color: var(--primary-color);"></i> Select Playback View</h3>
-            <p style="color: var(--text-muted); font-size: 13px; margin-top: 8px;">This note contains multiple formats. Choose how you want to experience the media:</p>
-            <div class="mode-options-container" style="max-height: 50vh; overflow-y: auto; padding-right: 5px;">
-                <button class="mode-btn" onclick="launchChoiceMode('stories')">
-                    <i class="fab fa-instagram" style="color: var(--voice-color);"></i>
-                    <div>
-                        <div style="font-weight: 700;">WhatsApp &amp; Instagram Status</div>
-                        <div style="color: var(--text-muted); font-size: 12px; font-weight: 400;">Autoplaying timed slides with horizontal progress bars</div>
-                    </div>
-                </button>
-                <button class="mode-btn" onclick="launchChoiceMode('facebook')">
-                    <i class="fab fa-facebook" style="color: var(--fb-color);"></i>
-                    <div>
-                        <div style="font-weight: 700;">Facebook Social Feed</div>
-                        <div style="color: var(--text-muted); font-size: 12px; font-weight: 400;">Classic Facebook-style timeline feed with likes and reactions</div>
-                    </div>
-                </button>
-                <button class="mode-btn" onclick="launchChoiceMode('shorts')">
-                    <i class="fab fa-youtube" style="color: red;"></i>
-                    <div>
-                        <div style="font-weight: 700;">YouTube Shorts Vertical Feed</div>
-                        <div style="color: var(--text-muted); font-size: 12px; font-weight: 400;">Seamless vertical scroll-snap feed with auto video player</div>
-                    </div>
-                </button>
-                <button class="mode-btn" onclick="launchChoiceMode('pinterest')">
-                    <i class="fab fa-pinterest" style="color: var(--pinterest-color);"></i>
-                    <div>
-                        <div style="font-weight: 700;">Pinterest Board Pin Grid</div>
-                        <div style="color: var(--text-muted); font-size: 12px; font-weight: 400;">Clean visual Masonry board pin cards with hover interactions</div>
-                    </div>
-                </button>
-                <button class="mode-btn" onclick="launchChoiceMode('twitter')">
-                    <i class="fab fa-twitter" style="color: var(--twitter-color);"></i>
-                    <div>
-                        <div style="font-weight: 700;">X / Twitter Micro-Post Feed</div>
-                        <div style="color: var(--text-muted); font-size: 12px; font-weight: 400;">Clean layout of scrolling status card posts with comment/repost engagement</div>
-                    </div>
-                </button>
-                <button class="mode-btn" onclick="launchChoiceMode('telegram')">
-                    <i class="fab fa-telegram" style="color: var(--telegram-color);"></i>
-                    <div>
-                        <div style="font-weight: 700;">Telegram Channel Thread View</div>
-                        <div style="color: var(--text-muted); font-size: 12px; font-weight: 400;">Telegram styled interactive chat timeline with double blue ticks and date groups</div>
-                    </div>
-                </button>
-            </div>
-            <button class="btn-cancel" onclick="closePlayChoiceDialog()" style="margin-top: 20px; text-align: center; width: 100%;">Cancel</button>
-        </div>
-    </div>
-
-    <!-- Multi-media Viewer Overlays (WhatsApp, Shorts, Pinterest, etc) -->
-    <div class="story-viewer-overlay" id="story-viewer-overlay" onclick="handleStoryTap(event)">
-        <div class="story-container">
-            <div class="story-progress-container" id="story-progress-bars"></div>
-            <div class="story-header">
-                <div class="story-author-info">
-                    <img alt="Avatar" class="story-author-img" id="story-author-avatar" src="" />
-                    <div>
-                        <div class="story-author-title" id="story-author-name"></div>
-                        <div class="story-author-sub" id="story-author-date"></div>
-                    </div>
-                </div>
-                <button class="story-close-btn" onclick="closeStoryViewer(event)"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="story-nav-left" onclick="goToPrevStory(event)"></div>
-            <div class="story-nav-right" onclick="goToNextStory(event)"></div>
-            <div class="story-content" id="story-media-box"></div>
-            <div id="story-caption" style="background: rgba(0,0,0,0.7); border-radius: 8px; bottom: 40px; color: white; display: none; font-size: 14px; left: 15px; max-height: 120px; overflow-y: auto; padding: 12px 18px; position: absolute; right: 15px; text-align: center; z-index: 3010;"></div>
-        </div>
-    </div>
-
-    <div class="shorts-viewer-overlay" id="shorts-viewer-overlay">
-        <div class="shorts-container">
-            <div class="shorts-header-fixed">
-                <div class="shorts-fixed-author">
-                    <div><div class="shorts-fixed-name" id="shorts-author-name"></div></div>
-                </div>
-                <button class="story-close-btn" onclick="closeShortsViewer(event)" title="Exit Player"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="shorts-right-controls">
-                <button class="shorts-control-btn" id="shorts-like-btn" onclick="toggleShortsLike(this)"><i class="fas fa-heart"></i></button>
-                <span class="shorts-control-label">12.5K</span>
-                <button class="shorts-control-btn" onclick="shareCurrentShort()"><i class="fas fa-share"></i></button>
-                <span class="shorts-control-label">Share</span>
-                <button class="shorts-control-btn" id="shorts-mute-btn" onclick="toggleShortsMute()"><i class="fas fa-volume-up"></i></button>
-                <span class="shorts-control-label">Sound</span>
-            </div>
-            <div class="shorts-scroller" id="shorts-scroller-feed"></div>
-        </div>
-    </div>
-
-    <div class="pinterest-viewer-overlay" id="pinterest-viewer-overlay">
-        <div class="pinterest-header">
-            <div class="pinterest-logo-brand"><i class="fab fa-pinterest"></i><span id="pinterest-board-title"></span></div>
-            <button class="close-modal-btn" onclick="closePinterestViewer()" style="border-radius: var(--radius-pill);"><i class="fas fa-times"></i> Exit Board</button>
-        </div>
-        <div class="pinterest-body"><div class="pinterest-grid" id="pinterest-pins-grid"></div></div>
-    </div>
-
-    <div class="twitter-viewer-overlay" id="twitter-viewer-overlay">
-        <div class="twitter-header">
-            <div class="twitter-logo-brand"><i class="fab fa-twitter" style="color: var(--twitter-color);"></i><span id="twitter-timeline-title"></span></div>
-            <button class="close-modal-btn" onclick="closeTwitterViewer()" style="border-radius: var(--radius-pill);"><i class="fas fa-times"></i> Exit X.com</button>
-        </div>
-        <div class="twitter-body"><div class="twitter-timeline" id="twitter-posts-container"></div></div>
-    </div>
-
-    <div class="telegram-viewer-overlay" id="telegram-viewer-overlay">
-        <div class="telegram-header">
-            <div class="telegram-channel-info">
-                <img alt="Avatar" class="telegram-avatar-round" id="telegram-channel-avatar" src="" />
-                <div>
-                    <div class="telegram-channel-name" id="telegram-channel-title"></div>
-                    <div class="telegram-subscribers"><i class="fas fa-users"></i> 84,200 subscribers</div>
-                </div>
-            </div>
-            <button class="close-modal-btn" onclick="closeTelegramViewer()" style="border-radius: var(--radius-pill);"><i class="fas fa-times"></i> Exit Telegram</button>
-        </div>
-        <div class="telegram-body"><div class="telegram-chat-timeline" id="telegram-messages-container"></div></div>
-        <div class="telegram-join-bar">
-            <button class="telegram-join-btn" onclick="showToast('Subscribed to Telegram updates!', 'success')">Subscribe Channel</button>
-        </div>
-    </div>
-
-    <div class="facebook-viewer-overlay" id="facebook-viewer-overlay">
-        <div class="facebook-header">
-            <div class="facebook-logo-brand">
-                <i class="fab fa-facebook"></i>
-                <span id="facebook-timeline-title"></span>
-            </div>
-            <button class="close-modal-btn" onclick="closeFacebookViewer()" style="border-radius: var(--radius-pill);"><i class="fas fa-times"></i> Exit Facebook</button>
-        </div>
-        <div class="facebook-body">
-            <div class="facebook-timeline" id="facebook-posts-container"></div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="slide-text-modal" style="z-index: 1600;">
-        <div class="modal-content small-modal" style="display: flex; flex-direction: column; gap: 15px; padding: 25px;">
-            <h3><i class="fas fa-edit" style="color: var(--primary-color);"></i> Edit Slide Post Text</h3>
-            <p style="color: var(--text-muted); font-size: 12px; line-height: 1.4;">
-                Write custom text or explanation content for this slide. It will be shown directly in the active Timeline, Feed, or Caption view.
-            </p>
-            <textarea id="slide-text-textarea" placeholder="Type your custom slide explanation or post text here..." style="background: var(--editor-toolbar-bg); border-radius: var(--radius-sm); border: 1px solid var(--border-color); color: var(--text-main); font-size: 14px; height: 120px; outline: none; padding: 12px; resize: none; transition: var(--transition); width: 100%;"></textarea>
-            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 5px;">
-                <button class="btn-cancel" onclick="closeSlideTextModal()" style="font-size: 13px; padding: 8px 16px;">Cancel</button>
-                <button class="btn-save" onclick="saveSlideText()" style="font-size: 13px; margin: 0; padding: 8px 20px;"><i class="fas fa-save"></i> Save</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="live-studio-overlay" style="background: #000; z-index: 4000;">
-        <div class="story-container" style="background: #000; display: flex; flex-direction: column; height: 100%; max-width: 500px; position: relative; width: 100%;">
-            <video autoplay="" id="live-video-stream" muted="" playsinline="" style="background: #111; height: 100%; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; object-fit: cover; width: 100%;"></video>
-            <div style="align-items: center; display: flex; gap: 10px; left: 20px; position: absolute; top: 20px; z-index: 4010;">
-                <span style="animation: blink 1.2s infinite; background: #ef4444; border-radius: 6px; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4); color: white; font-size: 12px; font-weight: bold; letter-spacing: 1px; padding: 4px 10px;"><i class="fas fa-circle"></i> LIVE</span>
-                <span style="backdrop-filter: blur(8px); background: rgba(15,23,42,0.6); border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 12px; padding: 4px 10px;"><i class="fas fa-eye"></i> <span id="live-viewer-count">854</span></span>
-            </div>
-            <button class="story-close-btn" onclick="closeLiveStudio()" style="font-size: 24px; position: absolute; right: 20px; text-shadow: 0 2px 8px rgba(0,0,0,0.8); top: 20px; z-index: 4010;"><i class="fas fa-times"></i></button>
-            <div class="live-chat-box" id="live-studio-chat"></div>
-            <div style="align-items: center; bottom: 30px; display: flex; flex-direction: column; gap: 15px; left: 0; padding: 0 20px; position: absolute; width: 100%; z-index: 4010;">
-                <div style="backdrop-filter: blur(10px); background: rgba(0,0,0,0.55); border-radius: 20px; border: 1px solid rgba(255,255,255,0.15); color: white; display: flex; font-size: 12px; font-weight: 600; gap: 18px; letter-spacing: 0.5px; padding: 6px 18px;">
-                    <span class="active-mode" id="mode-photo" onclick="setLiveMode('photo')" style="color: #10b981; cursor: pointer; transition: 0.2s;">SNAP PHOTO</span>
-                    <span style="color: rgba(255,255,255,0.3);">|</span>
-                    <span id="mode-video" onclick="setLiveMode('video')" style="color: #a1a1aa; cursor: pointer; transition: 0.2s;">RECORD REEL</span>
-                </div>
-                <div style="align-items: center; display: flex; justify-content: space-between; max-width: 300px; width: 100%;">
-                    <button onclick="toggleCameraFacing()" style="align-items: center; backdrop-filter: blur(10px); background: rgba(255,255,255,0.15); border-radius: 50%; border: 1px solid rgba(255,255,255,0.25); color: white; cursor: pointer; display: flex; font-size: 18px; height: 50px; justify-content: center; outline: none; transition: 0.2s; width: 50px;" title="Switch Camera Front/Back"><i class="fas fa-camera-rotate"></i></button>
-                    <div style="align-items: center; display: flex; justify-content: center; position: relative;">
-                        <button id="live-capture-trigger" onclick="handleLiveAction()" style="background: #ffffff; border-radius: 50%; border: 5px solid rgba(255,255,255,0.35); box-shadow: 0 4px 15px rgba(0,0,0,0.4); cursor: pointer; height: 75px; outline: none; transition: all 0.2s; width: 75px;"></button>
-                    </div>
-                    <div style="align-items: center; display: flex; height: 50px; justify-content: center; width: 50px;">
-                        <span id="live-recording-timer" style="background: #ef4444; border-radius: 6px; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4); color: white; display: none; font-size: 11px; font-weight: bold; letter-spacing: 0.5px; padding: 4px 8px;">00:00</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="pin-lightbox" id="pin-lightbox" onclick="closePinLightbox()">
-        <div class="pin-lightbox-content" onclick="event.stopPropagation()">
-            <button class="pin-lightbox-close" onclick="closePinLightbox()"><i class="fas fa-times"></i></button>
-            <div id="pin-lightbox-media"></div>
-        </div>
-    </div>
-
-    <!-- CUSTOM CONFIRM DIALOG -->
-    <div class="modal-overlay" id="confirm-modal" style="z-index: 2000;">
-        <div class="modal-content small-modal" style="padding: 40px 30px; text-align: center;">
-            <i class="fas fa-exclamation-triangle" style="color: var(--danger-color); font-size: 50px; margin-bottom: 20px;"></i>
-            <h2 id="confirm-modal-title" style="color: var(--text-main); font-size: 22px; margin-bottom: 10px;">Delete Note?</h2>
-            <p id="confirm-modal-desc" style="color: var(--text-muted); font-size: 15px; margin-bottom: 30px;">This note will be moved to the Recycle Bin. You can restore it later.</p>
-            <div style="display: flex; gap: 15px; justify-content: center;">
-                <button class="btn-cancel" onclick="closeConfirmModal()" style="background: #cbd5e1; border-radius: 8px; border: none; cursor: pointer; padding: 10px 20px;">Cancel</button>
-                <button class="btn-save" id="confirm-modal-action-btn" onclick="executeDelete()" style="background: linear-gradient(135deg, var(--danger-color), var(--danger-hover)); border-radius: 8px; border: none; box-shadow: 0 4px 15px rgba(229,62,62,0.3); color: white; cursor: pointer; padding: 10px 20px;">Yes, Delete it</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Hidden Inputs -->
-    <input id="hidden-media-input" multiple="" style="display: none;" type="file" />
-    <input accept="image/*" id="note-logo-upload-input" style="display: none;" type="file" />
-    <input accept="image/*,video/*" id="status-media-uploader" multiple="" style="display: none;" type="file" />
-    <input accept="image/*,video/*" id="shorts-media-uploader" multiple="" style="display: none;" type="file" />
-    <input accept="image/*,video/*" id="pinterest-media-uploader" multiple="" style="display: none;" type="file" />
-    <input accept="image/*,video/*" id="twitter-media-uploader" multiple="" style="display: none;" type="file" />
-    <input accept="image/*,video/*" id="telegram-media-uploader" multiple="" style="display: none;" type="file" />
-    <input accept="image/*,video/*" id="facebook-media-uploader" multiple="" style="display: none;" type="file" />
-
-    <!-- Toast Container -->
+    <!-- Toast Notifications -->
     <div class="toast-container" id="toast-container"></div>
 
+    <!-- Custom JS Link -->
     <script src="script.js"></script>
 </body>
 </html>
