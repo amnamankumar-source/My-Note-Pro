@@ -5,24 +5,42 @@ require('dotenv').config();
 
 const app = express();
 
-// Middlewares
-app.use(cors());
-app.use(express.json({ limit: '50mb' })); // Base64 Media and Large Content Uploads Support
+// ==========================================
+// 📌 MIDDLEWARES & CORS CONFIGURATION
+// ==========================================
+app.use(cors({
+    origin: '*', // Agar specific frontend domain ho toh '*' ki jagah 'https://yourdomain.com' use karein
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Base64 Media & Large JSON Payload Support
+app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// MongoDB Connection
+// ==========================================
+// 📌 MONGODB CONNECTION
+// ==========================================
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/MyNoteProDB';
-mongoose.connect(MONGO_URI)
-    .then(() => console.log('✅ MongoDB Database Connected Successfully!'))
-    .catch(err => console.error('❌ Database Connection Error:', err));
+
+const connectDB = async () => {
+    try {
+        await mongoose.connect(MONGO_URI);
+        console.log('✅ MongoDB Database Connected Successfully!');
+    } catch (err) {
+        console.error('❌ Database Connection Error:', err.message);
+        process.exit(1);
+    }
+};
+connectDB();
 
 // ==========================================
-// 📌 MONGOOSE SCHEMAS & MODELS
+// 📌 SCHEMAS & MODELS
 // ==========================================
 
 // Note Schema
 const noteSchema = new mongoose.Schema({
-    id: { type: String, required: true, unique: true }, // Custom ID sync (e.g. neet_bio_01)
+    id: { type: String, required: true, unique: true },
     title: { type: String, required: true, default: 'Untitled Note' },
     logo: { type: String, default: '' },
     author: { type: String, default: 'Pro User' },
@@ -50,7 +68,7 @@ const noteSchema = new mongoose.Schema({
 
 const Note = mongoose.model('Note', noteSchema);
 
-// Settings Schema (Profile Name, Profile Image, Themes etc.)
+// Settings Schema
 const settingSchema = new mongoose.Schema({
     key: { type: String, required: true, unique: true },
     value: { type: mongoose.Schema.Types.Mixed, required: true }
@@ -58,7 +76,7 @@ const settingSchema = new mongoose.Schema({
 
 const Setting = mongoose.model('Setting', settingSchema);
 
-// Permanent / Undeletable System Notes Config
+// System Undeletable Notes Config
 const PERMANENT_NOTE_IDS = ["neet_bio_01", "neet_chem_03", "neet_zoo_04", "neet_phy_05"];
 
 
@@ -66,11 +84,20 @@ const PERMANENT_NOTE_IDS = ["neet_bio_01", "neet_chem_03", "neet_zoo_04", "neet_
 // 🚀 REST API ENDPOINTS
 // ==========================================
 
+// Healthcheck Route (Render aur Browser Test ke liye)
+app.get('/api', (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: '🚀 MyNotePro API Service is Live and Running!',
+        endpoint: 'https://my-note-pro-1.onrender.com/api'
+    });
+});
+
 // 1. GET ALL NOTES
 app.get('/api/notes', async (req, res) => {
     try {
         const notes = await Note.find().sort({ createdAt: -1 });
-        res.status(200).json({ success: true, data: notes });
+        res.status(200).json({ success: true, count: notes.length, data: notes });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
@@ -80,7 +107,9 @@ app.get('/api/notes', async (req, res) => {
 app.get('/api/notes/:id', async (req, res) => {
     try {
         const note = await Note.findOne({ id: req.params.id });
-        if (!note) return res.status(404).json({ success: false, message: 'Note not found' });
+        if (!note) {
+            return res.status(404).json({ success: false, message: 'Note not found' });
+        }
         res.status(200).json({ success: true, data: note });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
@@ -91,8 +120,12 @@ app.get('/api/notes/:id', async (req, res) => {
 app.post('/api/notes', async (req, res) => {
     try {
         const noteData = req.body;
+
+        if (!noteData.id) {
+            return res.status(400).json({ success: false, message: 'Note ID is required!' });
+        }
         
-        // Ensure Permanent notes cannot be deleted
+        // Permanent notes guard
         if (PERMANENT_NOTE_IDS.includes(noteData.id)) {
             noteData.isDeleted = false;
         }
@@ -109,25 +142,24 @@ app.post('/api/notes', async (req, res) => {
     }
 });
 
-// 4. DELETE NOTE (PERMANENT DELETE OR RECYCLE BIN MOVER)
+// 4. DELETE NOTE (RECYCLE BIN / PERMANENT DELETE)
 app.delete('/api/notes/:id', async (req, res) => {
     try {
         const noteId = req.params.id;
 
-        // Security Shield: Prevent permanent system notes deletion
         if (PERMANENT_NOTE_IDS.includes(noteId)) {
             return res.status(403).json({ success: false, message: 'Security Guard: Permanent notes cannot be deleted!' });
         }
 
         const note = await Note.findOne({ id: noteId });
-        if (!note) return res.status(404).json({ success: false, message: 'Note not found' });
+        if (!note) {
+            return res.status(404).json({ success: false, message: 'Note not found' });
+        }
 
         if (note.isDeleted) {
-            // Permanent Delete from MongoDB if already in Recycle Bin
             await Note.deleteOne({ id: noteId });
             return res.status(200).json({ success: true, message: 'Note permanently deleted from database.' });
         } else {
-            // Move to Recycle Bin
             note.isDeleted = true;
             await note.save();
             return res.status(200).json({ success: true, message: 'Note moved to Recycle Bin.' });
@@ -145,22 +177,28 @@ app.patch('/api/notes/:id/restore', async (req, res) => {
             { isDeleted: false },
             { new: true }
         );
-        res.status(200).json({ success: true, message: 'Note restored!', data: note });
+        if (!note) {
+            return res.status(404).json({ success: false, message: 'Note not found to restore' });
+        }
+        res.status(200).json({ success: true, message: 'Note restored successfully!', data: note });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
 });
 
-// 6. SAVE SETTING (PROFILE / THEME SETTINGS)
+// 6. SAVE OR UPDATE SETTINGS
 app.post('/api/settings', async (req, res) => {
     try {
         const { key, value } = req.body;
+        if (!key) {
+            return res.status(400).json({ success: false, message: 'Key is required' });
+        }
         const setting = await Setting.findOneAndUpdate(
             { key },
             { key, value },
             { upsert: true, new: true }
         );
-        res.status(200).json({ success: true, data: setting });
+        res.status(200).json({ success: true, message: 'Setting saved successfully!', data: setting });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
@@ -176,8 +214,10 @@ app.get('/api/settings/:key', async (req, res) => {
     }
 });
 
-// Server Listening
+// ==========================================
+// 🚀 SERVER STARTUP
+// ==========================================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`🚀 Server running on port ${PORT}`);
 });
