@@ -1,261 +1,185 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
+require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
-// Middleware
+// Middlewares (Increased payload limits for Base64 image/media upload)
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// MongoDB Connection String
+// Serve Static Frontend HTML
+app.use(express.static(path.join(__dirname, 'public')));
+
+// MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/mynotepro';
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('MongoDB Database Connected Successfully'))
+  .catch(err => console.error('MongoDB Connection Error:', err));
 
-mongoose.connect(MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-})
-.then(() => console.log('MongoDB Connected Successfully'))
-.catch(err => console.error('MongoDB Connection Error:', err));
-
-// ===== MongoDB Schemas =====
+// ================= SCHEMAS & MODELS =================
 
 // Note Schema
 const noteSchema = new mongoose.Schema({
-    title: { type: String, required: true },
-    content: { type: String, default: '' },
-    subject: { type: String, default: 'Custom Author' },
-    isPrivate: { type: Boolean, default: false },
-    isPinned: { type: Boolean, default: false },
-    createdAt: { type: String, default: () => new Date().toLocaleString() },
-    views: { type: Number, default: 0 },
-    likes: { type: Number, default: 0 },
-    likedBy: [{ type: String }] // Array containing User IDs who liked this note
+  title: { type: String, default: 'Untitled Note' },
+  content: { type: String, default: '' },
+  subject: { type: String, default: 'General' },
+  isPrivate: { type: Boolean, default: false },
+  isPinned: { type: Boolean, default: false },
+  views: { type: Number, default: 0 },
+  likes: { type: Number, default: 0 },
+  createdAtFormatted: { type: String }
 }, { timestamps: true });
 
 const Note = mongoose.model('Note', noteSchema);
 
-// Subject/Logo Schema
+// Subject / Circle Schema
 const subjectSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    img: { type: String, required: true }
-});
+  name: { type: String, required: true },
+  img: { type: String, required: true }
+}, { timestamps: true });
 
 const Subject = mongoose.model('Subject', subjectSchema);
 
-// Profile Schema
-const profileSchema = new mongoose.Schema({
-    userId: { type: String, default: 'default_user' },
-    name: { type: String, default: 'Note Author' },
-    img: { type: String, default: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80' }
-});
+// ================= REST API ENDPOINTS =================
 
-const Profile = mongoose.model('Profile', profileSchema);
-
-
-// ===== API Routes =====
-
-// 1. GET Notes with Pagination, Search & User-Specific Like Check
+// 1. Fetch Notes with Pagination (Infinite Scroll API)
 app.get('/api/notes', async (req, res) => {
-    try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 9;
-        const skip = (page - 1) * limit;
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 9;
+    const skip = (page - 1) * limit;
+    const subject = req.query.subject || '';
+    const search = req.query.search || '';
+    const date = req.query.date || '';
 
-        const search = req.query.search || '';
-        const subject = req.query.subject || '';
-        const date = req.query.date || '';
-        const userId = req.query.userId || 'default_user'; // User tracker ID
+    let filter = {};
 
-        let query = {};
-
-        if (search) {
-            query.$or = [
-                { title: { $regex: search, $options: 'i' } },
-                { content: { $regex: search, $options: 'i' } }
-            ];
-        }
-
-        if (subject) {
-            query.subject = { $regex: `^${subject}$`, $options: 'i' };
-        }
-
-        if (date) {
-            query.createdAt = { $regex: date, $options: 'i' };
-        }
-
-        const rawNotes = await Note.find(query)
-            .sort({ isPinned: -1, createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        // Map notes to calculate 'likes' dynamically and set 'userLiked' status for requested user
-        const notes = rawNotes.map(note => {
-            const noteObj = note.toObject();
-            noteObj.userLiked = note.likedBy ? note.likedBy.includes(userId) : false;
-            noteObj.likes = note.likedBy ? note.likedBy.length : note.likes;
-            return noteObj;
-        });
-
-        const totalNotes = await Note.countDocuments(query);
-        const hasMore = skip + notes.length < totalNotes;
-
-        res.json({
-            notes,
-            hasMore,
-            totalNotes,
-            currentPage: page
-        });
-    } catch (err) {
-        res.status(500).json({ error: 'Server Error fetching notes' });
+    if (subject) {
+      filter.subject = { $regex: new RegExp(`^${subject}$`, 'i') };
     }
+
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { content: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    if (date) {
+      filter.createdAtFormatted = { $regex: date, $options: 'i' };
+    }
+
+    // Sort by pinned notes first, then latest created
+    const totalNotes = await Note.countDocuments(filter);
+    const notes = await Note.find(filter)
+      .sort({ isPinned: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.json({
+      notes,
+      currentPage: page,
+      totalPages: Math.ceil(totalNotes / limit),
+      hasMore: skip + notes.length < totalNotes
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch notes' });
+  }
 });
 
-// 2. CREATE Note
+// 2. Create New Note
 app.post('/api/notes', async (req, res) => {
-    try {
-        const newNote = new Note(req.body);
-        const savedNote = await newNote.save();
-        res.status(201).json(savedNote);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to create note' });
-    }
+  try {
+    const { title, content, subject, isPrivate, isPinned, createdAtFormatted } = req.body;
+    const newNote = new Note({
+      title,
+      content,
+      subject: subject || 'General',
+      isPrivate: isPrivate || false,
+      isPinned: isPinned || false,
+      createdAtFormatted: createdAtFormatted || new Date().toLocaleString()
+    });
+    await newNote.save();
+    res.status(201).json(newNote);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create note' });
+  }
 });
 
-// 3. UPDATE Note
+// 3. Update Note (Edit / Pin / View Count)
 app.put('/api/notes/:id', async (req, res) => {
-    try {
-        const updatedNote = await Note.findByIdAndUpdate(
-            req.params.id,
-            { $set: req.body },
-            { new: true }
-        );
-        res.json(updatedNote);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to update note' });
-    }
+  try {
+    const updatedNote = await Note.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(updatedNote);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update note' });
+  }
 });
 
-// 4. DELETE Note
+// 4. Global Like API (Increments/Decrements globally for all users)
+app.post('/api/notes/:id/like', async (req, res) => {
+  try {
+    const { action } = req.body; // 'like' or 'unlike'
+    const increment = action === 'like' ? 1 : -1;
+    
+    const note = await Note.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { likes: increment } },
+      { new: true }
+    );
+    
+    // Prevent negative likes
+    if (note.likes < 0) {
+      note.likes = 0;
+      await note.save();
+    }
+    
+    res.json({ likes: note.likes });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update like status' });
+  }
+});
+
+// 5. Delete Note
 app.delete('/api/notes/:id', async (req, res) => {
-    try {
-        await Note.findByIdAndDelete(req.params.id);
-        res.json({ message: 'Note deleted successfully' });
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to delete note' });
-    }
+  try {
+    await Note.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Note deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete note' });
+  }
 });
 
-// 5. TOGGLE LIKE (Like / Unlike Route)
-app.patch('/api/notes/:id/like', async (req, res) => {
-    try {
-        const { userId } = req.body;
-        if (!userId) {
-            return res.status(400).json({ error: 'userId is required in body' });
-        }
-
-        const note = await Note.findById(req.params.id);
-        if (!note) {
-            return res.status(404).json({ error: 'Note not found' });
-        }
-
-        const alreadyLiked = note.likedBy.includes(userId);
-
-        if (alreadyLiked) {
-            // Remove user from array (Unlike)
-            note.likedBy = note.likedBy.filter(id => id !== userId);
-        } else {
-            // Push user to array (Like)
-            note.likedBy.push(userId);
-        }
-
-        note.likes = note.likedBy.length;
-        await note.save();
-
-        res.json({
-            message: alreadyLiked ? 'Unliked successfully' : 'Liked successfully',
-            likes: note.likes,
-            userLiked: !alreadyLiked
-        });
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to update like status' });
-    }
-});
-
-// 6. GET Details of Users who liked a Note
-app.get('/api/notes/:id/likes', async (req, res) => {
-    try {
-        const note = await Note.findById(req.params.id);
-        if (!note) {
-            return res.status(404).json({ error: 'Note not found' });
-        }
-
-        res.json({
-            totalLikes: note.likedBy.length,
-            likedByUsers: note.likedBy
-        });
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch likes data' });
-    }
-});
-
-// ===== Subject Circles API =====
+// 6. Fetch Custom Circle Logos
 app.get('/api/subjects', async (req, res) => {
-    try {
-        const subjects = await Subject.find();
-        if (subjects.length === 0) {
-            const defaultSubjects = [
-                { name: 'Biology', img: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=150&h=150&q=80' },
-                { name: 'Physics', img: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=120&120&q=80' },
-                { name: 'Chemistry', img: 'https://images.unsplash.com/photo-1532187863486-abf9d39d66e8?auto=format&fit=crop&w=120&120&q=80' }
-            ];
-            await Subject.insertMany(defaultSubjects);
-            return res.json(defaultSubjects);
-        }
-        res.json(subjects);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch subjects' });
-    }
+  try {
+    const subjects = await Subject.find().sort({ createdAt: -1 });
+    res.json(subjects);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch subjects' });
+  }
 });
 
+// 7. Add Custom Circle Logo
 app.post('/api/subjects', async (req, res) => {
-    try {
-        const newSubject = new Subject(req.body);
-        const saved = await newSubject.save();
-        res.status(201).json(saved);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to save subject' });
-    }
+  try {
+    const { name, img } = req.body;
+    const newSubject = new Subject({ name, img });
+    await newSubject.save();
+    res.status(201).json(newSubject);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to add subject' });
+  }
 });
 
-// ===== Profile API =====
-app.get('/api/profile', async (req, res) => {
-    try {
-        let profile = await Profile.findOne({ userId: 'default_user' });
-        if (!profile) {
-            profile = await Profile.create({ userId: 'default_user' });
-        }
-        res.json(profile);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch profile' });
-    }
+// Fallback Route to serve Frontend
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.put('/api/profile', async (req, res) => {
-    try {
-        const profile = await Profile.findOneAndUpdate(
-            { userId: 'default_user' },
-            { $set: req.body },
-            { new: true, upsert: true }
-        );
-        res.json(profile);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to update profile' });
-    }
-});
-
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
