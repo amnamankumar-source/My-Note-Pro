@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// MongoDB Connection String (Process ENV se le raha hai)
+// MongoDB Connection String
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/mynotepro';
 
 mongoose.connect(MONGO_URI, {
@@ -32,7 +32,7 @@ const noteSchema = new mongoose.Schema({
     createdAt: { type: String, default: () => new Date().toLocaleString() },
     views: { type: Number, default: 0 },
     likes: { type: Number, default: 0 },
-    userLiked: { type: Boolean, default: false }
+    likedBy: [{ type: String }] // Array containing User IDs who liked this note
 }, { timestamps: true });
 
 const Note = mongoose.model('Note', noteSchema);
@@ -57,7 +57,7 @@ const Profile = mongoose.model('Profile', profileSchema);
 
 // ===== API Routes =====
 
-// 1. GET Notes with Pagination (Infinite Scroll) & Search/Filter
+// 1. GET Notes with Pagination, Search & User-Specific Like Check
 app.get('/api/notes', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -67,6 +67,7 @@ app.get('/api/notes', async (req, res) => {
         const search = req.query.search || '';
         const subject = req.query.subject || '';
         const date = req.query.date || '';
+        const userId = req.query.userId || 'default_user'; // User tracker ID
 
         let query = {};
 
@@ -85,10 +86,18 @@ app.get('/api/notes', async (req, res) => {
             query.createdAt = { $regex: date, $options: 'i' };
         }
 
-        const notes = await Note.find(query)
+        const rawNotes = await Note.find(query)
             .sort({ isPinned: -1, createdAt: -1 })
             .skip(skip)
             .limit(limit);
+
+        // Map notes to calculate 'likes' dynamically and set 'userLiked' status for requested user
+        const notes = rawNotes.map(note => {
+            const noteObj = note.toObject();
+            noteObj.userLiked = note.likedBy ? note.likedBy.includes(userId) : false;
+            noteObj.likes = note.likedBy ? note.likedBy.length : note.likes;
+            return noteObj;
+        });
 
         const totalNotes = await Note.countDocuments(query);
         const hasMore = skip + notes.length < totalNotes;
@@ -139,12 +148,64 @@ app.delete('/api/notes/:id', async (req, res) => {
     }
 });
 
+// 5. TOGGLE LIKE (Like / Unlike Route)
+app.patch('/api/notes/:id/like', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required in body' });
+        }
+
+        const note = await Note.findById(req.params.id);
+        if (!note) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+
+        const alreadyLiked = note.likedBy.includes(userId);
+
+        if (alreadyLiked) {
+            // Remove user from array (Unlike)
+            note.likedBy = note.likedBy.filter(id => id !== userId);
+        } else {
+            // Push user to array (Like)
+            note.likedBy.push(userId);
+        }
+
+        note.likes = note.likedBy.length;
+        await note.save();
+
+        res.json({
+            message: alreadyLiked ? 'Unliked successfully' : 'Liked successfully',
+            likes: note.likes,
+            userLiked: !alreadyLiked
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update like status' });
+    }
+});
+
+// 6. GET Details of Users who liked a Note
+app.get('/api/notes/:id/likes', async (req, res) => {
+    try {
+        const note = await Note.findById(req.params.id);
+        if (!note) {
+            return res.status(404).json({ error: 'Note not found' });
+        }
+
+        res.json({
+            totalLikes: note.likedBy.length,
+            likedByUsers: note.likedBy
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch likes data' });
+    }
+});
+
 // ===== Subject Circles API =====
 app.get('/api/subjects', async (req, res) => {
     try {
         const subjects = await Subject.find();
         if (subjects.length === 0) {
-            // Default Subjects
             const defaultSubjects = [
                 { name: 'Biology', img: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=150&h=150&q=80' },
                 { name: 'Physics', img: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=120&120&q=80' },
