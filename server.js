@@ -1,170 +1,183 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
-require('dotenv').config();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
-app.use(cors());
-
-// MongoDB Connection
-const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://your_mongo_connection_string_here';
-
-mongoose.connect(MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-}).then(() => console.log('MongoDB Connected Successfully'))
-  .catch(err => console.error('MongoDB Connection Error:', err));
-
-// --- Schemas ---
-
-// 1. Note Schema
-const NoteSchema = new mongoose.Schema({
-    title: { type: String, required: true },
-    content: { type: String, required: true },
-    subject: { type: String, default: 'General' },
-    isPrivate: { type: Boolean, default: false },
-    isPinned: { type: Boolean, default: false },
-    views: { type: Number, default: 0 },
-    likes: { type: Number, default: 0 },
-    likedBy: { type: [String], default: [] }, // Stores IP/Session/User identifier who liked
-    createdAt: { type: String, required: true }
-}, { timestamps: true });
-
-const Note = mongoose.model('Note', NoteSchema);
-
-// 2. Custom Category Circle Schema
-const SubjectSchema = new mongoose.Schema({
-    name: { type: String, required: true, unique: true },
-    img: { type: String, required: true }
-});
-
-const Subject = mongoose.model('Subject', SubjectSchema);
-
-
-// --- API Endpoints ---
-
-// 1. Get Notes with Pagination & Infinite Scroll Support
-app.get('/api/notes', async (req, res) => {
-    try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
-        const subject = req.query.subject;
-
-        let query = { isPrivate: false };
-        if (subject) {
-            query.subject = subject;
-        }
-
-        const totalNotes = await Note.countDocuments(query);
-        const notes = await Note.find(query)
-            .sort({ isPinned: -1, createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        res.json({
-            notes,
-            currentPage: page,
-            totalPages: Math.ceil(totalNotes / limit),
-            hasMore: skip + notes.length < totalNotes
-        });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// 2. Create Note
-app.post('/api/notes', async (req, res) => {
-    try {
-        const newNote = new Note(req.body);
-        const savedNote = await newNote.save();
-        res.status(201).json(savedNote);
-    } catch (err) {
-        res.status(400).json({ error: err.message });
-    }
-});
-
-// 3. Update Note (Views, Likes, Content)
-app.put('/api/notes/:id', async (req, res) => {
-    try {
-        const { views, incrementLike, userId } = req.body;
-        const note = await Note.findById(req.params.id);
-        
-        if (!note) return res.status(404).json({ error: 'Note not found' });
-
-        if (views !== undefined) {
-            note.views += 1;
-        }
-
-        if (incrementLike !== undefined && userId) {
-            const hasLiked = note.likedBy.includes(userId);
-            if (incrementLike && !hasLiked) {
-                note.likedBy.push(userId);
-                note.likes += 1;
-            } else if (!incrementLike && hasLiked) {
-                note.likedBy = note.likedBy.filter(id => id !== userId);
-                note.likes = Math.max(0, note.likes - 1);
-            }
-        }
-
-        // Standard field updates if provided
-        if (req.body.title) note.title = req.body.title;
-        if (req.body.content) note.content = req.body.content;
-        if (req.body.subject) note.subject = req.body.subject;
-        if (req.body.isPinned !== undefined) note.isPinned = req.body.isPinned;
-
-        const updatedNote = await note.save();
-        res.json(updatedNote);
-    } catch (err) {
-        res.status(400).json({ error: err.message });
-    }
-});
-
-// 4. Delete Note
-app.delete('/api/notes/:id', async (req, res) => {
-    try {
-        await Note.findByIdAndDelete(req.params.id);
-        res.json({ message: 'Note deleted successfully' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// --- Category Circle Endpoints ---
-
-// Get all custom category circles
-app.get('/api/subjects', async (req, res) => {
-    try {
-        const subjects = await Subject.find();
-        res.json(subjects);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Add custom category circle
-app.post('/api/subjects', async (req, res) => {
-    try {
-        const { name, img } = req.body;
-        const newSub = new Subject({ name, img });
-        const saved = await newSub.save();
-        res.status(201).json(saved);
-    } catch (err) {
-        res.status(400).json({ error: err.message });
-    }
-});
-
-// Delete custom category circle
-app.delete('/api/subjects/:id', async (req, res) => {
-    try {
-        await Subject.findByIdAndDelete(req.params.id);
-        res.json({ message: 'Subject circle deleted' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// Middleware
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Serve Uploaded Files Static Folder
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir);
+}
+app.use('/uploads', express.static(uploadsDir));
+app.use(express.static(__dirname));
+
+// Multer Storage Configuration for Media Uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadsDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+});
+const upload = multer({ storage: storage });
+
+// In-Memory Database (Real production में MongoDB से बदल सकते हैं)
+let profileData = {
+    name: "Note Author",
+    img: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80"
+};
+
+let subjectsData = [
+    { id: "sub-1", name: "Science", img: "https://images.unsplash.com/photo-1507668077129-56e32842fceb?auto=format&fit=crop&w=120&120&q=80" },
+    { id: "sub-2", name: "Maths", img: "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=120&120&q=80" }
+];
+
+let notesData = [];
+
+// Generate Sample Notes
+for (let i = 1; i <= 25; i++) {
+    notesData.push({
+        _id: "note-" + i,
+        title: `Sample Note ${i}`,
+        content: `<p>This is test content for note number ${i}. Fully stored in backend server storage.</p>`,
+        subject: i % 2 === 0 ? "Science" : "Maths",
+        isPrivate: false,
+        isPinned: false,
+        likes: Math.floor(Math.random() * 20),
+        userLiked: false,
+        views: Math.floor(Math.random() * 100),
+        createdAt: "Aug 7, 10:00 AM"
+    });
+}
+
+// ===== API ROUTES =====
+
+// 1. Profile APIs
+app.get('/api/profile', (req, res) => {
+    res.json(profileData);
+});
+
+app.put('/api/profile', (req, res) => {
+    const { name, img } = req.body;
+    if (name) profileData.name = name;
+    if (img) profileData.img = img;
+    res.json({ message: "Profile updated successfully", profile: profileData });
+});
+
+// 2. Subjects / Circle Logos APIs
+app.get('/api/subjects', (req, res) => {
+    res.json(subjectsData);
+});
+
+app.post('/api/subjects', (req, res) => {
+    const { name, img } = req.body;
+    const newSubject = {
+        id: "sub-" + Date.now(),
+        name: name || "Custom Logo",
+        img: img || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=120&120&q=80"
+    };
+    subjectsData.unshift(newSubject);
+    res.status(201).json(newSubject);
+});
+
+app.delete('/api/subjects/:id', (req, res) => {
+    const { id } = req.params;
+    subjectsData = subjectsData.filter(s => s.id !== id);
+    res.json({ message: "Circle logo deleted successfully", id });
+});
+
+// 3. Notes APIs with Downward Infinite Scroll Pagination
+app.get('/api/notes', (req, res) => {
+    let { page = 1, limit = 9, search = '', subject = '', date = '' } = req.query;
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    let filtered = [...notesData];
+
+    if (search) {
+        const q = search.toLowerCase();
+        filtered = filtered.filter(n => n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q));
+    }
+
+    if (subject) {
+        filtered = filtered.filter(n => n.subject.toLowerCase() === subject.toLowerCase());
+    }
+
+    if (date) {
+        filtered = filtered.filter(n => n.createdAt.includes(date));
+    }
+
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedNotes = filtered.slice(startIndex, endIndex);
+
+    res.json({
+        notes: paginatedNotes,
+        hasMore: endIndex < filtered.length,
+        totalNotes: filtered.length
+    });
+});
+
+app.post('/api/notes', (req, res) => {
+    const { title, content, subject, isPrivate, isPinned, createdAt } = req.body;
+    const newNote = {
+        _id: "note-" + Date.now(),
+        title: title || 'Untitled Note',
+        content: content || '',
+        subject: subject || 'General',
+        isPrivate: !!isPrivate,
+        isPinned: !!isPinned,
+        likes: 0,
+        userLiked: false,
+        views: 0,
+        createdAt: createdAt || new Date().toLocaleString()
+    };
+    notesData.unshift(newNote);
+    res.status(201).json(newNote);
+});
+
+app.put('/api/notes/:id', (req, res) => {
+    const { id } = req.params;
+    const index = notesData.findIndex(n => n._id === id);
+
+    if (index !== -1) {
+        notesData[index] = { ...notesData[index], ...req.body };
+        return res.json(notesData[index]);
+    }
+    res.status(404).json({ error: "Note not found" });
+});
+
+app.delete('/api/notes/:id', (req, res) => {
+    const { id } = req.params;
+    notesData = notesData.filter(n => n._id !== id);
+    res.json({ message: "Note deleted successfully from server", id });
+});
+
+// 4. File Upload Endpoint with Progress Tracking
+app.post('/api/upload', upload.single('media'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+    }
+    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    res.json({ url: fileUrl, fileType: req.file.mimetype });
+});
+
+// Catch-all route
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+});
