@@ -3,31 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
-    <title>My Note Pro - Backend Connected</title>
+    <title>My Note Pro</title>
 
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@1,500&family=Roboto+Mono&family=Caveat:wght@600&family=Lobster&family=Pacifico&display=swap" rel="stylesheet">
-    <!-- FontAwesome for Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght=300;400;500;600;700&family=Playfair+Display:ital,wght@1,500&family=Roboto+Mono&family=Caveat:wght@600&family=Lobster&family=Pacifico&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <!-- html2pdf Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <style>
-        header, .header, #header, .Header, .header-widget,
-        .navbar, nav, #navbar-iframe,
-        #sidebar-wrapper, .sidebar, .sidebar-container,
-        .blog-header, .header-inner, .header-section,
-        .widget.Header, .site-title, .blog-title, .titlewrapper,
-        h1.title, h1.header-title, h1:not(.app-title), h2.header-title,
-        .blog-pager, .blog-pager-newer-link, .blog-pager-older-link, 
-        #blog-pager-newer-link, #blog-pager-older-link, .post-nav, 
-        .post-pagination, .pagenavi, .post-navigation, .nextprev, 
-        .newer-posts, .older-posts, .nav-links, .single-navigation,
-        .prev-post, .next-post, #blog-pager {
+        /* ===== Reset & Base Layout ===== */
+        header, .header, #header, .navbar, nav, #sidebar-wrapper, .sidebar {
           display: none !important;
-          visibility: hidden !important;
-          height: 0 !important;
-          opacity: 0 !important;
         }
 
         :root {
@@ -36,8 +22,6 @@
             --text-main: #2d3748 !important;
             --text-muted: #718096 !important;
             --primary-color: #4f46e5 !important; 
-            --primary-hover: #4338ca !important;
-            --danger-color: #e53e3e !important;
             --border-color: #e2e8f0 !important;
             --shadow-sm: 0 2px 4px rgba(0,0,0,0.04) !important;
             --shadow-md: 0 4px 12px rgba(0,0,0,0.08) !important;
@@ -54,94 +38,105 @@
             --editor-toolbar-bg: #0f172a !important;
         }
 
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 9999px; }
-
         * { box-sizing: border-box !important; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
 
         body {
             background-color: var(--bg-color) !important; 
             color: var(--text-main) !important;
-            line-height: 1.6; min-height: 100vh; padding: 0px;
-            overflow-x: hidden; display: flex; justify-content: center;
+            line-height: 1.6; min-height: 100vh; overflow-x: hidden;
+            display: flex; justify-content: center; transition: background 0.3s, color 0.3s;
         }
-        .app-container { width: 100%; max-width: 1200px; display: flex; flex-direction: column; gap: 20px; margin: 0 auto; padding: 15px 0;}
+        .app-container { width: 100%; max-width: 1200px; display: flex; flex-direction: column; gap: 20px; padding: 15px 0;}
 
+        /* Header & Profile */
         .top-header-wrapper { display: flex !important; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 0 15px; }
-        .header-left { display: flex; align-items: center; }
-        .profile-section { display: flex !important; align-items: center; gap: 12px; background: var(--surface-color) !important; padding: 8px 16px; border-radius: 9999px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); }
-        .profile-img-wrapper { position: relative; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; border: 2px solid #4f46e5; flex-shrink: 0; }
-        .profile-img-wrapper img { width: 100%; height: 100%; object-fit: cover; }
-        .profile-name { font-size: 15px; font-weight: 600; color: var(--text-main) !important; }
-
-        .logo-area { display: flex !important; align-items: center; gap: 10px; cursor: pointer; padding: 6px 10px; border-radius: 12px; }
+        .logo-area { display: flex !important; align-items: center; gap: 10px; cursor: pointer; }
         .logo-icon { background: linear-gradient(135deg, #4f46e5, #d53f8c); color: white; width: 40px; height: 40px; display: flex !important; align-items: center; justify-content: center; border-radius: 12px; font-size: 18px; }
         .logo-area h1.app-title { font-size: 20px; font-weight: 700; color: var(--text-main) !important; margin: 0; }
+
+        .profile-section { display: flex !important; align-items: center; gap: 12px; background: var(--surface-color) !important; padding: 8px 16px; border-radius: 9999px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); }
+        .profile-img-wrapper { width: 40px; height: 40px; border-radius: 50%; overflow: hidden; border: 2px solid #4f46e5; cursor: pointer; }
+        .profile-img-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-name { font-size: 15px; font-weight: 600; outline: none; border-bottom: 1px dashed transparent; }
+
         .header-actions { display: flex !important; align-items: center; gap: 12px; }
+        .theme-toggle-btn { background: var(--surface-color) !important; border: 1px solid var(--border-color) !important; color: var(--text-main) !important; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; }
+        .live-clock { text-align: right; background: var(--surface-color) !important; padding: 6px 14px; border-radius: 9999px; border: 1px solid var(--border-color); }
+        .live-clock .time { font-size: 14px; font-weight: 600; color: #4f46e5; }
+        .live-clock .date { font-size: 10px; color: var(--text-muted) !important; }
 
-        .theme-toggle-btn { background: var(--surface-color) !important; border: 1.5px solid var(--border-color) !important; color: var(--text-main) !important; width: 40px !important; height: 40px !important; border-radius: 50% !important; cursor: pointer !important; }
-        
+        /* Toolbar */
         .toolbar { display: flex !important; justify-content: space-between; align-items: center; gap: 15px; padding: 0 15px; flex-wrap: wrap; }
-        .search-wrapper { flex: 1; min-width: 260px; max-width: 600px; display: flex !important; align-items: center; background: var(--surface-color) !important; border-radius: 9999px; box-shadow: var(--shadow-md); padding: 5px 15px; border: 1px solid var(--border-color); }
-        .search-wrapper input { flex: 1; border: none; background: transparent; padding: 10px; font-size: 14px; color: var(--text-main) !important; outline: none; }
-        
-        .btn-add { background: linear-gradient(135deg, #4f46e5, #4338ca) !important; color: #ffffff !important; border: none !important; padding: 12px 24px !important; border-radius: 9999px !important; font-size: 15px !important; font-weight: 600 !important; cursor: pointer !important; }
+        .search-wrapper { flex: 1; min-width: 260px; display: flex !important; align-items: center; background: var(--surface-color) !important; border-radius: 9999px; padding: 5px 15px; border: 1px solid var(--border-color); }
+        .search-wrapper input { flex: 1; border: none; background: transparent; padding: 8px; font-size: 14px; color: var(--text-main) !important; outline: none; }
+        .filter-tools { display: flex; align-items: center; gap: 8px; }
+        .calendar-btn { position: relative; width: 34px; height: 34px; border-radius: 50%; background: rgba(79, 70, 229, 0.1); color: #4f46e5; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .calendar-btn input[type="date"] { position: absolute; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 
-        .quick-subjects-wrapper { display: flex !important; gap: 22px; overflow-x: auto; padding: 10px 15px; width: 100% !important; scrollbar-width: none; }
-        .quick-subjects-wrapper::-webkit-scrollbar { display: none; }
-        .subject-circle-item { display: flex !important; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; flex-shrink: 0; position: relative; }
-        .subject-ring { width: 72px; height: 72px; border-radius: 50%; padding: 3px; display: flex !important; align-items: center; justify-content: center; background: var(--surface-color) !important; border: 2.5px solid #4f46e5; position: relative; }
-        .subject-circle-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-        .subject-circle-item span { font-size: 12px; font-weight: 600; color: var(--text-main) !important; }
-        .delete-subject-badge { position: absolute; top: 0; right: 0; background: #e53e3e; color: white; width: 20px; height: 20px; border-radius: 50%; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .btn-add { background: linear-gradient(135deg, #4f46e5, #4338ca) !important; color: white !important; border: none; padding: 10px 20px; border-radius: 9999px; font-weight: 600; cursor: pointer; }
 
-        .add-subject-ring { border: 2.5px dashed #4f46e5 !important; background: rgba(79, 70, 229, 0.08) !important; color: #4f46e5; font-size: 26px; }
-        .subject-circle-item.active .subject-ring { border-color: #d53f8c !important; }
+        /* Progress Bar Modal Container */
+        .progress-bar-container { width: 100%; background-color: #e2e8f0; border-radius: 8px; overflow: hidden; margin-top: 10px; display: none; }
+        .progress-bar-fill { width: 0%; height: 12px; background: linear-gradient(90deg, #4f46e5, #d53f8c); transition: width 0.2s ease-in-out; }
+        .progress-text { font-size: 12px; font-weight: 600; color: var(--primary-color); text-align: right; margin-top: 4px; display: none; }
 
-        .notes-grid { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; padding: 0 15px; }
-        .note-card { background: var(--surface-color) !important; border-radius: 20px; padding: 25px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); display: flex !important; flex-direction: column; gap: 16px; position: relative; }
-        
-        .note-top-meta { position: absolute; top: 12px; right: 15px; display: flex !important; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; }
-        .view-count-tag { background: rgba(79, 70, 229, 0.1); color: #4f46e5; padding: 3px 8px; border-radius: 9999px; }
+        /* Circle Slider */
+        .quick-subjects-wrapper { display: flex !important; gap: 20px; overflow-x: auto; padding: 10px 15px; scrollbar-width: none; }
+        .subject-circle-item { display: flex !important; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; position: relative; flex-shrink: 0; }
+        .subject-ring { width: 68px; height: 68px; border-radius: 50%; padding: 2px; border: 2.5px solid #4f46e5; background: var(--surface-color); position: relative; }
+        .subject-ring img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .subject-circle-item span { font-size: 12px; font-weight: 600; color: var(--text-main); max-width: 75px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .add-subject-ring { border: 2.5px dashed #4f46e5 !important; display: flex; align-items: center; justify-content: center; color: #4f46e5; font-size: 22px; }
+        .subject-delete-btn { position: absolute; top: -2px; right: -2px; background: #e53e3e; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; border: 1px solid white; }
+
+        /* Notes Grid */
+        .notes-grid { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; padding: 0 15px; }
+        .note-card { background: var(--surface-color) !important; border-radius: 18px; padding: 20px; border: 1px solid var(--border-color); display: flex !important; flex-direction: column; gap: 12px; position: relative; }
+        .note-top-meta { position: absolute; top: 12px; right: 15px; display: flex; gap: 8px; font-size: 11px; font-weight: 600; }
         .like-count-tag { background: rgba(229, 62, 62, 0.1); color: #e53e3e; padding: 3px 8px; border-radius: 9999px; cursor: pointer; }
         .like-count-tag.liked { background: #e53e3e; color: #ffffff; }
-        .pinned-tag { background: rgba(245, 158, 11, 0.15); color: #d97706; padding: 3px 8px; border-radius: 9999px; }
-        
-        .note-card-header { display: flex !important; align-items: center; gap: 15px; margin-top: 15px; }
-        .note-author-tag { font-size: 11px; font-weight: 600; color: #4f46e5; background: rgba(79, 70, 229, 0.08); padding: 3px 10px; border-radius: 9999px; }
-        .note-card h3.clickable-title { font-size: 17px; color: var(--text-main) !important; font-weight: 600; cursor: pointer; }
-        .note-body-html { font-size: 14px; line-height: 1.7; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; color: var(--text-muted) !important; }
 
-        .note-footer { margin-top: auto; padding-top: 15px; border-top: 1px solid var(--border-color); display: flex !important; justify-content: space-between; align-items: center; }
-        .action-btn { width: 36px !important; height: 36px !important; border-radius: 10px !important; border: 1px solid var(--border-color) !important; background: var(--editor-toolbar-bg) !important; cursor: pointer !important; }
+        .note-card-header { display: flex; align-items: center; gap: 12px; margin-top: 15px; }
+        .note-circle-logo { width: 40px; height: 40px; border-radius: 50%; background: var(--editor-toolbar-bg); display: flex; align-items: center; justify-content: center; }
+        .note-author-tag { font-size: 11px; font-weight: 600; color: #4f46e5; background: rgba(79, 70, 229, 0.08); padding: 2px 8px; border-radius: 9999px; }
+        .clickable-title { font-size: 16px; font-weight: 600; color: var(--text-main); cursor: pointer; }
+        .note-body-html { font-size: 13px; max-height: 100px; overflow: hidden; color: var(--text-muted); word-break: break-word; }
 
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); z-index: 1000; display: flex !important; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
-        .modal-overlay.active { opacity: 1 !important; pointer-events: auto !important; }
-        .modal-content.full-screen { width: 100%; height: 100%; background: var(--surface-color) !important; display: flex !important; flex-direction: column; overflow: hidden; }
+        .note-footer { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .note-date { font-size: 11px; color: var(--text-muted); }
+        .action-btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--editor-toolbar-bg); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 
-        .modal-header { padding: 12px 18px; border-bottom: 1px solid var(--border-color); display: flex !important; justify-content: space-between; align-items: center; }
-        .modal-body { flex: 1; overflow-y: auto; padding: 15px; display: flex !important; flex-direction: column; gap: 15px; max-width: 1000px; margin: 0 auto; width: 100%; }
+        .loading-spinner { text-align: center; padding: 20px; font-weight: 600; color: #4f46e5; width: 100%; }
 
-        .editor-container { width: 100%; flex: 1; display: flex !important; flex-direction: column; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-color) !important; min-height: 250px; }
-        .rich-editor-area { width: 100%; flex: 1; font-size: 15px; line-height: 1.8; color: var(--text-main) !important; outline: none; padding: 15px; overflow-y: auto; }
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content.full-screen { width: 100%; height: 100%; background: var(--surface-color); display: flex; flex-direction: column; }
 
-        .fab-add-btn { position: fixed; bottom: 30px; right: 30px; width: 55px; height: 55px; border-radius: 50% !important; background: linear-gradient(135deg, #4f46e5, #d53f8c) !important; color: white !important; font-size: 22px !important; border: none !important; z-index: 900; cursor: pointer !important; }
+        .modal-header { padding: 12px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; max-width: 900px; margin: 0 auto; width: 100%; }
 
-        .toast-container { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 50000; display: flex !important; flex-direction: column; gap: 10px; pointer-events: none; }
-        .toast { background: rgba(15, 23, 42, 0.95); color: white; padding: 10px 20px; border-radius: 9999px; font-size: 13px; opacity: 0; transition: opacity 0.4s ease; }
-        .toast.show { opacity: 1 !important; }
+        .editor-title { width: 100%; padding: 10px; font-size: 16px; font-weight: 600; border: 1px solid var(--border-color); border-radius: 8px; outline: none; background: var(--surface-color); color: var(--text-main); }
+        .editor-toolbar { display: flex; gap: 8px; overflow-x: auto; padding: 8px; background: var(--editor-toolbar-bg); border-radius: 8px; border: 1px solid var(--border-color); }
+        .editor-toolbar button { padding: 6px 12px; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; color: var(--text-main); }
 
-        .simple-modal-card { background: var(--surface-color) !important; width: 90%; max-width: 400px; border-radius: 20px; padding: 20px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 15px; }
-        .input-group { display: flex; flex-direction: column; gap: 6px; }
-        .input-group input { padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--editor-toolbar-bg); color: var(--text-main) !important; }
+        .rich-editor-area { flex: 1; border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; outline: none; min-height: 250px; background: var(--surface-color); color: var(--text-main); }
+        .rich-editor-area img, .rich-editor-area video { max-width: 100%; border-radius: 8px; margin: 8px 0; }
 
-        #loading-indicator { text-align: center; padding: 20px; width: 100%; grid-column: 1/-1; display: none; font-weight: 600; color: #4f46e5; }
+        .fab-add-btn { position: fixed; bottom: 25px; right: 25px; width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #d53f8c); color: white; font-size: 20px; border: none; cursor: pointer; box-shadow: 0 8px 20px rgba(79,70,229,0.4); }
+
+        .toast-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+        .toast { background: #1e293b; color: white; padding: 8px 18px; border-radius: 9999px; font-size: 13px; opacity: 0; transition: all 0.3s; }
+        .toast.show { opacity: 1; }
+
+        .simple-modal-card { background: var(--surface-color); width: 90%; max-width: 380px; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px; border: 1px solid var(--border-color); }
+        .input-group input { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); margin-top: 4px; outline: none; background: var(--editor-toolbar-bg); color: var(--text-main); }
     </style>
 </head>
 <body>
 
     <div class="app-container">
+        <!-- Header -->
         <div class="top-header-wrapper">
             <div class="logo-area" onclick="goHome()">
                 <div class="logo-icon"><i class="fas fa-book-open"></i></div>
@@ -149,95 +144,130 @@
             </div>
             
             <div class="profile-section">
-                <div class="profile-img-wrapper">
-                    <img alt="Profile" id="profile-img" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80" />
+                <div class="profile-img-wrapper" onclick="document.getElementById('profile-img-upload').click()">
+                    <img alt="Profile" id="profile-img" src="" />
+                    <input accept="image/*" id="profile-img-upload" onchange="updateProfileImg(event)" style="display: none;" type="file" />
                 </div>
-                <div class="profile-name" id="profile-name">Note Author</div>
+                <div class="profile-name" contenteditable="true" id="profile-name" onblur="saveProfileName()">Note Author</div>
             </div>
 
             <div class="header-actions">
                 <button class="theme-toggle-btn" onclick="toggleTheme()"><i class="fas fa-moon" id="theme-icon"></i></button>
+                <div class="live-clock">
+                    <div class="time" id="live-time">00:00:00</div>
+                    <div class="date" id="live-date">...</div>
+                </div>
             </div>
         </div>
 
+        <!-- Toolbar -->
         <div class="toolbar">
             <div class="search-wrapper">
                 <i class="fas fa-search" style="color:var(--text-muted)"></i>
-                <input id="search-input" oninput="filterNotes()" placeholder="Search backend notes..." type="text" />
+                <input id="search-input" oninput="handleSearch()" placeholder="Search notes..." type="text" />
+                <div class="filter-tools">
+                    <div class="calendar-btn">
+                        <i class="fas fa-calendar-alt"></i>
+                        <input id="date-search-input" onchange="filterByDate()" type="date" />
+                    </div>
+                </div>
             </div>
-            <button class="btn-add" onclick="openModal()"><i class="fas fa-pen-nib"></i> Write Note</button>
+
+            <button class="btn-add" onclick="openModal()"><i class="fas fa-plus"></i> Write Note</button>
         </div>
 
-        <!-- Quick Subject Circles -->
+        <!-- Circle Logos Slider -->
         <div class="quick-subjects-wrapper" id="quick-subjects-slider">
-            <div class="subject-circle-item active" onclick="filterBySubject('', this)">
+            <div class="subject-circle-item" onclick="filterBySubject('', this)">
                 <div class="subject-ring">
-                    <img src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&w=120&q=80" />
+                    <img alt="All" src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&w=120&120&q=80" />
                 </div>
                 <span>All Notes</span>
             </div>
+
             <div class="subject-circle-item" onclick="openAddSubjectModal()">
                 <div class="subject-ring add-subject-ring"><i class="fas fa-plus"></i></div>
                 <span>Add Logo</span>
             </div>
-            <div id="dynamic-subjects-list" style="display: flex; gap: 22px;"></div>
+
+            <div id="dynamic-subjects-list" style="display: flex; gap: 20px;"></div>
         </div>
 
         <!-- Notes Grid -->
         <div class="notes-grid" id="notes-container"></div>
-        <div id="loading-indicator">Loading more notes from database...</div>
+        
+        <!-- Infinite Scroll Loader -->
+        <div id="loading-spinner" class="loading-spinner" style="display: none;">
+            <i class="fas fa-spinner fa-spin"></i> Loading more notes...
+        </div>
     </div>
 
     <button class="fab-add-btn" onclick="openModal()"><i class="fas fa-plus"></i></button>
 
-    <!-- Add Subject Circle Modal -->
+    <!-- ADD CIRCLE LOGO MODAL -->
     <div class="modal-overlay" id="add-subject-modal">
         <div class="simple-modal-card">
-            <h3>Add Category Circle</h3>
+            <h3>Add Circle Logo</h3>
             <div class="input-group">
-                <label>Category Name:</label>
-                <input type="text" id="new-subject-name" placeholder="e.g. History, Coding">
+                <label>Logo / Subject Name:</label>
+                <input type="text" id="new-subject-name" placeholder="Name...">
             </div>
             <div class="input-group">
-                <label>Image URL:</label>
-                <input type="text" id="new-subject-img" placeholder="https://image-url.com/img.jpg">
+                <label>Circle Image File:</label>
+                <input type="file" id="new-subject-file" accept="image/*">
             </div>
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button onclick="closeAddSubjectModal()">Cancel</button>
-                <button onclick="saveNewSubjectCircle()" style="background:#4f46e5; color:white; border:none; padding:8px 16px; border-radius:8px;">Save</button>
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px;">
+                <button onclick="closeAddSubjectModal()" style="padding:6px 12px; border-radius:6px; border:1px solid var(--border-color); background:transparent; color:var(--text-main);">Cancel</button>
+                <button onclick="saveNewSubjectCircle()" style="padding:6px 12px; border-radius:6px; background:#4f46e5; color:white; border:none;">Save</button>
             </div>
         </div>
     </div>
 
-    <!-- View Note Modal -->
+    <!-- READ-ONLY VIEW MODAL -->
     <div class="modal-overlay" id="view-modal">
         <div class="modal-content full-screen">
             <div class="modal-header">
-                <h2 id="view-note-title"></h2>
-                <button onclick="closeViewModal()" style="background:#e53e3e; color:white; border:none; padding:8px 14px; border-radius:8px;">Close</button>
+                <h2 id="view-modal-title-header">View Note</h2>
+                <button onclick="closeViewModal()" style="padding:6px 12px; border-radius:6px; border:none; background:#e53e3e; color:white;">Close</button>
             </div>
-            <div class="modal-body" id="view-note-content"></div>
+            <div class="modal-body">
+                <h2 id="view-note-title"></h2>
+                <div id="view-date-stamp" style="font-size:12px; color:var(--text-muted); margin-bottom:10px;"></div>
+                <div id="view-note-content"></div>
+            </div>
         </div>
     </div>
 
-    <!-- Editor Modal -->
+    <!-- EDITOR MODAL -->
     <div class="modal-overlay" id="editor-modal">
         <div class="modal-content full-screen">
             <div class="modal-header">
-                <input id="note-title" placeholder="Note Title..." type="text" style="flex:1; border:none; font-size:18px; font-weight:600; outline:none; background:transparent; color:inherit;">
-                <div style="display:flex; gap:10px;">
-                    <button onclick="saveNoteToBackend()" style="background:#4f46e5; color:white; border:none; padding:8px 16px; border-radius:8px;">Save Note</button>
-                    <button onclick="closeModal()" style="background:#e53e3e; color:white; border:none; padding:8px 14px; border-radius:8px;">Close</button>
+                <h2 id="modal-heading-text">Note Editor</h2>
+                <div>
+                    <button onclick="saveNoteAndClose()" style="padding:6px 14px; background:#4f46e5; color:white; border:none; border-radius:6px; font-weight:600;">Save</button>
+                    <button onclick="closeModal()" style="padding:6px 12px; background:transparent; border:1px solid var(--border-color); color:var(--text-main); border-radius:6px;">Cancel</button>
                 </div>
             </div>
+            
             <div class="modal-body">
-                <div class="input-group" style="margin-bottom:10px;">
-                    <label>Category Tag:</label>
-                    <input type="text" id="editor-subject-input" placeholder="e.g. General, Physics">
+                <input class="editor-title" id="note-title" placeholder="Note Title..." type="text">
+
+                <div class="editor-toolbar">
+                    <button onclick="execCmd('bold')"><b>B</b></button>
+                    <button onclick="execCmd('italic')"><i>I</i></button>
+
+                    <!-- Media Upload File Input -->
+                    <button onclick="document.getElementById('media-file-input').click()" style="color:#4f46e5;"><i class="fas fa-upload"></i> Upload Media</button>
+                    <input type="file" id="media-file-input" accept="image/*,video/*" style="display:none;" onchange="uploadMediaFile(event)">
                 </div>
-                <div class="editor-container">
-                    <div class="rich-editor-area" contenteditable="true" id="note-editor"></div>
+
+                <!-- 100% Media Upload Progress Bar -->
+                <div class="progress-bar-container" id="progress-container">
+                    <div class="progress-bar-fill" id="progress-fill"></div>
                 </div>
+                <div class="progress-text" id="progress-text">0% Uploaded</div>
+
+                <div class="rich-editor-area" contenteditable="true" id="note-editor"></div>
             </div>
         </div>
     </div>
@@ -245,57 +275,245 @@
     <div class="toast-container" id="toast-container"></div>
 
     <script>
-        // CHANGE TO YOUR DEPLOYED BACKEND SERVER URL (e.g. Render, Heroku)
-        const API_BASE_URL = 'https://your-backend-service.onrender.com/api';
+        // BACKEND API BASE URL
+        const API_BASE_URL = '/api';
 
-        let userId = localStorage.getItem('unique_user_identifier');
-        if (!userId) {
-            userId = 'user_' + Math.random().toString(36.substring(2)) + Date.now();
-            localStorage.setItem('unique_user_identifier', userId);
-        }
+        let notes = [];
+        let customSubjects = [];
+        let currentEditId = null;
+        let selectedSubjectFilter = '';
+        let currentSearchQuery = '';
+        let currentDateFilter = '';
 
+        // Pagination State for Downward Infinite Scroll
         let currentPage = 1;
-        let totalPages = 1;
-        let isLoading = false;
-        let selectedSubject = '';
-        let notesList = [];
+        let hasMoreNotes = true;
+        let isLoadingNotes = false;
 
         document.addEventListener('DOMContentLoaded', () => {
-            fetchSubjects();
-            fetchNotes(true);
+            updateClock();
+            setInterval(updateClock, 1000);
+            
+            fetchProfileFromBackend();
+            fetchSubjectsFromBackend();
+            fetchNotesFromBackend(true);
 
-            window.addEventListener('scroll', () => {
-                if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
-                    if (!isLoading && currentPage < totalPages) {
-                        currentPage++;
-                        fetchNotes(false);
-                    }
-                }
-            });
+            // Infinite Scroll on Downward Scroll
+            window.addEventListener('scroll', handleInfiniteScroll);
         });
 
-        async function fetchSubjects() {
-            try {
-                const res = await fetch(`${API_BASE_URL}/subjects`);
-                const subjects = await res.json();
-                renderSubjects(subjects);
-            } catch (err) {
-                console.error('Failed to load subjects', err);
+        // 1. Downward Infinite Scroll Event Listener
+        function handleInfiniteScroll() {
+            if (isLoadingNotes || !hasMoreNotes) return;
+
+            const scrollPosition = window.innerHeight + window.scrollY;
+            const threshold = document.documentElement.offsetHeight - 250;
+
+            if (scrollPosition >= threshold) {
+                fetchNotesFromBackend(false);
             }
         }
 
-        function renderSubjects(subjects) {
+        // 2. Fetch Notes from Backend API
+        async function fetchNotesFromBackend(reset = false) {
+            if (isLoadingNotes) return;
+            isLoadingNotes = true;
+
+            if (reset) {
+                currentPage = 1;
+                notes = [];
+                hasMoreNotes = true;
+                document.getElementById('notes-container').innerHTML = '';
+            }
+
+            document.getElementById('loading-spinner').style.display = 'block';
+
+            try {
+                let url = `${API_BASE_URL}/notes?page=${currentPage}&limit=9`;
+                if (currentSearchQuery) url += `&search=${encodeURIComponent(currentSearchQuery)}`;
+                if (selectedSubjectFilter) url += `&subject=${encodeURIComponent(selectedSubjectFilter)}`;
+                if (currentDateFilter) url += `&date=${encodeURIComponent(currentDateFilter)}`;
+
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = await res.json();
+                    
+                    notes = reset ? data.notes : [...notes, ...data.notes];
+                    hasMoreNotes = data.hasMore;
+                    currentPage++;
+
+                    renderNotesGrid();
+                }
+            } catch (err) {
+                showToast('Server connection failed', 'error');
+            } finally {
+                isLoadingNotes = false;
+                document.getElementById('loading-spinner').style.display = 'none';
+            }
+        }
+
+        function renderNotesGrid() {
+            const container = document.getElementById('notes-container');
+            container.innerHTML = '';
+
+            if(notes.length === 0) {
+                container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color:var(--text-muted);">No Notes Found</div>`;
+                return;
+            }
+
+            notes.forEach(note => {
+                const card = document.createElement('div');
+                card.className = 'note-card';
+                const noteId = note._id;
+                const likesCount = note.likes || 0;
+                const isLiked = note.userLiked || false;
+
+                card.innerHTML = `
+                    <div class="note-top-meta">
+                        <span class="like-count-tag ${isLiked ? 'liked' : ''}" onclick="toggleLike(event, '${noteId}')" title="Like Note">
+                            <i class="${isLiked ? 'fas' : 'far'} fa-heart"></i> ${likesCount}
+                        </span>
+                    </div>
+
+                    <div class="note-card-header">
+                        <div class="note-circle-logo"><i class="fas fa-book" style="color: #4f46e5;"></i></div>
+                        <div>
+                            <span class="note-author-tag">${escapeHtml(note.subject || 'General')}</span>
+                            <h3 class="clickable-title" onclick="viewNote('${noteId}')">${escapeHtml(note.title)}</h3>
+                        </div>
+                    </div>
+                    
+                    <div class="note-body-html" onclick="viewNote('${noteId}')">${note.content}</div>
+
+                    <div class="note-footer">
+                        <div class="note-date"><i class="far fa-clock"></i> ${note.createdAt}</div>
+                        <div>
+                            <button class="action-btn" onclick="openModal('${noteId}')" style="color:#4f46e5;"><i class="fas fa-pen"></i></button>
+                            <button class="action-btn" onclick="deleteNote('${noteId}')" style="color:#e53e3e;"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // 3. Like Toggle - Updates Directly to Backend
+        async function toggleLike(event, noteId) {
+            event.stopPropagation();
+            const note = notes.find(n => n._id === noteId);
+            if (!note) return;
+
+            note.userLiked = !note.userLiked;
+            note.likes = note.userLiked ? (note.likes || 0) + 1 : Math.max(0, (note.likes || 0) - 1);
+
+            renderNotesGrid();
+
+            try {
+                await fetch(`${API_BASE_URL}/notes/${noteId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ likes: note.likes, userLiked: note.userLiked })
+                });
+            } catch (err) {
+                console.error('Failed to save like on server:', err);
+            }
+        }
+
+        // 4. Delete Note - Deletes Directly from Backend
+        async function deleteNote(id) {
+            if(confirm('Permanently delete this note from backend storage?')) {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/notes/${id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        showToast('Note deleted from backend!', 'success');
+                        fetchNotesFromBackend(true);
+                    }
+                } catch (err) {
+                    showToast('Failed to delete note from server', 'error');
+                }
+            }
+        }
+
+        // 5. Media Upload with 100% Progress Bar
+        function uploadMediaFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('media', file);
+
+            const xhr = new XMLHttpRequest();
+            const progressBar = document.getElementById('progress-container');
+            const progressFill = document.getElementById('progress-fill');
+            const progressText = document.getElementById('progress-text');
+
+            progressBar.style.display = 'block';
+            progressText.style.display = 'block';
+
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    progressFill.style.width = percent + '%';
+                    progressText.innerText = `${percent}% Uploaded to backend...`;
+                }
+            });
+
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        const response = JSON.parse(xhr.responseText);
+                        insertMediaToEditor(response.url, file.type);
+                        showToast('Media uploaded 100%!', 'success');
+                    } else {
+                        showToast('Failed to upload file', 'error');
+                    }
+                    setTimeout(() => {
+                        progressBar.style.display = 'none';
+                        progressText.style.display = 'none';
+                        progressFill.style.width = '0%';
+                    }, 1500);
+                }
+            };
+
+            xhr.open('POST', `${API_BASE_URL}/upload`, true);
+            xhr.send(formData);
+            event.target.value = '';
+        }
+
+        function insertMediaToEditor(url, type) {
+            const editor = document.getElementById('note-editor');
+            editor.focus();
+            let html = type.startsWith('image/') ? 
+                `<p><img src="${url}" style="max-width:100%; border-radius:8px;"></p><br>` :
+                `<p><video src="${url}" controls style="max-width:100%; border-radius:8px;"></video></p><br>`;
+            document.execCommand('insertHTML', false, html);
+        }
+
+        // 6. Circle Logos / Subjects API (Add & Delete)
+        async function fetchSubjectsFromBackend() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/subjects`);
+                if (res.ok) {
+                    customSubjects = await res.json();
+                    renderSubjectCircles();
+                }
+            } catch (err) { console.warn(err); }
+        }
+
+        function renderSubjectCircles() {
             const container = document.getElementById('dynamic-subjects-list');
             container.innerHTML = '';
-            subjects.forEach(sub => {
+
+            customSubjects.forEach(sub => {
                 const item = document.createElement('div');
-                item.className = `subject-circle-item ${selectedSubject === sub.name ? 'active' : ''}`;
+                item.className = 'subject-circle-item';
+                
                 item.innerHTML = `
-                    <div class="subject-ring" onclick="filterBySubject('${sub.name}', this)">
-                        <img src="${sub.img}" />
+                    <div class="subject-ring" onclick="filterBySubject('${sub.name}', this.parentElement)">
+                        <img alt="${escapeHtml(sub.name)}" src="${sub.img}" />
                     </div>
-                    <div class="delete-subject-badge" onclick="deleteSubject('${sub._id}', event)"><i class="fas fa-times"></i></div>
-                    <span>${sub.name}</span>
+                    <span>${escapeHtml(sub.name)}</span>
+                    <button class="subject-delete-btn" onclick="deleteSubjectCircle(event, '${sub.id}')" title="Delete Circle Logo"><i class="fas fa-times"></i></button>
                 `;
                 container.appendChild(item);
             });
@@ -303,205 +521,210 @@
 
         async function saveNewSubjectCircle() {
             const name = document.getElementById('new-subject-name').value.trim();
-            const img = document.getElementById('new-subject-img').value.trim();
-            if (!name || !img) return showToast('Fill all fields!', 'error');
+            const fileInput = document.getElementById('new-subject-file');
+            
+            if (!name) {
+                showToast('Please enter logo name', 'error');
+                return;
+            }
+
+            let imgUrl = 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=120&120&q=80';
+
+            if (fileInput.files[0]) {
+                const formData = new FormData();
+                formData.append('media', fileInput.files[0]);
+                const uploadRes = await fetch(`${API_BASE_URL}/upload`, { method: 'POST', body: formData });
+                if (uploadRes.ok) {
+                    const uploadData = await uploadRes.json();
+                    imgUrl = uploadData.url;
+                }
+            }
 
             try {
                 const res = await fetch(`${API_BASE_URL}/subjects`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, img })
+                    body: JSON.stringify({ name, img: imgUrl })
                 });
+
                 if (res.ok) {
-                    fetchSubjects();
                     closeAddSubjectModal();
-                    showToast('Category circle added!', 'success');
+                    fetchSubjectsFromBackend();
+                    showToast('Circle logo added!', 'success');
                 }
             } catch (err) {
-                showToast('Error saving category', 'error');
+                showToast('Failed to add logo', 'error');
             }
         }
 
-        async function deleteSubject(id, event) {
+        async function deleteSubjectCircle(event, id) {
             event.stopPropagation();
-            if (!confirm('Delete this category circle?')) return;
-            try {
-                await fetch(`${API_BASE_URL}/subjects/${id}`, { method: 'DELETE' });
-                fetchSubjects();
-                showToast('Category deleted', 'success');
-            } catch (err) {
-                showToast('Delete failed', 'error');
+            if(confirm('Delete this circle logo from backend?')) {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/subjects/${id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        fetchSubjectsFromBackend();
+                        showToast('Logo deleted!', 'success');
+                    }
+                } catch (err) {
+                    showToast('Failed to delete logo', 'error');
+                }
             }
         }
 
-        async function fetchNotes(reset = false) {
-            if (isLoading) return;
-            isLoading = true;
-            document.getElementById('loading-indicator').style.display = 'block';
-
-            if (reset) {
-                currentPage = 1;
-                notesList = [];
-            }
-
+        // Profile APIs
+        async function fetchProfileFromBackend() {
             try {
-                let url = `${API_BASE_URL}/notes?page=${currentPage}&limit=10`;
-                if (selectedSubject) url += `&subject=${encodeURIComponent(selectedSubject)}`;
-
-                const res = await fetch(url);
-                const data = await res.json();
-
-                totalPages = data.totalPages;
-                notesList = reset ? data.notes : [...notesList, ...data.notes];
-                renderNotes(notesList);
-            } catch (err) {
-                showToast('Failed to load notes from database', 'error');
-            } finally {
-                isLoading = false;
-                document.getElementById('loading-indicator').style.display = 'none';
-            }
+                const res = await fetch(`${API_BASE_URL}/profile`);
+                if (res.ok) {
+                    const p = await res.json();
+                    document.getElementById('profile-name').innerText = p.name;
+                    document.getElementById('profile-img').src = p.img;
+                }
+            } catch (err) { console.warn(err); }
         }
 
-        function renderNotes(notes) {
-            const container = document.getElementById('notes-container');
-            container.innerHTML = '';
-
-            notes.forEach(note => {
-                const isLiked = note.likedBy && note.likedBy.includes(userId);
-                const card = document.createElement('div');
-                card.className = 'note-card';
-                card.innerHTML = `
-                    <div class="note-top-meta">
-                        ${note.isPinned ? '<span class="pinned-tag"><i class="fas fa-thumbtack"></i> Pinned</span>' : ''}
-                        <span class="like-count-tag ${isLiked ? 'liked' : ''}" onclick="toggleLike('${note._id}', ${!isLiked})">
-                            <i class="${isLiked ? 'fas' : 'far'} fa-heart"></i> ${note.likes || 0}
-                        </span>
-                        <span class="view-count-tag"><i class="fas fa-eye"></i> ${note.views || 0}</span>
-                    </div>
-                    <div class="note-card-header">
-                        <span class="note-author-tag">${note.subject || 'General'}</span>
-                        <h3 class="clickable-title" onclick="viewNote('${note._id}')">${note.title}</h3>
-                    </div>
-                    <div class="note-body-html" onclick="viewNote('${note._id}')">${note.content}</div>
-                    <div class="note-footer">
-                        <span style="font-size:12px; color:var(--text-muted);">${note.createdAt}</span>
-                        <button class="action-btn" onclick="deleteNote('${note._id}')"><i class="fas fa-trash" style="color:#e53e3e"></i></button>
-                    </div>
-                `;
-                container.appendChild(card);
+        async function saveProfileName() {
+            const name = document.getElementById('profile-name').innerText;
+            await fetch(`${API_BASE_URL}/profile`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
             });
+            showToast('Profile updated', 'success');
         }
 
-        async function toggleLike(noteId, incrementLike) {
-            try {
-                const res = await fetch(`${API_BASE_URL}/notes/${noteId}`, {
+        async function updateProfileImg(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('media', file);
+            const res = await fetch(`${API_BASE_URL}/upload`, { method: 'POST', body: formData });
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('profile-img').src = data.url;
+                await fetch(`${API_BASE_URL}/profile`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ incrementLike, userId })
+                    body: JSON.stringify({ img: data.url })
                 });
-                const updated = await res.json();
-                const index = notesList.findIndex(n => n._id === noteId);
-                if (index > -1) notesList[index] = updated;
-                renderNotes(notesList);
-            } catch (err) {
-                showToast('Like update failed', 'error');
+                showToast('Profile picture updated!', 'success');
             }
         }
 
-        async function viewNote(id) {
-            try {
-                const res = await fetch(`${API_BASE_URL}/notes/${id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ views: true })
-                });
-                const note = await res.json();
-                
-                document.getElementById('view-note-title').innerText = note.title;
-                document.getElementById('view-note-content').innerHTML = note.content;
-                document.getElementById('view-modal').classList.add('active');
-
-                // Update in local cache and re-render
-                const index = notesList.findIndex(n => n._id === id);
-                if (index > -1) notesList[index] = note;
-                renderNotes(notesList);
-            } catch (err) {
-                showToast('Could not open note', 'error');
-            }
-        }
-
-        async function saveNoteToBackend() {
+        // Save Note
+        async function saveNoteAndClose() {
             const title = document.getElementById('note-title').value.trim();
             const content = document.getElementById('note-editor').innerHTML.trim();
-            const subject = document.getElementById('editor-subject-input').value.trim() || 'General';
 
-            if (!title || !content) return showToast('Title and content are required!', 'error');
+            if(!title && !content) return showToast('Cannot save empty note!', 'error');
 
-            const now = new Date();
-            const createdAt = now.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const payload = {
+                title: title || 'Untitled Note',
+                content: content,
+                subject: selectedSubjectFilter || 'General',
+                createdAt: new Date().toLocaleDateString([], { month: 'short', day: 'numeric' })
+            };
+
+            const method = currentEditId ? 'PUT' : 'POST';
+            const url = currentEditId ? `${API_BASE_URL}/notes/${currentEditId}` : `${API_BASE_URL}/notes`;
 
             try {
-                const res = await fetch(`${API_BASE_URL}/notes`, {
-                    method: 'POST',
+                const res = await fetch(url, {
+                    method: method,
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, content, subject, createdAt })
+                    body: JSON.stringify(payload)
                 });
 
                 if (res.ok) {
+                    showToast('Note saved to server!', 'success');
                     closeModal();
-                    fetchNotes(true);
-                    showToast('Note published successfully!', 'success');
+                    fetchNotesFromBackend(true);
                 }
             } catch (err) {
-                showToast('Failed to save note to server', 'error');
+                showToast('Failed to save note', 'error');
             }
         }
 
-        async function deleteNote(id) {
-            if (!confirm('Permanently delete this note?')) return;
-            try {
-                await fetch(`${API_BASE_URL}/notes/${id}`, { method: 'DELETE' });
-                notesList = notesList.filter(n => n._id !== id);
-                renderNotes(notesList);
-                showToast('Note deleted', 'success');
-            } catch (err) {
-                showToast('Delete failed', 'error');
+        // Read Note
+        function viewNote(id) {
+            const note = notes.find(n => n._id === id);
+            if(!note) return;
+
+            document.getElementById('view-modal-title-header').innerText = note.title;
+            document.getElementById('view-note-title').innerText = note.title;
+            document.getElementById('view-note-content').innerHTML = note.content;
+            document.getElementById('view-date-stamp').innerText = `${note.createdAt} | Likes: ${note.likes || 0}`;
+            document.getElementById('view-modal').classList.add('active');
+        }
+
+        // Helpers
+        function handleSearch() {
+            currentSearchQuery = document.getElementById('search-input').value.trim();
+            fetchNotesFromBackend(true);
+        }
+
+        function filterBySubject(subject, element) {
+            selectedSubjectFilter = subject;
+            fetchNotesFromBackend(true);
+        }
+
+        function filterByDate() {
+            const val = document.getElementById('date-search-input').value;
+            if(!val) return;
+            currentDateFilter = new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' });
+            fetchNotesFromBackend(true);
+        }
+
+        function goHome() {
+            selectedSubjectFilter = '';
+            currentSearchQuery = '';
+            currentDateFilter = '';
+            document.getElementById('search-input').value = '';
+            fetchNotesFromBackend(true);
+        }
+
+        function openModal(id = null) {
+            currentEditId = id;
+            if(id) {
+                const n = notes.find(x => x._id === id);
+                document.getElementById('note-title').value = n.title;
+                document.getElementById('note-editor').innerHTML = n.content;
+            } else {
+                document.getElementById('note-title').value = '';
+                document.getElementById('note-editor').innerHTML = '';
             }
+            document.getElementById('editor-modal').classList.add('active');
         }
 
-        function filterBySubject(sub, element) {
-            selectedSubject = sub;
-            document.querySelectorAll('.subject-circle-item').forEach(el => el.classList.remove('active'));
-            if (element) element.classList.add('active');
-            fetchNotes(true);
-        }
-
-        function filterNotes() {
-            const query = document.getElementById('search-input').value.toLowerCase();
-            const filtered = notesList.filter(n => n.title.toLowerCase().includes(query) || n.content.toLowerCase().includes(query));
-            renderNotes(filtered);
-        }
-
-        function openModal() { document.getElementById('editor-modal').classList.add('active'); }
         function closeModal() { document.getElementById('editor-modal').classList.remove('active'); }
         function closeViewModal() { document.getElementById('view-modal').classList.remove('active'); }
         function openAddSubjectModal() { document.getElementById('add-subject-modal').classList.add('active'); }
         function closeAddSubjectModal() { document.getElementById('add-subject-modal').classList.remove('active'); }
-        function goHome() { selectedSubject = ''; fetchNotes(true); }
+        function execCmd(cmd) { document.execCommand(cmd, false, null); }
 
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = `toast show`;
-            toast.innerText = message;
-            container.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('live-time').innerText = now.toLocaleTimeString();
+            document.getElementById('live-date').innerText = now.toLocaleDateString();
         }
 
         function toggleTheme() {
             document.body.classList.toggle('dark-mode');
-            const isDark = document.body.classList.contains('dark-mode');
-            document.getElementById('theme-icon').className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+        }
+
+        function showToast(msg, type='info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast show';
+            toast.innerText = msg;
+            container.appendChild(toast);
+            setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 2500);
+        }
+
+        function escapeHtml(text) {
+            return (text || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
     </script>
 </body>
