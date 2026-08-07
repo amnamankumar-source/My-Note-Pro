@@ -1,130 +1,128 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+require('dotenv').config();
 
 const app = express();
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cors());
-app.use(express.json({ limit: '50mb' })); // Large base64 upload Support
 
-// MongoDB Connection String
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/mynotepro';
+// MongoDB Connection
+const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://your_mongo_connection_string_here';
 
 mongoose.connect(MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true
-})
-.then(() => console.log('MongoDB Connected Successfully'))
-.catch(err => console.error('MongoDB Connection Error:', err));
+}).then(() => console.log('MongoDB Connected Successfully'))
+  .catch(err => console.error('MongoDB Connection Error:', err));
 
-// --- SCHEMAS & MODELS ---
+// --- Schemas ---
 
 // 1. Note Schema
-const noteSchema = new mongoose.Schema({
-    title: { type: String, required: true, default: 'Untitled Note' },
-    content: { type: String, default: '' },
-    subject: { type: String, default: 'Custom Author' },
+const NoteSchema = new mongoose.Schema({
+    title: { type: String, required: true },
+    content: { type: String, required: true },
+    subject: { type: String, default: 'General' },
     isPrivate: { type: Boolean, default: false },
     isPinned: { type: Boolean, default: false },
-    createdAt: { type: String },
     views: { type: Number, default: 0 },
-    likes: { type: Number, default: 0 }
+    likes: { type: Number, default: 0 },
+    likedBy: { type: [String], default: [] }, // Stores IP/Session/User identifier who liked
+    createdAt: { type: String, required: true }
 }, { timestamps: true });
 
-const Note = mongoose.model('Note', noteSchema);
+const Note = mongoose.model('Note', NoteSchema);
 
-// 2. Profile Schema
-const profileSchema = new mongoose.Schema({
-    userId: { type: String, default: 'default_user' },
-    name: { type: String, default: 'Note Author' },
-    img: { type: String, default: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80' }
+// 2. Custom Category Circle Schema
+const SubjectSchema = new mongoose.Schema({
+    name: { type: String, required: true, unique: true },
+    img: { type: String, required: true }
 });
 
-const Profile = mongoose.model('Profile', profileSchema);
-
-// 3. Circle Logo / Custom Subject Schema
-const subjectSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    img: { type: String, required: true }
-}, { timestamps: true });
-
-const Subject = mongoose.model('Subject', subjectSchema);
+const Subject = mongoose.model('Subject', SubjectSchema);
 
 
-// --- API ROUTES ---
+// --- API Endpoints ---
 
-// 1. PAGINATED NOTES API (Infinite Scroll ke liye)
+// 1. Get Notes with Pagination & Infinite Scroll Support
 app.get('/api/notes', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 9;
-        const search = req.query.search || '';
-        const subject = req.query.subject || '';
-        const date = req.query.date || '';
-
-        const query = { isPrivate: false };
-
-        if (search) {
-            query.$or = [
-                { title: { $regex: search, $options: 'i' } },
-                { content: { $regex: search, $options: 'i' } }
-            ];
-        }
-
-        if (subject) {
-            query.subject = { $regex: new RegExp(`^${subject}$`, 'i') };
-        }
-
-        if (date) {
-            query.createdAt = { $regex: date, $options: 'i' };
-        }
-
+        const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
+        const subject = req.query.subject;
 
-        // Sort by Pinned first, then newest
+        let query = { isPrivate: false };
+        if (subject) {
+            query.subject = subject;
+        }
+
+        const totalNotes = await Note.countDocuments(query);
         const notes = await Note.find(query)
             .sort({ isPinned: -1, createdAt: -1 })
             .skip(skip)
             .limit(limit);
 
-        const totalNotes = await Note.countDocuments(query);
-        const hasMore = skip + notes.length < totalNotes;
-
         res.json({
             notes,
-            hasMore,
-            totalNotes
+            currentPage: page,
+            totalPages: Math.ceil(totalNotes / limit),
+            hasMore: skip + notes.length < totalNotes
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// 2. CREATE NEW NOTE
+// 2. Create Note
 app.post('/api/notes', async (req, res) => {
     try {
         const newNote = new Note(req.body);
         const savedNote = await newNote.save();
         res.status(201).json(savedNote);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(400).json({ error: err.message });
     }
 });
 
-// 3. UPDATE NOTE BY ID
+// 3. Update Note (Views, Likes, Content)
 app.put('/api/notes/:id', async (req, res) => {
     try {
-        const updatedNote = await Note.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true }
-        );
+        const { views, incrementLike, userId } = req.body;
+        const note = await Note.findById(req.params.id);
+        
+        if (!note) return res.status(404).json({ error: 'Note not found' });
+
+        if (views !== undefined) {
+            note.views += 1;
+        }
+
+        if (incrementLike !== undefined && userId) {
+            const hasLiked = note.likedBy.includes(userId);
+            if (incrementLike && !hasLiked) {
+                note.likedBy.push(userId);
+                note.likes += 1;
+            } else if (!incrementLike && hasLiked) {
+                note.likedBy = note.likedBy.filter(id => id !== userId);
+                note.likes = Math.max(0, note.likes - 1);
+            }
+        }
+
+        // Standard field updates if provided
+        if (req.body.title) note.title = req.body.title;
+        if (req.body.content) note.content = req.body.content;
+        if (req.body.subject) note.subject = req.body.subject;
+        if (req.body.isPinned !== undefined) note.isPinned = req.body.isPinned;
+
+        const updatedNote = await note.save();
         res.json(updatedNote);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(400).json({ error: err.message });
     }
 });
 
-// 4. DELETE NOTE BY ID
+// 4. Delete Note
 app.delete('/api/notes/:id', async (req, res) => {
     try {
         await Note.findByIdAndDelete(req.params.id);
@@ -134,78 +132,35 @@ app.delete('/api/notes/:id', async (req, res) => {
     }
 });
 
-// 5. INCREMENT VIEWS
-app.put('/api/notes/:id/view', async (req, res) => {
-    try {
-        const note = await Note.findByIdAndUpdate(
-            req.params.id,
-            { $inc: { views: 1 } },
-            { new: true }
-        );
-        res.json({ views: note.views });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+// --- Category Circle Endpoints ---
 
-// 6. TOGGLE / UPDATE LIKES
-app.put('/api/notes/:id/like', async (req, res) => {
-    try {
-        const { increment } = req.body; // true = +1, false = -1
-        const amount = increment ? 1 : -1;
-        
-        const note = await Note.findByIdAndUpdate(
-            req.params.id,
-            { $inc: { likes: amount } },
-            { new: true }
-        );
-        res.json({ likes: note.likes });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// 7. PROFILE GET & UPDATE
-app.get('/api/profile', async (req, res) => {
-    try {
-        let profile = await Profile.findOne({ userId: 'default_user' });
-        if (!profile) {
-            profile = await Profile.create({});
-        }
-        res.json(profile);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.put('/api/profile', async (req, res) => {
-    try {
-        const profile = await Profile.findOneAndUpdate(
-            { userId: 'default_user' },
-            req.body,
-            { new: true, upsert: true }
-        );
-        res.json(profile);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// 8. CUSTOM SUBJECTS / LOGOS GET & POST
+// Get all custom category circles
 app.get('/api/subjects', async (req, res) => {
     try {
-        const subjects = await Subject.find().sort({ createdAt: -1 });
+        const subjects = await Subject.find();
         res.json(subjects);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
+// Add custom category circle
 app.post('/api/subjects', async (req, res) => {
     try {
-        const newSubject = new Subject(req.body);
-        const saved = await newSubject.save();
+        const { name, img } = req.body;
+        const newSub = new Subject({ name, img });
+        const saved = await newSub.save();
         res.status(201).json(saved);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// Delete custom category circle
+app.delete('/api/subjects/:id', async (req, res) => {
+    try {
+        await Subject.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Subject circle deleted' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
