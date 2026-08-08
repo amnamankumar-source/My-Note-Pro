@@ -516,8 +516,10 @@
     <div class="toast-container" id="toast-container"></div>
 
     <script>
-        // API Base URL Setup (Relative URL for dynamic hosting support)
-        const API_BASE_URL = window.location.origin + '/api';
+        // API Base URL Setup
+        const API_BASE_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
+            ? 'http://localhost:5000/api'
+            : 'https://my-note-pro-1.onrender.com/api';
 
         // User Client Tracking Identifier (Unique per Browser/Device)
         let userId = localStorage.getItem('note_pro_user_id');
@@ -753,7 +755,7 @@
                     hideProgressPopup();
                     showToast('Note Saved Successfully!', 'success');
                     closeModal();
-                    fetchNotesFromBackend(true);
+                    fetchNotesFromBackend(true); // Complete hone par naye note ke saath render hoga
                 }, 400);
 
             } catch (err) {
