@@ -7,7 +7,7 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+// Middleware Setup
 app.use(cors());
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
@@ -15,12 +15,12 @@ app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 // Ensure Static Uploads Folder Exists
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
+    fs.mkdirSync(uploadsDir);
 }
 app.use('/uploads', express.static(uploadsDir));
 app.use(express.static(__dirname));
 
-// Multer Storage Setup for Direct Media Uploads
+// Multer Disk Storage Configuration
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, uploadsDir);
@@ -30,9 +30,9 @@ const storage = multer.diskStorage({
         cb(null, uniqueSuffix + path.extname(file.originalname));
     }
 });
-const upload = multer({ storage: storage });
+const upload = multer({ storage: storage, limits: { fileSize: 100 * 1024 * 1024 } }); // 100MB max limit
 
-// In-Memory Databases
+// Server In-Memory Storage Databases
 let profileData = {
     name: "Note Author",
     img: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80"
@@ -45,7 +45,7 @@ let subjectsData = [
 
 let notesData = [];
 
-// Seed Initial Data
+// Seed Initial Sample Notes
 for (let i = 1; i <= 25; i++) {
     notesData.push({
         _id: "note-" + i,
@@ -54,14 +54,13 @@ for (let i = 1; i <= 25; i++) {
         subject: i % 2 === 0 ? "Science" : "Maths",
         isPrivate: false,
         isPinned: false,
-        likes: Math.floor(Math.random() * 15),
-        likedUsers: [], // Array to store user IPs/tokens who liked
-        views: Math.floor(Math.random() * 80),
+        likedUsers: [], // Array of user IDs/IPs who liked this note
+        views: Math.floor(Math.random() * 100),
         createdAt: "Aug 7, 10:00 AM"
     });
 }
 
-// ===== API ROUTES =====
+// API ROUTES
 
 // 1. Profile APIs
 app.get('/api/profile', (req, res) => {
@@ -97,12 +96,11 @@ app.delete('/api/subjects/:id', (req, res) => {
     res.json({ message: "Circle logo deleted successfully", id });
 });
 
-// 3. Notes APIs with Global Pagination & User Specific Like Checks
+// 3. Notes APIs with Per-User Like Checking
 app.get('/api/notes', (req, res) => {
-    let { page = 1, limit = 9, search = '', subject = '', date = '' } = req.query;
+    let { page = 1, limit = 9, search = '', subject = '', date = '', userId = '' } = req.query;
     page = parseInt(page);
     limit = parseInt(limit);
-    const userIdentifier = req.ip || 'anonymous';
 
     let filtered = [...notesData];
 
@@ -121,13 +119,20 @@ app.get('/api/notes', (req, res) => {
 
     const startIndex = (page - 1) * limit;
     const endIndex = startIndex + limit;
-    const paginatedNotes = filtered.slice(startIndex, endIndex).map(n => ({
-        ...n,
-        userLiked: n.likedUsers ? n.likedUsers.includes(userIdentifier) : false
-    }));
+    const paginated = filtered.slice(startIndex, endIndex);
+
+    // Dynamic map to send userLiked status per user requesting
+    const formattedNotes = paginated.map(n => {
+        const userLiked = userId ? (n.likedUsers || []).includes(userId) : false;
+        return {
+            ...n,
+            likes: (n.likedUsers || []).length,
+            userLiked: userLiked
+        };
+    });
 
     res.json({
-        notes: paginatedNotes,
+        notes: formattedNotes,
         hasMore: endIndex < filtered.length,
         totalNotes: filtered.length
     });
@@ -142,41 +147,12 @@ app.post('/api/notes', (req, res) => {
         subject: subject || 'General',
         isPrivate: !!isPrivate,
         isPinned: !!isPinned,
-        likes: 0,
         likedUsers: [],
         views: 0,
         createdAt: createdAt || new Date().toLocaleString()
     };
     notesData.unshift(newNote);
     res.status(201).json(newNote);
-});
-
-// ACCURATE INDIVIDUAL LIKE ROUTE (MULTI-USER SAFE)
-app.post('/api/notes/:id/like', (req, res) => {
-    const { id } = req.params;
-    const userIdentifier = req.ip || 'anonymous';
-    const note = notesData.find(n => n._id === id);
-
-    if (!note) {
-        return res.status(404).json({ error: "Note not found" });
-    }
-
-    if (!note.likedUsers) note.likedUsers = [];
-
-    const userIndex = note.likedUsers.indexOf(userIdentifier);
-    let userLiked = false;
-
-    if (userIndex === -1) {
-        note.likedUsers.push(userIdentifier);
-        note.likes = (note.likes || 0) + 1;
-        userLiked = true;
-    } else {
-        note.likedUsers.splice(userIndex, 1);
-        note.likes = Math.max(0, (note.likes || 0) - 1);
-        userLiked = false;
-    }
-
-    res.json({ likes: note.likes, userLiked: userLiked });
 });
 
 app.put('/api/notes/:id', (req, res) => {
@@ -190,13 +166,40 @@ app.put('/api/notes/:id', (req, res) => {
     res.status(404).json({ error: "Note not found" });
 });
 
+// Per-User Unique Like System Endpoint
+app.post('/api/notes/:id/like', (req, res) => {
+    const { id } = req.params;
+    const { userId } = req.body;
+
+    const note = notesData.find(n => n._id === id);
+    if (!note) return res.status(404).json({ error: "Note not found" });
+
+    if (!note.likedUsers) note.likedUsers = [];
+
+    const userIndex = note.likedUsers.indexOf(userId);
+    let userLiked = false;
+
+    if (userIndex === -1) {
+        note.likedUsers.push(userId); // User Likes
+        userLiked = true;
+    } else {
+        note.likedUsers.splice(userIndex, 1); // User Unlikes
+        userLiked = false;
+    }
+
+    res.json({
+        likes: note.likedUsers.length,
+        userLiked: userLiked
+    });
+});
+
 app.delete('/api/notes/:id', (req, res) => {
     const { id } = req.params;
     notesData = notesData.filter(n => n._id !== id);
     res.json({ message: "Note deleted successfully from server", id });
 });
 
-// 4. Media Upload Endpoint with Direct File Serving
+// File Upload Endpoint with Real-Time Progress Support
 app.post('/api/upload', upload.single('media'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
@@ -205,11 +208,10 @@ app.post('/api/upload', upload.single('media'), (req, res) => {
     res.json({ url: fileUrl, fileType: req.file.mimetype });
 });
 
-// Catch-all route
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server running on http://localhost:${PORT}`);
 });
