@@ -129,10 +129,6 @@
         .note-card { background: var(--surface-color) !important; border-radius: 20px; padding: 25px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); display: flex !important; flex-direction: column; gap: 16px; position: relative; overflow: hidden; }
         
         .note-top-meta { position: absolute; top: 12px; right: 15px; display: flex !important; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; }
-        .status-badge { padding: 3px 8px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700; }
-        .status-badge.public { background: rgba(56, 161, 105, 0.15); color: #276749; }
-        .status-badge.private { background: rgba(229, 62, 62, 0.15); color: #9b2c2c; }
-
         .view-count-tag { background: rgba(79, 70, 229, 0.1); color: #4f46e5; padding: 3px 8px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 4px; }
         .like-count-tag { background: rgba(229, 62, 62, 0.1); color: #e53e3e; padding: 3px 8px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: transform 0.2s; }
         .like-count-tag:hover { transform: scale(1.1); }
@@ -140,7 +136,7 @@
 
         .pinned-tag { background: rgba(245, 158, 11, 0.15); color: #d97706; padding: 3px 8px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 4px; }
         
-        .note-card-header { display: flex !important; align-items: center; gap: 15px; width: 100%; margin-top: 18px; }
+        .note-card-header { display: flex !important; align-items: center; gap: 15px; width: 100%; margin-top: 15px; }
         .note-header-text { display: flex !important; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
         .note-circle-logo { width: 45px; height: 45px; border-radius: 50%; overflow: hidden; background: var(--editor-toolbar-bg) !important; display: flex !important; align-items: center; justify-content: center; flex-shrink: 0; }
         .note-author-tag { font-size: 11px; font-weight: 600; color: #4f46e5; display: inline-flex !important; align-items: center; gap: 6px; background: rgba(79, 70, 229, 0.08); padding: 3px 10px; border-radius: 9999px; width: fit-content; }
@@ -335,7 +331,7 @@
         
         <!-- Infinite Scroll Loader -->
         <div id="loading-spinner" class="loading-spinner" style="display: none;">
-            <i class="fas fa-spinner fa-spin"></i> Loading notes...
+            <i class="fas fa-spinner fa-spin"></i> Loading more notes...
         </div>
     </div>
 
@@ -406,9 +402,8 @@
                 </div>
                 
                 <div class="header-column-controls">
-                    <!-- Toggle Privacy Button: Default Publish false, toggled by user -->
-                    <button class="privacy-toggle-btn is-public" id="modal-privacy-btn" onclick="toggleModalPrivacy()">
-                        <i class="fas fa-globe" id="modal-privacy-icon"></i> <span id="modal-privacy-text">Published</span>
+                    <button class="privacy-toggle-btn is-private" id="modal-privacy-btn" onclick="toggleModalPrivacy()">
+                        <i class="fas fa-lock" id="modal-privacy-icon"></i> <span id="modal-privacy-text">Private</span>
                     </button>
                     <button class="header-save-btn" onclick="saveNoteAndClose()"><i class="fas fa-check-circle"></i> <span>Save Note</span></button>
                     <button class="close-modal-btn" onclick="closeModal()"><i class="fas fa-times"></i> <span>Close</span></button>
@@ -521,15 +516,13 @@
     <div class="toast-container" id="toast-container"></div>
 
     <script>
-        // API Base URL Setup
-        const API_BASE_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
-            ? 'http://localhost:5000/api'
-            : '/api';
+        // API Base URL Setup (Relative URL for dynamic hosting support)
+        const API_BASE_URL = window.location.origin + '/api';
 
-        // Unique Device User Identification
+        // User Client Tracking Identifier (Unique per Browser/Device)
         let userId = localStorage.getItem('note_pro_user_id');
         if (!userId) {
-            userId = 'usr_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+            userId = 'user_' + Math.random().toString(36).substr(2, 9);
             localStorage.setItem('note_pro_user_id', userId);
         }
 
@@ -544,7 +537,7 @@
         let hasMoreNotes = true;
         let isLoadingNotes = false;
 
-        let currentModalIsPrivate = false; // Default Published (accessible by everyone)
+        let currentModalIsPrivate = true;
         let currentModalIsPinned = false;
         let currentAuthorTag = 'Custom Author';
         let tempNewSubjectImgData = '';
@@ -575,7 +568,7 @@
             }
         }
 
-        // Fetch Notes from Backend with MongoDB Privacy Rule Filter
+        // Fetch Notes from Backend with User ID Query
         async function fetchNotesFromBackend(reset = false) {
             if (isLoadingNotes) return;
             isLoadingNotes = true;
@@ -630,13 +623,9 @@
                 const noteId = note._id;
                 const likesCount = note.likes || 0;
                 const isLiked = note.userLiked || false;
-                const isOwner = note.createdBy === userId;
 
                 card.innerHTML = `
                     <div class="note-top-meta">
-                        ${note.isPrivate ? 
-                            `<span class="status-badge private"><i class="fas fa-lock"></i> Private</span>` : 
-                            `<span class="status-badge public"><i class="fas fa-globe"></i> Published</span>`}
                         ${note.isPinned ? `<span class="pinned-tag"><i class="fas fa-thumbtack"></i> Pinned</span>` : ''}
                         <span class="like-count-tag ${isLiked ? 'liked' : ''}" onclick="toggleLike(event, '${noteId}')" title="Click to Like">
                             <i class="${isLiked ? 'fas' : 'far'} fa-heart"></i> ${likesCount}
@@ -659,10 +648,8 @@
                     <div class="note-footer">
                         <div class="note-date"><i class="far fa-clock"></i> ${note.createdAt}</div>
                         <div class="note-actions">
-                            ${isOwner ? `
-                                <button class="action-btn btn-edit" onclick="openModal('${noteId}')" title="Edit"><i class="fas fa-pen"></i></button>
-                                <button class="action-btn btn-delete" onclick="deleteNote('${noteId}')" title="Delete"><i class="fas fa-trash"></i></button>
-                            ` : ''}
+                            <button class="action-btn btn-edit" onclick="openModal('${noteId}')" title="Edit"><i class="fas fa-pen"></i></button>
+                            <button class="action-btn btn-delete" onclick="deleteNote('${noteId}')" title="Delete"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                 `;
@@ -670,7 +657,7 @@
             });
         }
 
-        // Toggle Like API Call
+        // Toggle Like API Call (Per User Like System)
         async function toggleLike(event, noteId) {
             event.stopPropagation();
             const note = notes.find(n => n._id === noteId);
@@ -694,7 +681,7 @@
             }
         }
 
-        // Upload Media Files with Real-time Progress
+        // Upload Media Files with Real-time 1% - 100% Progress Popup
         async function uploadAndInsertMediaFiles(event) {
             const files = event.target.files;
             if (!files || files.length === 0) return;
@@ -729,7 +716,7 @@
             event.target.value = '';
         }
 
-        // Save Note Direct to Backend MongoDB
+        // Save Note with 1% to 100% Saving Progress Popup
         async function saveNoteAndClose() {
             const title = document.getElementById('note-title').value.trim();
             const content = document.getElementById('note-editor').innerHTML.trim();
@@ -748,11 +735,10 @@
                 subject: currentAuthorTag,
                 isPrivate: currentModalIsPrivate,
                 isPinned: currentModalIsPinned,
-                createdAt: timeStamp,
-                userId: userId
+                createdAt: timeStamp
             };
 
-            showProgressPopup(currentEditId ? 'Updating Note...' : 'Publishing Note to Database...');
+            showProgressPopup(currentEditId ? 'Updating Note...' : 'Saving Note to Server...');
 
             const endpoint = currentEditId ? `${API_BASE_URL}/notes/${currentEditId}` : `${API_BASE_URL}/notes`;
             const method = currentEditId ? 'PUT' : 'POST';
@@ -765,10 +751,10 @@
                 updateProgressUI(100);
                 setTimeout(() => {
                     hideProgressPopup();
-                    showToast(currentModalIsPrivate ? 'Private Note Saved!' : 'Note Published Successfully!', 'success');
+                    showToast('Note Saved Successfully!', 'success');
                     closeModal();
                     fetchNotesFromBackend(true);
-                }, 300);
+                }, 400);
 
             } catch (err) {
                 hideProgressPopup();
@@ -776,6 +762,7 @@
             }
         }
 
+        // Custom XMLHttpRequest Helpers for Uploading & Saving Progress
         function uploadWithProgress(url, formData, onProgress) {
             return new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
@@ -789,8 +776,11 @@
                 };
 
                 xhr.onload = () => {
-                    if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.responseText);
-                    else reject(new Error('Upload failed'));
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        resolve(xhr.responseText);
+                    } else {
+                        reject(new Error('Upload failed'));
+                    }
                 };
 
                 xhr.onerror = () => reject(new Error('Upload error'));
@@ -812,8 +802,11 @@
                 };
 
                 xhr.onload = () => {
-                    if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.responseText);
-                    else reject(new Error('Save failed'));
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        resolve(xhr.responseText);
+                    } else {
+                        reject(new Error('Save failed'));
+                    }
                 };
 
                 xhr.onerror = () => reject(new Error('Network error'));
@@ -821,6 +814,7 @@
             });
         }
 
+        // Progress Modal Helpers
         function showProgressPopup(title) {
             document.getElementById('progress-title').innerHTML = `<i class="fas fa-spinner fa-spin" style="color:#4f46e5;"></i> ${title}`;
             updateProgressUI(1);
@@ -837,14 +831,14 @@
             document.getElementById('progress-modal').classList.remove('active');
         }
 
-        // Profile Backend Operations
+        // Profile API Operations
         async function fetchProfileFromBackend() {
             try {
-                const res = await fetch(`${API_BASE_URL}/profile?userId=${userId}`);
+                const res = await fetch(`${API_BASE_URL}/profile`);
                 if (res.ok) {
                     const profile = await res.json();
-                    document.getElementById('profile-name').innerText = profile.name || "Note Author";
-                    if (profile.img) document.getElementById('profile-img').src = profile.img;
+                    document.getElementById('profile-name').innerText = profile.name;
+                    document.getElementById('profile-img').src = profile.img;
                 }
             } catch (err) { console.warn('Profile error:', err); }
         }
@@ -855,9 +849,9 @@
                 await fetch(`${API_BASE_URL}/profile`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId, name: newName })
+                    body: JSON.stringify({ name: newName })
                 });
-                showToast('Profile updated!', 'success');
+                showToast('Profile name updated!', 'success');
             } catch (err) { showToast('Failed to update profile name', 'error'); }
         }
 
@@ -874,7 +868,7 @@
                     await fetch(`${API_BASE_URL}/profile`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userId, img: imgData })
+                        body: JSON.stringify({ img: imgData })
                     });
                     showToast('Profile image updated!', 'success');
                 } catch (err) { showToast('Failed to save profile image', 'error'); }
@@ -882,7 +876,7 @@
             reader.readAsDataURL(file);
         }
 
-        // Subjects APIs
+        // Subjects API Operations
         async function fetchSubjectsFromBackend() {
             try {
                 const res = await fetch(`${API_BASE_URL}/subjects`);
@@ -943,12 +937,10 @@
         async function deleteNote(id) {
             if(confirm('Delete this note permanently?')) {
                 try {
-                    const res = await fetch(`${API_BASE_URL}/notes/${id}?userId=${userId}`, { method: 'DELETE' });
+                    const res = await fetch(`${API_BASE_URL}/notes/${id}`, { method: 'DELETE' });
                     if (res.ok) {
-                        showToast('Note deleted from database!', 'error');
+                        showToast('Note deleted from backend!', 'error');
                         fetchNotesFromBackend(true);
-                    } else {
-                        showToast('Unauthorized to delete this note', 'error');
                     }
                 } catch (err) { showToast('Failed to delete note', 'error'); }
             }
@@ -985,7 +977,7 @@
             searchTimeout = setTimeout(() => {
                 currentSearchQuery = document.getElementById('search-input').value.trim();
                 fetchNotesFromBackend(true);
-            }, 300);
+            }, 400);
         }
 
         function filterBySubject(subject, element) {
@@ -1022,7 +1014,7 @@
             clearDateFilter();
         }
 
-        // Editor & UI Controls
+        // UI Helpers & Editors
         function openModal(noteId = null) {
             currentEditId = noteId;
             const modal = document.getElementById('editor-modal');
@@ -1032,8 +1024,8 @@
 
             if(noteId) {
                 const note = notes.find(n => n._id === noteId);
-                if(note && note.createdBy !== userId) {
-                    showToast('You do not have permission to edit this note!', 'error');
+                if(note && note.isPinned) {
+                    showToast('This note is locked/pinned and cannot be edited!', 'error');
                     return;
                 }
                 if(note) {
@@ -1047,7 +1039,7 @@
             } else {
                 titleInput.value = '';
                 editor.innerHTML = '';
-                currentModalIsPrivate = false; // Default: Published for all users
+                currentModalIsPrivate = true;
                 currentModalIsPinned = false;
                 currentAuthorTag = selectedSubjectFilter || document.getElementById('profile-name').innerText || 'Custom Author';
                 headingText.innerText = 'Create New Note';
@@ -1100,7 +1092,6 @@
 
         function closeViewModal() { document.getElementById('view-modal').classList.remove('active'); }
 
-        // Privacy Toggle
         function toggleModalPrivacy() {
             currentModalIsPrivate = !currentModalIsPrivate;
             updateModalPrivacyUI();
@@ -1113,11 +1104,11 @@
             if (currentModalIsPrivate) {
                 btn.className = 'privacy-toggle-btn is-private';
                 icon.className = 'fas fa-lock';
-                text.innerText = 'Private (Only You)';
+                text.innerText = 'Private';
             } else {
                 btn.className = 'privacy-toggle-btn is-public';
                 icon.className = 'fas fa-globe';
-                text.innerText = 'Published (Public)';
+                text.innerText = 'Published';
             }
         }
 
@@ -1131,7 +1122,7 @@
             const text = document.getElementById('modal-pin-text');
             if (currentModalIsPinned) {
                 btn.className = 'pin-toggle-btn is-pinned';
-                text.innerText = 'Pinned';
+                text.innerText = 'Pinned (Locked)';
             } else {
                 btn.className = 'pin-toggle-btn';
                 text.innerText = 'Pin Note';
