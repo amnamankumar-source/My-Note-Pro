@@ -31,7 +31,6 @@
           opacity: 0 !important;
         }
 
-        /* --- Pro Design Variables --- */
         :root {
             --bg-color: #f4f7f6 !important; 
             --surface-color: #ffffff !important;
@@ -162,7 +161,6 @@
         .modal-content.full-screen { width: 100%; height: 100%; max-width: 100vw; max-height: 100vh; background: var(--surface-color) !important; display: flex !important; flex-direction: column; overflow: hidden; }
 
         .modal-header { padding: 12px 18px; border-bottom: 1px solid var(--border-color); display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: center !important; background: var(--surface-color) !important; gap: 16px; flex-shrink: 0; }
-        
         .modal-header .header-left-group { flex: 1 1 auto !important; min-width: 0 !important; display: flex !important; flex-direction: column !important; gap: 4px; }
         .modal-header h2 { font-size: 16px; font-weight: 600; color: var(--text-main) !important; display: flex !important; align-items: flex-start; gap: 8px; margin: 0; white-space: normal !important; word-break: break-word !important; overflow-wrap: anywhere !important; line-height: 1.4; }
         .modal-header h2 i { margin-top: 3px; flex-shrink: 0; }
@@ -200,8 +198,7 @@
 
         .editor-container { width: 100%; flex: 1; display: flex !important; flex-direction: column; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-color) !important; overflow: hidden; min-height: 250px; }
         .rich-editor-area { width: 100%; height: 100%; flex: 1; font-size: 15px; line-height: 1.8; color: var(--text-main) !important; outline: none; padding: 15px; overflow-y: auto; box-sizing: border-box !important; }
-        .rich-editor-area img { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; display: block; }
-        .rich-editor-area video { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; display: block; }
+        .rich-editor-area img, .rich-editor-area video { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; display: block; }
         .rich-editor-area a { color: #4f46e5 !important; text-decoration: underline !important; font-weight: 500; }
 
         .media-slider-container { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 15px; overflow-x: auto !important; overflow-y: hidden !important; padding: 10px 5px !important; margin: 10px 0 !important; width: 100% !important; scrollbar-width: thin; -webkit-overflow-scrolling: touch; border-radius: 12px; background: rgba(0,0,0,0.02); }
@@ -209,8 +206,6 @@
         .media-slider-card.yt-card { width: 280px !important; height: 480px !important; max-height: 65vh !important; border-radius: 16px !important; }
         .media-slider-card.drive-card { width: 320px !important; height: 420px !important; background: var(--surface-color) !important; display: flex !important; flex-direction: column !important; }
         .media-slider-card iframe { width: 100%; height: 100%; border: none; }
-        .drive-card-frame { flex: 1; width: 100%; position: relative; }
-        .drive-card-footer { height: 35px; background: var(--editor-toolbar-bg); border-top: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font-size: 11px; font-weight: 600; color: var(--text-muted); }
 
         .view-note-title { font-size: 22px; font-weight: 700; color: var(--text-main) !important; margin-bottom: 12px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; word-break: break-word; }
         .view-note-body { font-size: 15px; line-height: 1.8; color: var(--text-main) !important; word-break: break-word; }
@@ -229,6 +224,15 @@
         .input-group input { padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border-color); outline: none; background: var(--editor-toolbar-bg); color: var(--text-main) !important; font-size: 13px; }
         .preview-img-box { width: 60px; height: 60px; border-radius: 50%; border: 2px dashed var(--border-color); display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 5px auto; }
         .preview-img-box img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* ===== Progress Popup Modal Style ===== */
+        .progress-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(6px); z-index: 99999; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .progress-overlay.active { opacity: 1; pointer-events: auto; }
+        .progress-card { background: var(--surface-color) !important; padding: 25px 30px; border-radius: 20px; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); width: 90%; max-width: 380px; text-align: center; display: flex; flex-direction: column; gap: 15px; }
+        .progress-title { font-size: 16px; font-weight: 600; color: var(--text-main) !important; }
+        .progress-bar-track { width: 100%; height: 12px; background: var(--border-color); border-radius: 9999px; overflow: hidden; position: relative; }
+        .progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #4f46e5, #d53f8c); border-radius: 9999px; transition: width 0.1s linear; }
+        .progress-percentage { font-size: 20px; font-weight: 700; color: #4f46e5; }
 
         @media (max-width: 768px) {
             .btn-add { display: none !important; } 
@@ -325,6 +329,17 @@
     <button class="fab-add-btn" id="fab-add-btn" onclick="openModal()" title="Add New Note">
         <i class="fas fa-plus"></i>
     </button>
+
+    <!-- PROGRESS BAR POPUP MODAL -->
+    <div class="progress-overlay" id="progress-modal">
+        <div class="progress-card">
+            <div class="progress-title" id="progress-status-title">Uploading File...</div>
+            <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="progress-bar-fill"></div>
+            </div>
+            <div class="progress-percentage" id="progress-percentage">0%</div>
+        </div>
+    </div>
 
     <!-- ADD CUSTOM CIRCLE LOGO MODAL -->
     <div class="modal-overlay" id="add-subject-modal">
@@ -490,10 +505,9 @@
     <!-- Toast Notifications -->
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- JavaScript Logic (Backend Driven + Downward Infinite Scroll) -->
+    <!-- JavaScript Logic -->
     <script>
-        // API Endpoint (Change to Render URL when deployed)
-        const API_BASE_URL = 'https://my-note-pro-1.onrender.com/api';
+        const API_BASE_URL = window.location.origin + '/api';
 
         let notes = [];
         let customSubjects = [];
@@ -516,12 +530,10 @@
             updateClock();
             setInterval(updateClock, 1000);
             
-            // Backend Data Loading
             fetchProfileFromBackend();
             fetchSubjectsFromBackend();
-            fetchNotesFromBackend(true); // Reset & load page 1
+            fetchNotesFromBackend(true);
 
-            // Infinite Scroll Trigger (Downward Scroll)
             window.addEventListener('scroll', handleInfiniteScroll);
 
             document.addEventListener('click', (e) => {
@@ -531,19 +543,33 @@
             });
         });
 
-        // Downward Infinite Scroll Listener
+        function showProgressPopup(title) {
+            document.getElementById('progress-status-title').innerText = title;
+            updateProgressPercentage(0);
+            document.getElementById('progress-modal').classList.add('active');
+        }
+
+        function updateProgressPercentage(percent) {
+            const val = Math.min(100, Math.max(0, Math.round(percent)));
+            document.getElementById('progress-bar-fill').style.width = val + '%';
+            document.getElementById('progress-percentage').innerText = val + '%';
+        }
+
+        function hideProgressPopup() {
+            setTimeout(() => {
+                document.getElementById('progress-modal').classList.remove('active');
+            }, 300);
+        }
+
         function handleInfiniteScroll() {
             if (isLoadingNotes || !hasMoreNotes) return;
-
             const scrollPosition = window.innerHeight + window.scrollY;
             const threshold = document.documentElement.offsetHeight - 300;
-
             if (scrollPosition >= threshold) {
-                fetchNotesFromBackend(false); // Fetch next page
+                fetchNotesFromBackend(false);
             }
         }
 
-        // Fetch Notes from Backend with Pagination
         async function fetchNotesFromBackend(reset = false) {
             if (isLoadingNotes) return;
             isLoadingNotes = true;
@@ -566,7 +592,6 @@
                 const res = await fetch(url);
                 if (res.ok) {
                     const data = await res.json();
-                    
                     notes = reset ? data.notes : [...notes, ...data.notes];
                     hasMoreNotes = data.hasMore;
                     currentPage++;
@@ -634,7 +659,6 @@
             });
         }
 
-        // Profile API Operations
         async function fetchProfileFromBackend() {
             try {
                 const res = await fetch(`${API_BASE_URL}/profile`);
@@ -666,26 +690,22 @@
             const file = event.target.files[0];
             if (!file) return;
 
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                const imgData = e.target.result;
-                document.getElementById('profile-img').src = imgData;
-                
-                try {
-                    await fetch(`${API_BASE_URL}/profile`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ img: imgData })
-                    });
-                    showToast('Profile image updated!', 'success');
-                } catch (err) {
-                    showToast('Failed to save profile image', 'error');
-                }
-            };
-            reader.readAsDataURL(file);
+            showProgressPopup('Uploading Profile Image...');
+            uploadSingleFileWithProgress(file, async (fileUrl) => {
+                document.getElementById('profile-img').src = fileUrl;
+                await fetch(`${API_BASE_URL}/profile`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ img: fileUrl })
+                });
+                hideProgressPopup();
+                showToast('Profile image updated!', 'success');
+            }, (err) => {
+                hideProgressPopup();
+                showToast('Failed to upload image', 'error');
+            });
         }
 
-        // Subjects API Operations
         async function fetchSubjectsFromBackend() {
             try {
                 const res = await fetch(`${API_BASE_URL}/subjects`);
@@ -724,9 +744,24 @@
                 return;
             }
 
-            const defaultImg = 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=120&120&q=80';
-            const img = tempNewSubjectImgData || defaultImg;
+            const fileInput = document.getElementById('new-subject-file');
+            let imgUrl = 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=120&120&q=80';
 
+            if (fileInput.files.length > 0) {
+                showProgressPopup('Uploading Subject Image...');
+                uploadSingleFileWithProgress(fileInput.files[0], async (url) => {
+                    await submitSubjectCircle(name, url);
+                    hideProgressPopup();
+                }, () => {
+                    hideProgressPopup();
+                    showToast('Failed to upload image', 'error');
+                });
+            } else {
+                await submitSubjectCircle(name, imgUrl);
+            }
+        }
+
+        async function submitSubjectCircle(name, img) {
             try {
                 const res = await fetch(`${API_BASE_URL}/subjects`, {
                     method: 'POST',
@@ -746,7 +781,7 @@
             }
         }
 
-        // Save / Update Note to Backend
+        // SAVE NOTE WITH 1% TO 100% PROGRESS
         async function saveNoteAndClose() {
             const title = document.getElementById('note-title').value.trim();
             const content = document.getElementById('note-editor').innerHTML.trim();
@@ -755,6 +790,8 @@
                 showToast('Cannot save an empty note!', 'error');
                 return;
             }
+
+            showProgressPopup('Saving Note to Backend Storage...');
 
             const now = new Date();
             const timeStamp = now.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -768,33 +805,43 @@
                 createdAt: timeStamp
             };
 
-            try {
-                let res;
-                if (currentEditId) {
-                    res = await fetch(`${API_BASE_URL}/notes/${currentEditId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                } else {
-                    res = await fetch(`${API_BASE_URL}/notes`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
+            let progressVal = 10;
+            updateProgressPercentage(progressVal);
+            const interval = setInterval(() => {
+                if (progressVal < 90) {
+                    progressVal += 15;
+                    updateProgressPercentage(progressVal);
                 }
+            }, 100);
+
+            try {
+                const url = currentEditId ? `${API_BASE_URL}/notes/${currentEditId}` : `${API_BASE_URL}/notes`;
+                const method = currentEditId ? 'PUT' : 'POST';
+
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                clearInterval(interval);
+                updateProgressPercentage(100);
 
                 if (res.ok) {
-                    showToast('Note Saved to Server!', 'success');
-                    closeModal();
-                    fetchNotesFromBackend(true); // Reload notes list
+                    setTimeout(() => {
+                        hideProgressPopup();
+                        showToast('Note Saved to Server Storage!', 'success');
+                        closeModal();
+                        fetchNotesFromBackend(true);
+                    }, 400);
                 }
             } catch (err) {
+                clearInterval(interval);
+                hideProgressPopup();
                 showToast('Failed to save note to server', 'error');
             }
         }
 
-        // Delete Note API Call
         async function deleteNote(id) {
             if(confirm('Delete this note permanently?')) {
                 try {
@@ -809,29 +856,25 @@
             }
         }
 
-        // Like Toggle API Call
+        // LIKE TOGGLE WITH ACCURATE MULTI-USER API COUNTER
         async function toggleLike(event, noteId) {
             event.stopPropagation();
-            const note = notes.find(n => n._id === noteId);
-            if (!note) return;
-
-            note.userLiked = !note.userLiked;
-            note.likes = note.userLiked ? (note.likes || 0) + 1 : Math.max(0, (note.likes || 0) - 1);
-
-            renderNotesGrid();
-
             try {
-                await fetch(`${API_BASE_URL}/notes/${noteId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ likes: note.likes, userLiked: note.userLiked })
-                });
+                const res = await fetch(`${API_BASE_URL}/notes/${noteId}/like`, { method: 'POST' });
+                if (res.ok) {
+                    const updated = await res.json();
+                    const note = notes.find(n => n._id === noteId);
+                    if (note) {
+                        note.likes = updated.likes;
+                        note.userLiked = updated.userLiked;
+                        renderNotesGrid();
+                    }
+                }
             } catch (err) {
-                console.warn('Like update failed:', err);
+                showToast('Like update failed', 'error');
             }
         }
 
-        // View Note API Call
         async function viewNote(noteId) {
             const note = notes.find(n => n._id === noteId);
             if(!note) return;
@@ -857,7 +900,6 @@
             }
         }
 
-        // Search & Filter Operations
         let searchTimeout;
         function handleSearch() {
             clearTimeout(searchTimeout);
@@ -901,7 +943,6 @@
             clearDateFilter();
         }
 
-        // Helper UI Functions
         function openModal(noteId = null) {
             currentEditId = noteId;
             const modal = document.getElementById('editor-modal');
@@ -1065,24 +1106,61 @@
             }, 100);
         }
 
-        function handleMediaFilesSelect(event) {
+        // REAL-TIME MULTI-FILE UPLOAD WITH 1% TO 100% PROGRESS BAR
+        async function handleMediaFilesSelect(event) {
             const files = event.target.files;
             if (!files || files.length === 0) return;
-            const editor = document.getElementById('note-editor');
-            editor.focus();
 
-            Array.from(files).forEach(file => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const src = e.target.result;
-                    let mediaHtml = file.type.startsWith('image/') ? 
-                        `<p><img src="${src}" style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></p><br>` :
-                        `<p><video src="${src}" controls style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></video></p><br>`;
-                    document.execCommand('insertHTML', false, mediaHtml);
-                };
-                reader.readAsDataURL(file);
-            });
+            const fileList = Array.from(files);
+            for (let i = 0; i < fileList.length; i++) {
+                const file = fileList[i];
+                showProgressPopup(`Uploading ${file.type.startsWith('video/') ? 'Video' : 'Image'} (${i + 1}/${fileList.length})...`);
+                
+                await new Promise((resolve) => {
+                    uploadSingleFileWithProgress(file, (fileUrl) => {
+                        const editor = document.getElementById('note-editor');
+                        editor.focus();
+                        let mediaHtml = file.type.startsWith('image/') ? 
+                            `<p><img src="${fileUrl}" style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></p><br>` :
+                            `<p><video src="${fileUrl}" controls style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></video></p><br>`;
+                        document.execCommand('insertHTML', false, mediaHtml);
+                        resolve();
+                    }, (err) => {
+                        showToast(`Upload failed: ${file.name}`, 'error');
+                        resolve();
+                    });
+                });
+            }
+
+            hideProgressPopup();
+            showToast('All media files uploaded successfully!', 'success');
             event.target.value = '';
+        }
+
+        function uploadSingleFileWithProgress(file, onSuccess, onError) {
+            const xhr = new XMLHttpRequest();
+            const formData = new FormData();
+            formData.append('media', file);
+
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const percentComplete = (e.loaded / e.total) * 100;
+                    updateProgressPercentage(percentComplete);
+                }
+            });
+
+            xhr.addEventListener('load', () => {
+                if (xhr.status === 200) {
+                    const res = JSON.parse(xhr.responseText);
+                    onSuccess(res.url);
+                } else {
+                    onError('Upload error');
+                }
+            });
+
+            xhr.addEventListener('error', () => onError('Upload failed'));
+            xhr.open('POST', `${API_BASE_URL}/upload`, true);
+            xhr.send(formData);
         }
 
         function insertMediaByUrl() {
