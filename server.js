@@ -7,56 +7,58 @@ const mongoose = require('mongoose');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-// MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/mynotepro';
 
+// MongoDB Connection Setup
 mongoose.connect(MONGO_URI)
-  .then(() => console.log('MongoDB Connected Successfully'))
-  .catch(err => console.error('MongoDB Connection Error:', err));
+    .then(() => console.log('MongoDB Connected Successfully'))
+    .catch(err => console.error('MongoDB Connection Error:', err));
 
-// MongoDB Schemas & Models
+// Database Schemas & Models
 const NoteSchema = new mongoose.Schema({
-    title: { type: String, required: true },
+    title: { type: String, required: true, default: 'Untitled Note' },
     content: { type: String, default: '' },
     subject: { type: String, default: 'General' },
-    isPrivate: { type: Boolean, default: false },
+    createdBy: { type: String, required: true }, // Creator UserId
+    isPrivate: { type: Boolean, default: true }, // true = Private (Only creator), false = Published (Everyone)
     isPinned: { type: Boolean, default: false },
-    creatorUserId: { type: String, required: true },
-    likedUsers: [{ type: String }],
+    likedUsers: { type: [String], default: [] },
     views: { type: Number, default: 0 },
-    createdAt: { type: String, default: () => new Date().toLocaleString() }
+    createdAt: { type: String, required: true }
 }, { timestamps: true });
 
-const ProfileSchema = new mongoose.Schema({
-    userId: { type: String, unique: true },
-    name: { type: String, default: 'Note Author' },
-    img: { type: String, default: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80' }
-});
+// Text Search Indexes for Fast Search
+NoteSchema.index({ title: 'text', content: 'text', subject: 'text' });
 
 const SubjectSchema = new mongoose.Schema({
     name: { type: String, required: true },
     img: { type: String, required: true }
 });
 
+const ProfileSchema = new mongoose.Schema({
+    userId: { type: String, unique: true },
+    name: { type: String, default: "Note Author" },
+    img: { type: String, default: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80" }
+});
+
 const Note = mongoose.model('Note', NoteSchema);
-const Profile = mongoose.model('Profile', ProfileSchema);
 const Subject = mongoose.model('Subject', SubjectSchema);
+const Profile = mongoose.model('Profile', ProfileSchema);
 
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
-// Safe Folder Creation
+// Static Uploads Folder
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
+    fs.mkdirSync(uploadsDir);
 }
 app.use('/uploads', express.static(uploadsDir));
 app.use(express.static(__dirname));
 
-// Multer Storage
+// Multer Config
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
     filename: (req, file, cb) => {
@@ -64,42 +66,61 @@ const storage = multer.diskStorage({
         cb(null, uniqueSuffix + path.extname(file.originalname));
     }
 });
-const upload = multer({ storage: storage, limits: { fileSize: 100 * 1024 * 1024 } });
+const upload = multer({ storage, limits: { fileSize: 100 * 1024 * 1024 } });
 
-// API Routes
+// Seed Default Subjects if empty
+async function seedDefaultSubjects() {
+    const count = await Subject.countDocuments();
+    if (count === 0) {
+        await Subject.insertMany([
+            { name: "Science", img: "https://images.unsplash.com/photo-1507668077129-56e32842fceb?auto=format&fit=crop&w=120&120&q=80" },
+            { name: "Maths", img: "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=120&120&q=80" }
+        ]);
+    }
+}
+seedDefaultSubjects();
+
+/* ================= API ROUTES ================= */
+
+// 1. Profile APIs
 app.get('/api/profile', async (req, res) => {
     try {
-        const { userId } = req.query;
+        const userId = req.query.userId || 'default_user';
         let profile = await Profile.findOne({ userId });
         if (!profile) {
-            profile = await Profile.create({ userId, name: "Note Author", img: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80" });
+            profile = await Profile.create({ userId, name: "Note Author" });
         }
         res.json(profile);
     } catch (err) {
-        res.status(500).json({ error: 'Server Error' });
+        res.status(500).json({ error: "Server Error" });
     }
 });
 
 app.put('/api/profile', async (req, res) => {
     try {
         const { userId, name, img } = req.body;
-        let profile = await Profile.findOneAndUpdate(
-            { userId },
-            { $set: { name, img } },
+        const updateData = {};
+        if (name) updateData.name = name;
+        if (img) updateData.img = img;
+
+        const profile = await Profile.findOneAndUpdate(
+            { userId: userId || 'default_user' },
+            { $set: updateData },
             { new: true, upsert: true }
         );
-        res.json({ message: "Profile updated successfully", profile });
+        res.json({ message: "Profile updated", profile });
     } catch (err) {
-        res.status(500).json({ error: 'Failed to update profile' });
+        res.status(500).json({ error: "Failed to update profile" });
     }
 });
 
+// 2. Subjects / Circle Logos APIs
 app.get('/api/subjects', async (req, res) => {
     try {
         const subjects = await Subject.find().sort({ _id: -1 });
         res.json(subjects);
     } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch subjects' });
+        res.status(500).json({ error: "Failed to fetch subjects" });
     }
 });
 
@@ -112,60 +133,73 @@ app.post('/api/subjects', async (req, res) => {
         });
         res.status(201).json(newSubject);
     } catch (err) {
-        res.status(500).json({ error: 'Failed to create subject' });
+        res.status(500).json({ error: "Failed to create subject" });
     }
 });
 
+// 3. Notes APIs with Global Search & Privacy Control
 app.get('/api/notes', async (req, res) => {
     try {
         let { page = 1, limit = 9, search = '', subject = '', date = '', userId = '' } = req.query;
         page = parseInt(page);
         limit = parseInt(limit);
 
-        let query = {
+        // PRIVACY RULE:
+        // User primary condition: Global Published Notes (isPrivate: false) OR Private Notes created by current user
+        let filter = {
             $or: [
                 { isPrivate: false },
-                { isPrivate: true, creatorUserId: userId }
+                { isPrivate: true, createdBy: userId }
             ]
         };
 
+        // Filter by Search Query
         if (search) {
-            const regex = new RegExp(search, 'i');
-            query.$and = [
-                { $or: query.$or },
-                { $or: [{ title: regex }, { content: regex }] }
+            const searchRegex = new RegExp(search, 'i');
+            filter.$and = [
+                {
+                    $or: [
+                        { title: searchRegex },
+                        { content: searchRegex },
+                        { subject: searchRegex }
+                    ]
+                }
             ];
-            delete query.$or;
         }
 
+        // Filter by Subject
         if (subject) {
-            query.subject = { $regex: new RegExp(`^${subject}$`, 'i') };
+            filter.subject = new RegExp(`^${subject}$`, 'i');
         }
 
+        // Filter by Date
         if (date) {
-            query.createdAt = { $regex: new RegExp(date, 'i') };
+            filter.createdAt = new RegExp(date, 'i');
         }
 
-        const totalNotes = await Note.countDocuments(query);
-        const notes = await Note.find(query)
+        const totalNotes = await Note.countDocuments(filter);
+        const notesList = await Note.find(filter)
             .sort({ isPinned: -1, createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit);
 
-        const formattedNotes = notes.map(n => ({
-            _id: n._id,
-            title: n.title,
-            content: n.content,
-            subject: n.subject,
-            isPrivate: n.isPrivate,
-            isPinned: n.isPinned,
-            creatorUserId: n.creatorUserId,
-            views: n.views,
-            createdAt: n.createdAt,
-            likes: n.likedUsers.length,
-            userLiked: userId ? n.likedUsers.includes(userId) : false,
-            isOwner: n.creatorUserId === userId
-        }));
+        // Map notes to format liked state per user
+        const formattedNotes = notesList.map(n => {
+            const likedArray = n.likedUsers || [];
+            return {
+                _id: n._id,
+                title: n.title,
+                content: n.content,
+                subject: n.subject,
+                createdBy: n.createdBy,
+                isPrivate: n.isPrivate,
+                isPinned: n.isPinned,
+                views: n.views,
+                createdAt: n.createdAt,
+                likes: likedArray.length,
+                userLiked: userId ? likedArray.includes(userId) : false
+            };
+        });
 
         res.json({
             notes: formattedNotes,
@@ -173,7 +207,8 @@ app.get('/api/notes', async (req, res) => {
             totalNotes
         });
     } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch notes' });
+        console.error(err);
+        res.status(500).json({ error: "Failed to load notes" });
     }
 });
 
@@ -184,29 +219,61 @@ app.post('/api/notes', async (req, res) => {
             title: title || 'Untitled Note',
             content: content || '',
             subject: subject || 'General',
-            isPrivate: !!isPrivate,
+            createdBy: userId || 'anonymous',
+            isPrivate: isPrivate !== undefined ? isPrivate : false, // Default published if set false
             isPinned: !!isPinned,
-            creatorUserId: userId,
             likedUsers: [],
             views: 0,
             createdAt: createdAt || new Date().toLocaleString()
         });
         res.status(201).json(newNote);
     } catch (err) {
-        res.status(500).json({ error: 'Failed to save note' });
+        res.status(500).json({ error: "Failed to save note" });
     }
 });
 
 app.put('/api/notes/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const updatedNote = await Note.findByIdAndUpdate(id, req.body, { new: true });
+        const { userId, ...updateFields } = req.body;
+
+        const note = await Note.findById(id);
+        if (!note) return res.status(404).json({ error: "Note not found" });
+
+        // If updating content/privacy, check creator ownership
+        if (updateFields.title || updateFields.content || updateFields.isPrivate !== undefined) {
+            if (note.createdBy !== userId) {
+                return res.status(403).json({ error: "You are not authorized to edit this note" });
+            }
+        }
+
+        const updatedNote = await Note.findByIdAndUpdate(id, { $set: updateFields }, { new: true });
         res.json(updatedNote);
     } catch (err) {
-        res.status(500).json({ error: 'Failed to update note' });
+        res.status(500).json({ error: "Failed to update note" });
     }
 });
 
+app.delete('/api/notes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { userId } = req.query;
+
+        const note = await Note.findById(id);
+        if (!note) return res.status(404).json({ error: "Note not found" });
+
+        if (note.createdBy !== userId) {
+            return res.status(403).json({ error: "Unauthorized to delete this note" });
+        }
+
+        await Note.findByIdAndDelete(id);
+        res.json({ message: "Note deleted from MongoDB", id });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to delete note" });
+    }
+});
+
+// Like Endpoint
 app.post('/api/notes/:id/like', async (req, res) => {
     try {
         const { id } = req.params;
@@ -215,34 +282,23 @@ app.post('/api/notes/:id/like', async (req, res) => {
         const note = await Note.findById(id);
         if (!note) return res.status(404).json({ error: "Note not found" });
 
-        const userIndex = note.likedUsers.indexOf(userId);
         let userLiked = false;
-
-        if (userIndex === -1) {
+        if (note.likedUsers.includes(userId)) {
+            note.likedUsers = note.likedUsers.filter(u => u !== userId);
+            userLiked = false;
+        } else {
             note.likedUsers.push(userId);
             userLiked = true;
-        } else {
-            note.likedUsers.splice(userIndex, 1);
-            userLiked = false;
         }
 
         await note.save();
         res.json({ likes: note.likedUsers.length, userLiked });
     } catch (err) {
-        res.status(500).json({ error: 'Failed to update like' });
+        res.status(500).json({ error: "Like toggle failed" });
     }
 });
 
-app.delete('/api/notes/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        await Note.findByIdAndDelete(id);
-        res.json({ message: "Note deleted successfully", id });
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to delete note' });
-    }
-});
-
+// File Upload Endpoint
 app.post('/api/upload', upload.single('media'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
@@ -250,12 +306,9 @@ app.post('/api/upload', upload.single('media'), (req, res) => {
 });
 
 app.get('*', (req, res) => {
-    const indexPath = path.join(__dirname, 'index.html');
-    if (fs.existsSync(indexPath)) {
-        res.sendFile(indexPath);
-    } else {
-        res.send('API Running Successfully');
-    }
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+});
