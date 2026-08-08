@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// MongoDB Connection String (Replace with your Mongo URI or ENV variable)
+// MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/mynotepro';
 
 mongoose.connect(MONGO_URI)
@@ -22,7 +22,7 @@ const NoteSchema = new mongoose.Schema({
     subject: { type: String, default: 'General' },
     isPrivate: { type: Boolean, default: false },
     isPinned: { type: Boolean, default: false },
-    creatorUserId: { type: String, required: true }, // Created by specific User
+    creatorUserId: { type: String, required: true },
     likedUsers: [{ type: String }],
     views: { type: Number, default: 0 },
     createdAt: { type: String, default: () => new Date().toLocaleString() }
@@ -43,20 +43,20 @@ const Note = mongoose.model('Note', NoteSchema);
 const Profile = mongoose.model('Profile', ProfileSchema);
 const Subject = mongoose.model('Subject', SubjectSchema);
 
-// Middleware Setup
+// Middleware
 app.use(cors());
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
-// Ensure Static Uploads Folder Exists
+// Safe Folder Creation
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir);
+    fs.mkdirSync(uploadsDir, { recursive: true });
 }
 app.use('/uploads', express.static(uploadsDir));
 app.use(express.static(__dirname));
 
-// Multer Storage Configuration
+// Multer Storage
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
     filename: (req, file, cb) => {
@@ -66,9 +66,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage, limits: { fileSize: 100 * 1024 * 1024 } });
 
-// API ROUTES
-
-// 1. Profile APIs
+// API Routes
 app.get('/api/profile', async (req, res) => {
     try {
         const { userId } = req.query;
@@ -96,7 +94,6 @@ app.put('/api/profile', async (req, res) => {
     }
 });
 
-// 2. Subjects APIs
 app.get('/api/subjects', async (req, res) => {
     try {
         const subjects = await Subject.find().sort({ _id: -1 });
@@ -119,14 +116,12 @@ app.post('/api/subjects', async (req, res) => {
     }
 });
 
-// 3. Notes APIs (Public All Users + Private Only Owner)
 app.get('/api/notes', async (req, res) => {
     try {
         let { page = 1, limit = 9, search = '', subject = '', date = '', userId = '' } = req.query;
         page = parseInt(page);
         limit = parseInt(limit);
 
-        // Core Query: Show all Public notes OR Private notes owned by current User
         let query = {
             $or: [
                 { isPrivate: false },
@@ -212,7 +207,6 @@ app.put('/api/notes/:id', async (req, res) => {
     }
 });
 
-// Unique Like System
 app.post('/api/notes/:id/like', async (req, res) => {
     try {
         const { id } = req.params;
@@ -249,7 +243,6 @@ app.delete('/api/notes/:id', async (req, res) => {
     }
 });
 
-// Upload File Endpoint
 app.post('/api/upload', upload.single('media'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
@@ -257,7 +250,12 @@ app.post('/api/upload', upload.single('media'), (req, res) => {
 });
 
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    const indexPath = path.join(__dirname, 'index.html');
+    if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        res.send('API Running Successfully');
+    }
 });
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
