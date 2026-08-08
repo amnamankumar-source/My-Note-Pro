@@ -13,6 +13,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <style>
+        /* Reset & Base Layout */
         header, .header, #header, .Header, .header-widget,
         .navbar, nav, #navbar-iframe,
         #sidebar-wrapper, .sidebar, .sidebar-container,
@@ -128,15 +129,18 @@
         .note-card { background: var(--surface-color) !important; border-radius: 20px; padding: 25px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); display: flex !important; flex-direction: column; gap: 16px; position: relative; overflow: hidden; }
         
         .note-top-meta { position: absolute; top: 12px; right: 15px; display: flex !important; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; }
+        .status-badge { padding: 3px 8px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700; }
+        .status-badge.public { background: rgba(56, 161, 105, 0.15); color: #276749; }
+        .status-badge.private { background: rgba(229, 62, 62, 0.15); color: #9b2c2c; }
+
         .view-count-tag { background: rgba(79, 70, 229, 0.1); color: #4f46e5; padding: 3px 8px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 4px; }
         .like-count-tag { background: rgba(229, 62, 62, 0.1); color: #e53e3e; padding: 3px 8px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: transform 0.2s; }
         .like-count-tag:hover { transform: scale(1.1); }
         .like-count-tag.liked { background: #e53e3e; color: #ffffff; }
 
         .pinned-tag { background: rgba(245, 158, 11, 0.15); color: #d97706; padding: 3px 8px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 4px; }
-        .private-tag { background: rgba(229, 62, 62, 0.15); color: #e53e3e; padding: 3px 8px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 4px; }
         
-        .note-card-header { display: flex !important; align-items: center; gap: 15px; width: 100%; margin-top: 15px; }
+        .note-card-header { display: flex !important; align-items: center; gap: 15px; width: 100%; margin-top: 18px; }
         .note-header-text { display: flex !important; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
         .note-circle-logo { width: 45px; height: 45px; border-radius: 50%; overflow: hidden; background: var(--editor-toolbar-bg) !important; display: flex !important; align-items: center; justify-content: center; flex-shrink: 0; }
         .note-author-tag { font-size: 11px; font-weight: 600; color: #4f46e5; display: inline-flex !important; align-items: center; gap: 6px; background: rgba(79, 70, 229, 0.08); padding: 3px 10px; border-radius: 9999px; width: fit-content; }
@@ -290,7 +294,7 @@
         <div class="toolbar">
             <div class="search-wrapper">
                 <i class="fas fa-search"></i>
-                <input id="search-input" oninput="handleSearch()" placeholder="Search published notes globally..." type="text" />
+                <input id="search-input" oninput="handleSearch()" placeholder="Search notes..." type="text" />
                 <div class="filter-tools">
                     <button class="clear-date-btn" id="clear-date-btn" onclick="clearDateFilter()" title="Clear Date Filter">
                         <i class="fas fa-times"></i>
@@ -331,7 +335,7 @@
         
         <!-- Infinite Scroll Loader -->
         <div id="loading-spinner" class="loading-spinner" style="display: none;">
-            <i class="fas fa-spinner fa-spin"></i> Loading more notes...
+            <i class="fas fa-spinner fa-spin"></i> Loading notes...
         </div>
     </div>
 
@@ -402,8 +406,9 @@
                 </div>
                 
                 <div class="header-column-controls">
-                    <button class="privacy-toggle-btn is-private" id="modal-privacy-btn" onclick="toggleModalPrivacy()">
-                        <i class="fas fa-lock" id="modal-privacy-icon"></i> <span id="modal-privacy-text">Private</span>
+                    <!-- Toggle Privacy Button: Default Publish false, toggled by user -->
+                    <button class="privacy-toggle-btn is-public" id="modal-privacy-btn" onclick="toggleModalPrivacy()">
+                        <i class="fas fa-globe" id="modal-privacy-icon"></i> <span id="modal-privacy-text">Published</span>
                     </button>
                     <button class="header-save-btn" onclick="saveNoteAndClose()"><i class="fas fa-check-circle"></i> <span>Save Note</span></button>
                     <button class="close-modal-btn" onclick="closeModal()"><i class="fas fa-times"></i> <span>Close</span></button>
@@ -461,7 +466,7 @@
                         </div>
                     </div>
 
-                    <!-- MEDIA BUTTON SECTION -->
+                    <!-- FIXED MEDIA BUTTON SECTION -->
                     <div style="position:relative; flex-shrink:0;">
                         <button onclick="togglePopup('media-popup', this)" title="Insert Media" style="color: #4f46e5 !important; font-weight: 600;">
                             <i class="fas fa-paperclip"></i> Media
@@ -481,6 +486,7 @@
                             </div>
                         </div>
                     </div>
+                    <!-- File Input for Media Uploads -->
                     <input type="file" id="media-file-input" multiple accept="image/*,video/*" style="display:none;" onchange="uploadAndInsertMediaFiles(event)">
 
                     <button onclick="insertUrlPinLink()" title="Attach URL link" style="color:#0284c7 !important; font-weight:600;">
@@ -515,12 +521,12 @@
     <div class="toast-container" id="toast-container"></div>
 
     <script>
-        // API Base URL
+        // API Base URL Setup
         const API_BASE_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
             ? 'http://localhost:5000/api'
             : '/api';
 
-        // Unique User Token for Browser/Device Identification
+        // Unique Device User Identification
         let userId = localStorage.getItem('note_pro_user_id');
         if (!userId) {
             userId = 'usr_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
@@ -538,7 +544,7 @@
         let hasMoreNotes = true;
         let isLoadingNotes = false;
 
-        let currentModalIsPrivate = false; // Default Published (Public) for shared access
+        let currentModalIsPrivate = false; // Default Published (accessible by everyone)
         let currentModalIsPinned = false;
         let currentAuthorTag = 'Custom Author';
         let tempNewSubjectImgData = '';
@@ -569,7 +575,7 @@
             }
         }
 
-        // Fetch Notes from Backend (Includes Global Search & Visibility Controls)
+        // Fetch Notes from Backend with MongoDB Privacy Rule Filter
         async function fetchNotesFromBackend(reset = false) {
             if (isLoadingNotes) return;
             isLoadingNotes = true;
@@ -624,10 +630,13 @@
                 const noteId = note._id;
                 const likesCount = note.likes || 0;
                 const isLiked = note.userLiked || false;
+                const isOwner = note.createdBy === userId;
 
                 card.innerHTML = `
                     <div class="note-top-meta">
-                        ${note.isPrivate ? `<span class="private-tag"><i class="fas fa-lock"></i> Private</span>` : ''}
+                        ${note.isPrivate ? 
+                            `<span class="status-badge private"><i class="fas fa-lock"></i> Private</span>` : 
+                            `<span class="status-badge public"><i class="fas fa-globe"></i> Published</span>`}
                         ${note.isPinned ? `<span class="pinned-tag"><i class="fas fa-thumbtack"></i> Pinned</span>` : ''}
                         <span class="like-count-tag ${isLiked ? 'liked' : ''}" onclick="toggleLike(event, '${noteId}')" title="Click to Like">
                             <i class="${isLiked ? 'fas' : 'far'} fa-heart"></i> ${likesCount}
@@ -649,17 +658,19 @@
                     </div>
                     <div class="note-footer">
                         <div class="note-date"><i class="far fa-clock"></i> ${note.createdAt}</div>
-                        ${note.isOwner ? `
                         <div class="note-actions">
-                            <button class="action-btn btn-edit" onclick="openModal('${noteId}')" title="Edit"><i class="fas fa-pen"></i></button>
-                            <button class="action-btn btn-delete" onclick="deleteNote('${noteId}')" title="Delete"><i class="fas fa-trash"></i></button>
-                        </div>` : ''}
+                            ${isOwner ? `
+                                <button class="action-btn btn-edit" onclick="openModal('${noteId}')" title="Edit"><i class="fas fa-pen"></i></button>
+                                <button class="action-btn btn-delete" onclick="deleteNote('${noteId}')" title="Delete"><i class="fas fa-trash"></i></button>
+                            ` : ''}
+                        </div>
                     </div>
                 `;
                 container.appendChild(card);
             });
         }
 
+        // Toggle Like API Call
         async function toggleLike(event, noteId) {
             event.stopPropagation();
             const note = notes.find(n => n._id === noteId);
@@ -683,6 +694,7 @@
             }
         }
 
+        // Upload Media Files with Real-time Progress
         async function uploadAndInsertMediaFiles(event) {
             const files = event.target.files;
             if (!files || files.length === 0) return;
@@ -717,6 +729,7 @@
             event.target.value = '';
         }
 
+        // Save Note Direct to Backend MongoDB
         async function saveNoteAndClose() {
             const title = document.getElementById('note-title').value.trim();
             const content = document.getElementById('note-editor').innerHTML.trim();
@@ -739,7 +752,7 @@
                 userId: userId
             };
 
-            showProgressPopup(currentEditId ? 'Updating Note...' : 'Saving Note to Backend...');
+            showProgressPopup(currentEditId ? 'Updating Note...' : 'Publishing Note to Database...');
 
             const endpoint = currentEditId ? `${API_BASE_URL}/notes/${currentEditId}` : `${API_BASE_URL}/notes`;
             const method = currentEditId ? 'PUT' : 'POST';
@@ -752,10 +765,10 @@
                 updateProgressUI(100);
                 setTimeout(() => {
                     hideProgressPopup();
-                    showToast(currentModalIsPrivate ? 'Private Note Saved!' : 'Published Globally to All Users!', 'success');
+                    showToast(currentModalIsPrivate ? 'Private Note Saved!' : 'Note Published Successfully!', 'success');
                     closeModal();
                     fetchNotesFromBackend(true);
-                }, 400);
+                }, 300);
 
             } catch (err) {
                 hideProgressPopup();
@@ -767,10 +780,19 @@
             return new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', url, true);
+
                 xhr.upload.onprogress = (e) => {
-                    if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        onProgress(percent);
+                    }
                 };
-                xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve(xhr.responseText) : reject(new Error('Upload failed'));
+
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.responseText);
+                    else reject(new Error('Upload failed'));
+                };
+
                 xhr.onerror = () => reject(new Error('Upload error'));
                 xhr.send(formData);
             });
@@ -781,10 +803,19 @@
                 const xhr = new XMLHttpRequest();
                 xhr.open(method, url, true);
                 xhr.setRequestHeader('Content-Type', 'application/json');
+
                 xhr.upload.onprogress = (e) => {
-                    if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        onProgress(percent);
+                    }
                 };
-                xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve(xhr.responseText) : reject(new Error('Save failed'));
+
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.responseText);
+                    else reject(new Error('Save failed'));
+                };
+
                 xhr.onerror = () => reject(new Error('Network error'));
                 xhr.send(JSON.stringify(data));
             });
@@ -799,20 +830,21 @@
         function updateProgressUI(percent) {
             const p = Math.min(100, Math.max(1, percent));
             document.getElementById('progress-bar-fill').style.width = `${p}%`;
-            document.getElementById('progress-text').innerText = `${p}%`;
+            document.getElementById('progress-text').innerText = `${p}% Saved`;
         }
 
         function hideProgressPopup() {
             document.getElementById('progress-modal').classList.remove('active');
         }
 
+        // Profile Backend Operations
         async function fetchProfileFromBackend() {
             try {
                 const res = await fetch(`${API_BASE_URL}/profile?userId=${userId}`);
                 if (res.ok) {
                     const profile = await res.json();
-                    document.getElementById('profile-name').innerText = profile.name;
-                    document.getElementById('profile-img').src = profile.img;
+                    document.getElementById('profile-name').innerText = profile.name || "Note Author";
+                    if (profile.img) document.getElementById('profile-img').src = profile.img;
                 }
             } catch (err) { console.warn('Profile error:', err); }
         }
@@ -825,7 +857,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId, name: newName })
                 });
-                showToast('Profile name updated!', 'success');
+                showToast('Profile updated!', 'success');
             } catch (err) { showToast('Failed to update profile name', 'error'); }
         }
 
@@ -850,6 +882,7 @@
             reader.readAsDataURL(file);
         }
 
+        // Subjects APIs
         async function fetchSubjectsFromBackend() {
             try {
                 const res = await fetch(`${API_BASE_URL}/subjects`);
@@ -906,18 +939,22 @@
             } catch (err) { showToast('Failed to save custom subject', 'error'); }
         }
 
+        // Delete Note API Call
         async function deleteNote(id) {
             if(confirm('Delete this note permanently?')) {
                 try {
-                    const res = await fetch(`${API_BASE_URL}/notes/${id}`, { method: 'DELETE' });
+                    const res = await fetch(`${API_BASE_URL}/notes/${id}?userId=${userId}`, { method: 'DELETE' });
                     if (res.ok) {
-                        showToast('Note deleted from backend!', 'error');
+                        showToast('Note deleted from database!', 'error');
                         fetchNotesFromBackend(true);
+                    } else {
+                        showToast('Unauthorized to delete this note', 'error');
                     }
                 } catch (err) { showToast('Failed to delete note', 'error'); }
             }
         }
 
+        // View Note API Call
         async function viewNote(noteId) {
             const note = notes.find(n => n._id === noteId);
             if(!note) return;
@@ -941,13 +978,14 @@
             } catch(err) { console.warn('Views update error:', err); }
         }
 
+        // Search & Filter Operations
         let searchTimeout;
         function handleSearch() {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 currentSearchQuery = document.getElementById('search-input').value.trim();
                 fetchNotesFromBackend(true);
-            }, 400);
+            }, 300);
         }
 
         function filterBySubject(subject, element) {
@@ -984,6 +1022,7 @@
             clearDateFilter();
         }
 
+        // Editor & UI Controls
         function openModal(noteId = null) {
             currentEditId = noteId;
             const modal = document.getElementById('editor-modal');
@@ -993,8 +1032,8 @@
 
             if(noteId) {
                 const note = notes.find(n => n._id === noteId);
-                if(note && note.isPinned) {
-                    showToast('This note is locked/pinned and cannot be edited!', 'error');
+                if(note && note.createdBy !== userId) {
+                    showToast('You do not have permission to edit this note!', 'error');
                     return;
                 }
                 if(note) {
@@ -1008,7 +1047,7 @@
             } else {
                 titleInput.value = '';
                 editor.innerHTML = '';
-                currentModalIsPrivate = false; // Set default Published
+                currentModalIsPrivate = false; // Default: Published for all users
                 currentModalIsPinned = false;
                 currentAuthorTag = selectedSubjectFilter || document.getElementById('profile-name').innerText || 'Custom Author';
                 headingText.innerText = 'Create New Note';
@@ -1061,6 +1100,7 @@
 
         function closeViewModal() { document.getElementById('view-modal').classList.remove('active'); }
 
+        // Privacy Toggle
         function toggleModalPrivacy() {
             currentModalIsPrivate = !currentModalIsPrivate;
             updateModalPrivacyUI();
@@ -1073,11 +1113,11 @@
             if (currentModalIsPrivate) {
                 btn.className = 'privacy-toggle-btn is-private';
                 icon.className = 'fas fa-lock';
-                text.innerText = 'Private (Only Me)';
+                text.innerText = 'Private (Only You)';
             } else {
                 btn.className = 'privacy-toggle-btn is-public';
                 icon.className = 'fas fa-globe';
-                text.innerText = 'Published (All Users)';
+                text.innerText = 'Published (Public)';
             }
         }
 
@@ -1091,7 +1131,7 @@
             const text = document.getElementById('modal-pin-text');
             if (currentModalIsPinned) {
                 btn.className = 'pin-toggle-btn is-pinned';
-                text.innerText = 'Pinned (Locked)';
+                text.innerText = 'Pinned';
             } else {
                 btn.className = 'pin-toggle-btn';
                 text.innerText = 'Pin Note';
