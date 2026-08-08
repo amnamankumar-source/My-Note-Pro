@@ -13,7 +13,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <style>
-        /* Reset & Base Layout */
         header, .header, #header, .Header, .header-widget,
         .navbar, nav, #navbar-iframe,
         #sidebar-wrapper, .sidebar, .sidebar-container,
@@ -135,6 +134,7 @@
         .like-count-tag.liked { background: #e53e3e; color: #ffffff; }
 
         .pinned-tag { background: rgba(245, 158, 11, 0.15); color: #d97706; padding: 3px 8px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 4px; }
+        .private-tag { background: rgba(229, 62, 62, 0.15); color: #e53e3e; padding: 3px 8px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 4px; }
         
         .note-card-header { display: flex !important; align-items: center; gap: 15px; width: 100%; margin-top: 15px; }
         .note-header-text { display: flex !important; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
@@ -290,7 +290,7 @@
         <div class="toolbar">
             <div class="search-wrapper">
                 <i class="fas fa-search"></i>
-                <input id="search-input" oninput="handleSearch()" placeholder="Search notes..." type="text" />
+                <input id="search-input" oninput="handleSearch()" placeholder="Search published notes globally..." type="text" />
                 <div class="filter-tools">
                     <button class="clear-date-btn" id="clear-date-btn" onclick="clearDateFilter()" title="Clear Date Filter">
                         <i class="fas fa-times"></i>
@@ -461,7 +461,7 @@
                         </div>
                     </div>
 
-                    <!-- FIXED MEDIA BUTTON SECTION -->
+                    <!-- MEDIA BUTTON SECTION -->
                     <div style="position:relative; flex-shrink:0;">
                         <button onclick="togglePopup('media-popup', this)" title="Insert Media" style="color: #4f46e5 !important; font-weight: 600;">
                             <i class="fas fa-paperclip"></i> Media
@@ -481,7 +481,6 @@
                             </div>
                         </div>
                     </div>
-                    <!-- File Input for Media Uploads -->
                     <input type="file" id="media-file-input" multiple accept="image/*,video/*" style="display:none;" onchange="uploadAndInsertMediaFiles(event)">
 
                     <button onclick="insertUrlPinLink()" title="Attach URL link" style="color:#0284c7 !important; font-weight:600;">
@@ -516,15 +515,15 @@
     <div class="toast-container" id="toast-container"></div>
 
     <script>
-        // API Base URL Setup
+        // API Base URL
         const API_BASE_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
             ? 'http://localhost:5000/api'
-            : 'https://my-note-pro-1.onrender.com/api';
+            : '/api';
 
-        // User Client Tracking Identifier (Unique per Browser/Device)
+        // Unique User Token for Browser/Device Identification
         let userId = localStorage.getItem('note_pro_user_id');
         if (!userId) {
-            userId = 'user_' + Math.random().toString(36).substr(2, 9);
+            userId = 'usr_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
             localStorage.setItem('note_pro_user_id', userId);
         }
 
@@ -539,7 +538,7 @@
         let hasMoreNotes = true;
         let isLoadingNotes = false;
 
-        let currentModalIsPrivate = true;
+        let currentModalIsPrivate = false; // Default Published (Public) for shared access
         let currentModalIsPinned = false;
         let currentAuthorTag = 'Custom Author';
         let tempNewSubjectImgData = '';
@@ -570,7 +569,7 @@
             }
         }
 
-        // Fetch Notes from Backend with User ID Query
+        // Fetch Notes from Backend (Includes Global Search & Visibility Controls)
         async function fetchNotesFromBackend(reset = false) {
             if (isLoadingNotes) return;
             isLoadingNotes = true;
@@ -628,6 +627,7 @@
 
                 card.innerHTML = `
                     <div class="note-top-meta">
+                        ${note.isPrivate ? `<span class="private-tag"><i class="fas fa-lock"></i> Private</span>` : ''}
                         ${note.isPinned ? `<span class="pinned-tag"><i class="fas fa-thumbtack"></i> Pinned</span>` : ''}
                         <span class="like-count-tag ${isLiked ? 'liked' : ''}" onclick="toggleLike(event, '${noteId}')" title="Click to Like">
                             <i class="${isLiked ? 'fas' : 'far'} fa-heart"></i> ${likesCount}
@@ -649,17 +649,17 @@
                     </div>
                     <div class="note-footer">
                         <div class="note-date"><i class="far fa-clock"></i> ${note.createdAt}</div>
+                        ${note.isOwner ? `
                         <div class="note-actions">
                             <button class="action-btn btn-edit" onclick="openModal('${noteId}')" title="Edit"><i class="fas fa-pen"></i></button>
                             <button class="action-btn btn-delete" onclick="deleteNote('${noteId}')" title="Delete"><i class="fas fa-trash"></i></button>
-                        </div>
+                        </div>` : ''}
                     </div>
                 `;
                 container.appendChild(card);
             });
         }
 
-        // Toggle Like API Call (Per User Like System)
         async function toggleLike(event, noteId) {
             event.stopPropagation();
             const note = notes.find(n => n._id === noteId);
@@ -683,7 +683,6 @@
             }
         }
 
-        // Upload Media Files with Real-time 1% - 100% Progress Popup
         async function uploadAndInsertMediaFiles(event) {
             const files = event.target.files;
             if (!files || files.length === 0) return;
@@ -718,7 +717,6 @@
             event.target.value = '';
         }
 
-        // Save Note with 1% to 100% Saving Progress Popup
         async function saveNoteAndClose() {
             const title = document.getElementById('note-title').value.trim();
             const content = document.getElementById('note-editor').innerHTML.trim();
@@ -737,10 +735,11 @@
                 subject: currentAuthorTag,
                 isPrivate: currentModalIsPrivate,
                 isPinned: currentModalIsPinned,
-                createdAt: timeStamp
+                createdAt: timeStamp,
+                userId: userId
             };
 
-            showProgressPopup(currentEditId ? 'Updating Note...' : 'Saving Note to Server...');
+            showProgressPopup(currentEditId ? 'Updating Note...' : 'Saving Note to Backend...');
 
             const endpoint = currentEditId ? `${API_BASE_URL}/notes/${currentEditId}` : `${API_BASE_URL}/notes`;
             const method = currentEditId ? 'PUT' : 'POST';
@@ -753,9 +752,9 @@
                 updateProgressUI(100);
                 setTimeout(() => {
                     hideProgressPopup();
-                    showToast('Note Saved Successfully!', 'success');
+                    showToast(currentModalIsPrivate ? 'Private Note Saved!' : 'Published Globally to All Users!', 'success');
                     closeModal();
-                    fetchNotesFromBackend(true); // Complete hone par naye note ke saath render hoga
+                    fetchNotesFromBackend(true);
                 }, 400);
 
             } catch (err) {
@@ -764,27 +763,14 @@
             }
         }
 
-        // Custom XMLHttpRequest Helpers for Uploading & Saving Progress
         function uploadWithProgress(url, formData, onProgress) {
             return new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', url, true);
-
                 xhr.upload.onprogress = (e) => {
-                    if (e.lengthComputable) {
-                        const percent = Math.round((e.loaded / e.total) * 100);
-                        onProgress(percent);
-                    }
+                    if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
                 };
-
-                xhr.onload = () => {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        resolve(xhr.responseText);
-                    } else {
-                        reject(new Error('Upload failed'));
-                    }
-                };
-
+                xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve(xhr.responseText) : reject(new Error('Upload failed'));
                 xhr.onerror = () => reject(new Error('Upload error'));
                 xhr.send(formData);
             });
@@ -795,28 +781,15 @@
                 const xhr = new XMLHttpRequest();
                 xhr.open(method, url, true);
                 xhr.setRequestHeader('Content-Type', 'application/json');
-
                 xhr.upload.onprogress = (e) => {
-                    if (e.lengthComputable) {
-                        const percent = Math.round((e.loaded / e.total) * 100);
-                        onProgress(percent);
-                    }
+                    if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
                 };
-
-                xhr.onload = () => {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        resolve(xhr.responseText);
-                    } else {
-                        reject(new Error('Save failed'));
-                    }
-                };
-
+                xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? resolve(xhr.responseText) : reject(new Error('Save failed'));
                 xhr.onerror = () => reject(new Error('Network error'));
                 xhr.send(JSON.stringify(data));
             });
         }
 
-        // Progress Modal Helpers
         function showProgressPopup(title) {
             document.getElementById('progress-title').innerHTML = `<i class="fas fa-spinner fa-spin" style="color:#4f46e5;"></i> ${title}`;
             updateProgressUI(1);
@@ -826,17 +799,16 @@
         function updateProgressUI(percent) {
             const p = Math.min(100, Math.max(1, percent));
             document.getElementById('progress-bar-fill').style.width = `${p}%`;
-            document.getElementById('progress-text').innerText = `${p}% Saved`;
+            document.getElementById('progress-text').innerText = `${p}%`;
         }
 
         function hideProgressPopup() {
             document.getElementById('progress-modal').classList.remove('active');
         }
 
-        // Profile API Operations
         async function fetchProfileFromBackend() {
             try {
-                const res = await fetch(`${API_BASE_URL}/profile`);
+                const res = await fetch(`${API_BASE_URL}/profile?userId=${userId}`);
                 if (res.ok) {
                     const profile = await res.json();
                     document.getElementById('profile-name').innerText = profile.name;
@@ -851,7 +823,7 @@
                 await fetch(`${API_BASE_URL}/profile`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: newName })
+                    body: JSON.stringify({ userId, name: newName })
                 });
                 showToast('Profile name updated!', 'success');
             } catch (err) { showToast('Failed to update profile name', 'error'); }
@@ -870,7 +842,7 @@
                     await fetch(`${API_BASE_URL}/profile`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ img: imgData })
+                        body: JSON.stringify({ userId, img: imgData })
                     });
                     showToast('Profile image updated!', 'success');
                 } catch (err) { showToast('Failed to save profile image', 'error'); }
@@ -878,7 +850,6 @@
             reader.readAsDataURL(file);
         }
 
-        // Subjects API Operations
         async function fetchSubjectsFromBackend() {
             try {
                 const res = await fetch(`${API_BASE_URL}/subjects`);
@@ -935,7 +906,6 @@
             } catch (err) { showToast('Failed to save custom subject', 'error'); }
         }
 
-        // Delete Note API Call
         async function deleteNote(id) {
             if(confirm('Delete this note permanently?')) {
                 try {
@@ -948,7 +918,6 @@
             }
         }
 
-        // View Note API Call
         async function viewNote(noteId) {
             const note = notes.find(n => n._id === noteId);
             if(!note) return;
@@ -972,7 +941,6 @@
             } catch(err) { console.warn('Views update error:', err); }
         }
 
-        // Search & Filter Operations
         let searchTimeout;
         function handleSearch() {
             clearTimeout(searchTimeout);
@@ -1016,7 +984,6 @@
             clearDateFilter();
         }
 
-        // UI Helpers & Editors
         function openModal(noteId = null) {
             currentEditId = noteId;
             const modal = document.getElementById('editor-modal');
@@ -1041,7 +1008,7 @@
             } else {
                 titleInput.value = '';
                 editor.innerHTML = '';
-                currentModalIsPrivate = true;
+                currentModalIsPrivate = false; // Set default Published
                 currentModalIsPinned = false;
                 currentAuthorTag = selectedSubjectFilter || document.getElementById('profile-name').innerText || 'Custom Author';
                 headingText.innerText = 'Create New Note';
@@ -1106,11 +1073,11 @@
             if (currentModalIsPrivate) {
                 btn.className = 'privacy-toggle-btn is-private';
                 icon.className = 'fas fa-lock';
-                text.innerText = 'Private';
+                text.innerText = 'Private (Only Me)';
             } else {
                 btn.className = 'privacy-toggle-btn is-public';
                 icon.className = 'fas fa-globe';
-                text.innerText = 'Published';
+                text.innerText = 'Published (All Users)';
             }
         }
 
