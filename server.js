@@ -3,9 +3,45 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const mongoose = require('mongoose');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// MongoDB Connection String (Replace with your Mongo URI or ENV variable)
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/mynotepro';
+
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('MongoDB Connected Successfully'))
+  .catch(err => console.error('MongoDB Connection Error:', err));
+
+// MongoDB Schemas & Models
+const NoteSchema = new mongoose.Schema({
+    title: { type: String, required: true },
+    content: { type: String, default: '' },
+    subject: { type: String, default: 'General' },
+    isPrivate: { type: Boolean, default: false },
+    isPinned: { type: Boolean, default: false },
+    creatorUserId: { type: String, required: true }, // Created by specific User
+    likedUsers: [{ type: String }],
+    views: { type: Number, default: 0 },
+    createdAt: { type: String, default: () => new Date().toLocaleString() }
+}, { timestamps: true });
+
+const ProfileSchema = new mongoose.Schema({
+    userId: { type: String, unique: true },
+    name: { type: String, default: 'Note Author' },
+    img: { type: String, default: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80' }
+});
+
+const SubjectSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    img: { type: String, required: true }
+});
+
+const Note = mongoose.model('Note', NoteSchema);
+const Profile = mongoose.model('Profile', ProfileSchema);
+const Subject = mongoose.model('Subject', SubjectSchema);
 
 // Middleware Setup
 app.use(cors());
@@ -20,190 +56,202 @@ if (!fs.existsSync(uploadsDir)) {
 app.use('/uploads', express.static(uploadsDir));
 app.use(express.static(__dirname));
 
-// Multer Disk Storage Configuration
+// Multer Storage Configuration
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadsDir);
-    },
+    destination: (req, file, cb) => cb(null, uploadsDir),
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         cb(null, uniqueSuffix + path.extname(file.originalname));
     }
 });
-const upload = multer({ storage: storage, limits: { fileSize: 100 * 1024 * 1024 } }); // 100MB max limit
-
-// Server In-Memory Storage Databases
-let profileData = {
-    name: "Note Author",
-    img: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80"
-};
-
-let subjectsData = [
-    { id: "sub-1", name: "Science", img: "https://images.unsplash.com/photo-1507668077129-56e32842fceb?auto=format&fit=crop&w=120&120&q=80" },
-    { id: "sub-2", name: "Maths", img: "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=120&120&q=80" }
-];
-
-let notesData = [];
-
-// Seed Initial Sample Notes
-for (let i = 1; i <= 25; i++) {
-    notesData.push({
-        _id: "note-" + i,
-        title: `Sample Note ${i}`,
-        content: `<p>This is test content for note number ${i}. Fully stored in backend server storage.</p>`,
-        subject: i % 2 === 0 ? "Science" : "Maths",
-        isPrivate: false,
-        isPinned: false,
-        likedUsers: [], // Array of user IDs/IPs who liked this note
-        views: Math.floor(Math.random() * 100),
-        createdAt: "Aug 7, 10:00 AM"
-    });
-}
+const upload = multer({ storage: storage, limits: { fileSize: 100 * 1024 * 1024 } });
 
 // API ROUTES
 
 // 1. Profile APIs
-app.get('/api/profile', (req, res) => {
-    res.json(profileData);
-});
-
-app.put('/api/profile', (req, res) => {
-    const { name, img } = req.body;
-    if (name) profileData.name = name;
-    if (img) profileData.img = img;
-    res.json({ message: "Profile updated successfully", profile: profileData });
-});
-
-// 2. Subjects / Circle Logos APIs
-app.get('/api/subjects', (req, res) => {
-    res.json(subjectsData);
-});
-
-app.post('/api/subjects', (req, res) => {
-    const { name, img } = req.body;
-    const newSubject = {
-        id: "sub-" + Date.now(),
-        name: name || "Custom Logo",
-        img: img || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=120&120&q=80"
-    };
-    subjectsData.unshift(newSubject);
-    res.status(201).json(newSubject);
-});
-
-app.delete('/api/subjects/:id', (req, res) => {
-    const { id } = req.params;
-    subjectsData = subjectsData.filter(s => s.id !== id);
-    res.json({ message: "Circle logo deleted successfully", id });
-});
-
-// 3. Notes APIs with Per-User Like Checking
-app.get('/api/notes', (req, res) => {
-    let { page = 1, limit = 9, search = '', subject = '', date = '', userId = '' } = req.query;
-    page = parseInt(page);
-    limit = parseInt(limit);
-
-    let filtered = [...notesData];
-
-    if (search) {
-        const q = search.toLowerCase();
-        filtered = filtered.filter(n => n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q));
+app.get('/api/profile', async (req, res) => {
+    try {
+        const { userId } = req.query;
+        let profile = await Profile.findOne({ userId });
+        if (!profile) {
+            profile = await Profile.create({ userId, name: "Note Author", img: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80" });
+        }
+        res.json(profile);
+    } catch (err) {
+        res.status(500).json({ error: 'Server Error' });
     }
+});
 
-    if (subject) {
-        filtered = filtered.filter(n => n.subject.toLowerCase() === subject.toLowerCase());
+app.put('/api/profile', async (req, res) => {
+    try {
+        const { userId, name, img } = req.body;
+        let profile = await Profile.findOneAndUpdate(
+            { userId },
+            { $set: { name, img } },
+            { new: true, upsert: true }
+        );
+        res.json({ message: "Profile updated successfully", profile });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update profile' });
     }
+});
 
-    if (date) {
-        filtered = filtered.filter(n => n.createdAt.includes(date));
+// 2. Subjects APIs
+app.get('/api/subjects', async (req, res) => {
+    try {
+        const subjects = await Subject.find().sort({ _id: -1 });
+        res.json(subjects);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch subjects' });
     }
+});
 
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginated = filtered.slice(startIndex, endIndex);
+app.post('/api/subjects', async (req, res) => {
+    try {
+        const { name, img } = req.body;
+        const newSubject = await Subject.create({
+            name: name || "Custom Logo",
+            img: img || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=120&120&q=80"
+        });
+        res.status(201).json(newSubject);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to create subject' });
+    }
+});
 
-    // Dynamic map to send userLiked status per user requesting
-    const formattedNotes = paginated.map(n => {
-        const userLiked = userId ? (n.likedUsers || []).includes(userId) : false;
-        return {
-            ...n,
-            likes: (n.likedUsers || []).length,
-            userLiked: userLiked
+// 3. Notes APIs (Public All Users + Private Only Owner)
+app.get('/api/notes', async (req, res) => {
+    try {
+        let { page = 1, limit = 9, search = '', subject = '', date = '', userId = '' } = req.query;
+        page = parseInt(page);
+        limit = parseInt(limit);
+
+        // Core Query: Show all Public notes OR Private notes owned by current User
+        let query = {
+            $or: [
+                { isPrivate: false },
+                { isPrivate: true, creatorUserId: userId }
+            ]
         };
-    });
 
-    res.json({
-        notes: formattedNotes,
-        hasMore: endIndex < filtered.length,
-        totalNotes: filtered.length
-    });
-});
+        if (search) {
+            const regex = new RegExp(search, 'i');
+            query.$and = [
+                { $or: query.$or },
+                { $or: [{ title: regex }, { content: regex }] }
+            ];
+            delete query.$or;
+        }
 
-app.post('/api/notes', (req, res) => {
-    const { title, content, subject, isPrivate, isPinned, createdAt } = req.body;
-    const newNote = {
-        _id: "note-" + Date.now(),
-        title: title || 'Untitled Note',
-        content: content || '',
-        subject: subject || 'General',
-        isPrivate: !!isPrivate,
-        isPinned: !!isPinned,
-        likedUsers: [],
-        views: 0,
-        createdAt: createdAt || new Date().toLocaleString()
-    };
-    notesData.unshift(newNote);
-    res.status(201).json(newNote);
-});
+        if (subject) {
+            query.subject = { $regex: new RegExp(`^${subject}$`, 'i') };
+        }
 
-app.put('/api/notes/:id', (req, res) => {
-    const { id } = req.params;
-    const index = notesData.findIndex(n => n._id === id);
+        if (date) {
+            query.createdAt = { $regex: new RegExp(date, 'i') };
+        }
 
-    if (index !== -1) {
-        notesData[index] = { ...notesData[index], ...req.body };
-        return res.json(notesData[index]);
+        const totalNotes = await Note.countDocuments(query);
+        const notes = await Note.find(query)
+            .sort({ isPinned: -1, createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        const formattedNotes = notes.map(n => ({
+            _id: n._id,
+            title: n.title,
+            content: n.content,
+            subject: n.subject,
+            isPrivate: n.isPrivate,
+            isPinned: n.isPinned,
+            creatorUserId: n.creatorUserId,
+            views: n.views,
+            createdAt: n.createdAt,
+            likes: n.likedUsers.length,
+            userLiked: userId ? n.likedUsers.includes(userId) : false,
+            isOwner: n.creatorUserId === userId
+        }));
+
+        res.json({
+            notes: formattedNotes,
+            hasMore: (page * limit) < totalNotes,
+            totalNotes
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch notes' });
     }
-    res.status(404).json({ error: "Note not found" });
 });
 
-// Per-User Unique Like System Endpoint
-app.post('/api/notes/:id/like', (req, res) => {
-    const { id } = req.params;
-    const { userId } = req.body;
-
-    const note = notesData.find(n => n._id === id);
-    if (!note) return res.status(404).json({ error: "Note not found" });
-
-    if (!note.likedUsers) note.likedUsers = [];
-
-    const userIndex = note.likedUsers.indexOf(userId);
-    let userLiked = false;
-
-    if (userIndex === -1) {
-        note.likedUsers.push(userId); // User Likes
-        userLiked = true;
-    } else {
-        note.likedUsers.splice(userIndex, 1); // User Unlikes
-        userLiked = false;
+app.post('/api/notes', async (req, res) => {
+    try {
+        const { title, content, subject, isPrivate, isPinned, createdAt, userId } = req.body;
+        const newNote = await Note.create({
+            title: title || 'Untitled Note',
+            content: content || '',
+            subject: subject || 'General',
+            isPrivate: !!isPrivate,
+            isPinned: !!isPinned,
+            creatorUserId: userId,
+            likedUsers: [],
+            views: 0,
+            createdAt: createdAt || new Date().toLocaleString()
+        });
+        res.status(201).json(newNote);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to save note' });
     }
-
-    res.json({
-        likes: note.likedUsers.length,
-        userLiked: userLiked
-    });
 });
 
-app.delete('/api/notes/:id', (req, res) => {
-    const { id } = req.params;
-    notesData = notesData.filter(n => n._id !== id);
-    res.json({ message: "Note deleted successfully from server", id });
+app.put('/api/notes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updatedNote = await Note.findByIdAndUpdate(id, req.body, { new: true });
+        res.json(updatedNote);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update note' });
+    }
 });
 
-// File Upload Endpoint with Real-Time Progress Support
+// Unique Like System
+app.post('/api/notes/:id/like', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { userId } = req.body;
+
+        const note = await Note.findById(id);
+        if (!note) return res.status(404).json({ error: "Note not found" });
+
+        const userIndex = note.likedUsers.indexOf(userId);
+        let userLiked = false;
+
+        if (userIndex === -1) {
+            note.likedUsers.push(userId);
+            userLiked = true;
+        } else {
+            note.likedUsers.splice(userIndex, 1);
+            userLiked = false;
+        }
+
+        await note.save();
+        res.json({ likes: note.likedUsers.length, userLiked });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update like' });
+    }
+});
+
+app.delete('/api/notes/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await Note.findByIdAndDelete(id);
+        res.json({ message: "Note deleted successfully", id });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete note' });
+    }
+});
+
+// Upload File Endpoint
 app.post('/api/upload', upload.single('media'), (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
-    }
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
     res.json({ url: fileUrl, fileType: req.file.mimetype });
 });
@@ -212,6 +260,4 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
