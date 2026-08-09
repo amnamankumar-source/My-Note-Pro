@@ -521,8 +521,12 @@
             ? 'http://localhost:5000/api'
             : '/api';
 
-        // LocalStorage completely removed (In-Memory User Identification)
-        const userId = 'user_' + Math.random().toString(36).substr(2, 9);
+        // Secure Persistent User ID in LocalStorage to maintain note states
+        let userId = localStorage.getItem('note_app_user_id');
+        if (!userId) {
+            userId = 'user_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('note_app_user_id', userId);
+        }
 
         let notes = [];
         let customSubjects = [];
@@ -566,7 +570,7 @@
             }
         }
 
-        // Fetch Notes from Backend (MongoDB Mongo Query)
+        // Fetch Notes from MongoDB Backend
         async function fetchNotesFromBackend(reset = false) {
             if (isLoadingNotes) return;
             isLoadingNotes = true;
@@ -589,8 +593,9 @@
                 const res = await fetch(url);
                 if (res.ok) {
                     const data = await res.json();
-                    notes = reset ? data.notes : [...notes, ...data.notes];
-                    hasMoreNotes = data.hasMore;
+                    const fetchedNotes = Array.isArray(data) ? data : (data.notes || []);
+                    notes = reset ? fetchedNotes : [...notes, ...fetchedNotes];
+                    hasMoreNotes = data.hasMore !== undefined ? data.hasMore : false;
                     currentPage++;
                     renderNotesGrid();
                 }
@@ -620,7 +625,7 @@
                 card.className = 'note-card';
                 const noteId = note._id;
                 const likesCount = note.likes || 0;
-                const isLiked = note.userLiked || false;
+                const isLiked = Array.isArray(note.likedBy) && note.likedBy.includes(userId);
 
                 card.innerHTML = `
                     <div class="note-top-meta">
@@ -644,7 +649,7 @@
                         <div class="note-body-html">${note.content}</div>
                     </div>
                     <div class="note-footer">
-                        <div class="note-date"><i class="far fa-clock"></i> ${note.createdAt}</div>
+                        <div class="note-date"><i class="far fa-clock"></i> ${note.createdAt || 'Just now'}</div>
                         <div class="note-actions">
                             <button class="action-btn btn-edit" onclick="openModal('${noteId}')" title="Edit"><i class="fas fa-pen"></i></button>
                             <button class="action-btn btn-delete" onclick="deleteNote('${noteId}')" title="Delete"><i class="fas fa-trash"></i></button>
@@ -671,7 +676,7 @@
                 if (res.ok) {
                     const updated = await res.json();
                     note.likes = updated.likes;
-                    note.userLiked = updated.userLiked;
+                    if(updated.likedBy) note.likedBy = updated.likedBy;
                     renderNotesGrid();
                 }
             } catch (err) {
@@ -701,7 +706,7 @@
 
                     const data = JSON.parse(response);
                     if (data.url) {
-                        let mediaHtml = data.fileType.startsWith('image/') ? 
+                        let mediaHtml = data.fileType && data.fileType.startsWith('image/') ? 
                             `<p><img src="${data.url}" style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></p><br>` :
                             `<p><video src="${data.url}" controls style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></video></p><br>`;
                         document.execCommand('insertHTML', false, mediaHtml);
@@ -833,8 +838,8 @@
                 const res = await fetch(`${API_BASE_URL}/profile`);
                 if (res.ok) {
                     const profile = await res.json();
-                    document.getElementById('profile-name').innerText = profile.name;
-                    document.getElementById('profile-img').src = profile.img;
+                    if(profile.name) document.getElementById('profile-name').innerText = profile.name;
+                    if(profile.img) document.getElementById('profile-img').src = profile.img;
                 }
             } catch (err) { console.warn('Profile error:', err); }
         }
@@ -953,7 +958,7 @@
             document.getElementById('view-modal-title-header').innerText = note.title || 'Untitled Note';
             document.getElementById('view-note-title').innerText = note.title;
             document.getElementById('view-note-content').innerHTML = note.content;
-            document.getElementById('view-date-stamp').innerHTML = `<i class="fas fa-clock"></i> ${note.createdAt} | Author: ${note.subject || 'Custom Author'} | Views: ${note.views} | Likes: ${note.likes || 0}`;
+            document.getElementById('view-date-stamp').innerHTML = `<i class="fas fa-clock"></i> ${note.createdAt || 'N/A'} | Author: ${note.subject || 'Custom Author'} | Views: ${note.views} | Likes: ${note.likes || 0}`;
 
             document.getElementById('view-modal').classList.add('active');
 
