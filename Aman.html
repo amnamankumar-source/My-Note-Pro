@@ -387,7 +387,7 @@
             </div>
             
             <div class="modal-body" id="view-modal-body">
-                <div class="view-note-title" id="view-note-title"></div>
+                <div class="view-note-title" id="view-note-title" style="font-size: 20px; font-weight: 700; margin-bottom: 10px;"></div>
                 <div class="view-note-body" id="view-note-content"></div>
             </div>
         </div>
@@ -521,7 +521,8 @@
             ? 'http://localhost:5000/api'
             : '/api';
 
-        // Secure Persistent User ID in LocalStorage to maintain note states
+        // LocalStorage sirf unique User Identity/Session maintain rakhne ke liye hai
+        // Actual sabhi Notes MongoDB database me store ho rahe hain.
         let userId = localStorage.getItem('note_app_user_id');
         if (!userId) {
             userId = 'user_' + Math.random().toString(36).substr(2, 9);
@@ -570,7 +571,7 @@
             }
         }
 
-        // Fetch Notes from MongoDB Backend
+        // Fetch Notes directly from MongoDB Backend
         async function fetchNotesFromBackend(reset = false) {
             if (isLoadingNotes) return;
             isLoadingNotes = true;
@@ -625,7 +626,7 @@
                 card.className = 'note-card';
                 const noteId = note._id;
                 const likesCount = note.likes || 0;
-                const isLiked = Array.isArray(note.likedBy) && note.likedBy.includes(userId);
+                const isLiked = Array.isArray(note.likedUsers) && note.likedUsers.includes(userId);
 
                 card.innerHTML = `
                     <div class="note-top-meta">
@@ -676,7 +677,7 @@
                 if (res.ok) {
                     const updated = await res.json();
                     note.likes = updated.likes;
-                    if(updated.likedBy) note.likedBy = updated.likedBy;
+                    note.likedUsers = updated.likedUsers || [];
                     renderNotesGrid();
                 }
             } catch (err) {
@@ -684,7 +685,7 @@
             }
         }
 
-        // Upload Media Files
+        // Upload Media Files directly to Express static `/uploads`
         async function uploadAndInsertMediaFiles(event) {
             const files = event.target.files;
             if (!files || files.length === 0) return;
@@ -719,7 +720,7 @@
             event.target.value = '';
         }
 
-        // Save Note to MongoDB
+        // Save Note to MongoDB Atlas
         async function saveNoteAndClose() {
             const title = document.getElementById('note-title').value.trim();
             const content = document.getElementById('note-editor').innerHTML.trim();
@@ -733,6 +734,7 @@
             const timeStamp = now.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
             const payload = {
+                userId: userId,
                 title: title || 'Untitled Note',
                 content: content,
                 subject: currentAuthorTag,
@@ -741,7 +743,7 @@
                 createdAt: timeStamp
             };
 
-            showProgressPopup(currentEditId ? 'Updating Note...' : 'Saving Note to Server...');
+            showProgressPopup(currentEditId ? 'Updating Note...' : 'Saving Note to MongoDB...');
 
             const endpoint = currentEditId ? `${API_BASE_URL}/notes/${currentEditId}` : `${API_BASE_URL}/notes`;
             const method = currentEditId ? 'PUT' : 'POST';
@@ -754,7 +756,7 @@
                 updateProgressUI(100);
                 setTimeout(() => {
                     hideProgressPopup();
-                    showToast('Note Saved Successfully!', 'success');
+                    showToast('Note Saved to MongoDB Successfully!', 'success');
                     closeModal();
                     fetchNotesFromBackend(true);
                 }, 400);
@@ -835,7 +837,7 @@
         // Profile MongoDB Operations
         async function fetchProfileFromBackend() {
             try {
-                const res = await fetch(`${API_BASE_URL}/profile`);
+                const res = await fetch(`${API_BASE_URL}/profile?userId=${userId}`);
                 if (res.ok) {
                     const profile = await res.json();
                     if(profile.name) document.getElementById('profile-name').innerText = profile.name;
@@ -850,7 +852,7 @@
                 await fetch(`${API_BASE_URL}/profile`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: newName })
+                    body: JSON.stringify({ userId: userId, name: newName })
                 });
                 showToast('Profile name updated!', 'success');
             } catch (err) { showToast('Failed to update profile name', 'error'); }
@@ -869,7 +871,7 @@
                     await fetch(`${API_BASE_URL}/profile`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ img: imgData })
+                        body: JSON.stringify({ userId: userId, img: imgData })
                     });
                     showToast('Profile image updated!', 'success');
                 } catch (err) { showToast('Failed to save profile image', 'error'); }
@@ -940,7 +942,7 @@
                 try {
                     const res = await fetch(`${API_BASE_URL}/notes/${id}`, { method: 'DELETE' });
                     if (res.ok) {
-                        showToast('Note deleted from backend!', 'error');
+                        showToast('Note deleted from database!', 'error');
                         fetchNotesFromBackend(true);
                     }
                 } catch (err) { showToast('Failed to delete note', 'error'); }
