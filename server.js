@@ -8,7 +8,7 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Security: Reduced payload limits to prevent Memory Exhaustion / DoS
+// Security & Middlewares
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -16,13 +16,13 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // 1. Uploads Folder Check
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir);
+    fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
 app.use('/uploads', express.static(uploadsDir));
 app.use(express.static(__dirname));
 
-// 2. Secure MongoDB Connection Setup (Via Environment Variables)
+// 2. Secure MongoDB Connection Setup
 const MONGO_URI = process.env.MONGO_URI;
 
 if (!MONGO_URI) {
@@ -34,7 +34,7 @@ mongoose.connect(MONGO_URI)
   .then(() => console.log('MongoDB Atlas Connected Successfully!'))
   .catch((err) => console.error('MongoDB Connection Error:', err));
 
-// Helper: Escape Special Regex Characters to prevent Regex Injection / ReDoS
+// Helper: Escape Special Regex Characters
 function escapeRegex(text) {
     return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
 }
@@ -66,7 +66,7 @@ const Profile = mongoose.model('Profile', profileSchema);
 const Subject = mongoose.model('Subject', subjectSchema);
 const Note = mongoose.model('Note', noteSchema);
 
-// 4. Secured Multer Configuration (File Upload Limits & Filtering)
+// 4. Secured Multer Configuration
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
     filename: (req, file, cb) => {
@@ -77,16 +77,16 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB Limit
+    limits: { fileSize: 15 * 1024 * 1024 }, // 15 MB Limit
     fileFilter: (req, file, cb) => {
-        const allowedTypes = /jpeg|jpg|png|gif|pdf|webp/;
+        const allowedTypes = /jpeg|jpg|png|gif|pdf|webp|mp4|webm|quicktime/;
         const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
         const mimetype = allowedTypes.test(file.mimetype);
 
         if (extname && mimetype) {
             return cb(null, true);
         }
-        cb(null, false);
+        cb(new Error("Unsupported file format!"));
     }
 });
 
@@ -111,8 +111,8 @@ app.put('/api/profile', async (req, res) => {
         let profile = await Profile.findOne({ userId: 'default_user' });
         if (!profile) profile = new Profile({ userId: 'default_user' });
         
-        if (name) profile.name = name;
-        if (img) profile.img = img;
+        if (name !== undefined) profile.name = name;
+        if (img !== undefined) profile.img = img;
         await profile.save();
 
         res.json({ message: "Profile updated successfully", profile });
@@ -154,7 +154,7 @@ app.delete('/api/subjects/:id', async (req, res) => {
     }
 });
 
-// Notes APIs (Protected against Regex Injection)
+// Notes APIs
 app.get('/api/notes', async (req, res) => {
     try {
         let { page = 1, limit = 9, search = '', subject = '', date = '', userId = '' } = req.query;
@@ -213,8 +213,8 @@ app.post('/api/notes', async (req, res) => {
             title: title || 'Untitled Note',
             content: content || '',
             subject: subject || 'General',
-            isPrivate: !!isPrivate,
-            isPinned: !!isPinned,
+            isPrivate: typeof isPrivate === 'boolean' ? isPrivate : true,
+            isPinned: typeof isPinned === 'boolean' ? isPinned : false,
             createdAt: createdAt || new Date().toLocaleString()
         });
         await newNote.save();
@@ -224,19 +224,41 @@ app.post('/api/notes', async (req, res) => {
     }
 });
 
-// Protected against Mass Assignment
+// Partial Safe Update Note API
 app.put('/api/notes/:id', async (req, res) => {
     try {
+        const updateFields = {};
         const { title, content, subject, isPrivate, isPinned } = req.body;
+
+        if (title !== undefined) updateFields.title = title;
+        if (content !== undefined) updateFields.content = content;
+        if (subject !== undefined) updateFields.subject = subject;
+        if (isPrivate !== undefined) updateFields.isPrivate = isPrivate;
+        if (isPinned !== undefined) updateFields.isPinned = isPinned;
         
         const updatedNote = await Note.findByIdAndUpdate(
             req.params.id, 
-            { title, content, subject, isPrivate, isPinned }, 
+            { $set: updateFields }, 
             { new: true, runValidators: true }
         );
 
         if (!updatedNote) return res.status(404).json({ error: "Note not found" });
         res.json(updatedNote);
+    } catch (err) {
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+// View Count Increment Route
+app.post('/api/notes/:id/view', async (req, res) => {
+    try {
+        const note = await Note.findByIdAndUpdate(
+            req.params.id,
+            { $inc: { views: 1 } },
+            { new: true }
+        );
+        if (!note) return res.status(404).json({ error: "Note not found" });
+        res.json({ views: note.views });
     } catch (err) {
         res.status(500).json({ error: "Internal Server Error" });
     }
@@ -275,24 +297,38 @@ app.post('/api/notes/:id/like', async (req, res) => {
 
 app.delete('/api/notes/:id', async (req, res) => {
     try {
-        await Note.findByIdAndDelete(req.params.id);
+        const deletedNote = await Note.findByIdAndDelete(req.params.id);
+        if (!deletedNote) return res.status(404).json({ error: "Note not found" });
         res.json({ message: "Note deleted successfully from server", id: req.params.id });
     } catch (err) {
         res.status(500).json({ error: "Internal Server Error" });
     }
 });
 
-// File Upload Endpoint
-app.post('/api/upload', upload.single('media'), (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded or invalid file format' });
-    }
-    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-    res.json({ url: fileUrl, fileType: req.file.mimetype });
+// File Upload Endpoint with Safe Error Catching
+app.post('/api/upload', (req, res) => {
+    upload.single('media')(req, res, (err) => {
+        if (err instanceof multer.MulterError) {
+            return res.status(400).json({ error: `Multer Error: ${err.message}` });
+        } else if (err) {
+            return res.status(400).json({ error: err.message });
+        }
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded or file rejected' });
+        }
+        const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+        res.json({ url: fileUrl, fileType: req.file.mimetype });
+    });
 });
 
+// Safe Catch-All Route for Single Page Apps
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    const indexPath = path.join(__dirname, 'index.html');
+    if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        res.status(404).json({ error: "Frontend entry (index.html) not found on server." });
+    }
 });
 
 app.listen(PORT, () => {
