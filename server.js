@@ -10,12 +10,12 @@ const { GridFSBucket, ObjectId } = require('mongodb');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware Setup
+// Body Parser Limit
 app.use(cors());
 app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ extended: true, limit: '500mb' }));
 
-// 1. MongoDB Atlas Connection via Environment Variables
+// 1. MongoDB Connection Setup via Environment Variables
 const MONGO_URI = process.env.MONGO_URI;
 
 if (!MONGO_URI) {
@@ -27,7 +27,7 @@ mongoose.connect(MONGO_URI)
     .then(() => console.log('MongoDB Atlas Connected Successfully!'))
     .catch(err => console.error('MongoDB Connection Error:', err));
 
-// 2. Mongoose Schemas & Models
+// 2. Mongoose Database Schemas
 const profileSchema = new mongoose.Schema({
     name: { type: String, default: "Note Author" },
     img: { type: String, default: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80" }
@@ -53,7 +53,7 @@ const Profile = mongoose.model('Profile', profileSchema);
 const Subject = mongoose.model('Subject', subjectSchema);
 const Note = mongoose.model('Note', noteSchema);
 
-// 3. Multer Setup for MongoDB GridFS
+// Memory Storage for Multer (Saves directly to MongoDB GridFS)
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
@@ -240,7 +240,7 @@ app.delete('/api/notes/:id', async (req, res) => {
     }
 });
 
-// GridFS Unlimited Size Image/Video Upload Endpoint
+// Unlimited Media File Upload to MongoDB (GridFS)
 app.post('/api/upload', upload.single('media'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
@@ -263,7 +263,7 @@ app.post('/api/upload', upload.single('media'), (req, res) => {
     });
 });
 
-// GridFS Stream Serving Endpoint
+// Serve Uploaded Files Directly from MongoDB GridFS
 app.get('/api/files/:id', async (req, res) => {
     try {
         const bucket = new GridFSBucket(mongoose.connection.db, { bucketName: 'uploads' });
