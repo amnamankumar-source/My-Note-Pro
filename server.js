@@ -8,10 +8,10 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Security & Middlewares
+// Security & Payload Limits
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // 1. Uploads Folder Check
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -41,7 +41,7 @@ function escapeRegex(text) {
 
 // 3. Mongoose Schemas & Models
 const profileSchema = new mongoose.Schema({
-    userId: { type: String, default: 'default_user' },
+    userId: { type: String, required: true, unique: true },
     name: { type: String, default: "Note Author" },
     img: { type: String, default: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80" }
 });
@@ -52,6 +52,7 @@ const subjectSchema = new mongoose.Schema({
 });
 
 const noteSchema = new mongoose.Schema({
+    userId: { type: String, default: 'default_user' },
     title: { type: String, default: 'Untitled Note' },
     content: { type: String, default: '' },
     subject: { type: String, default: 'General' },
@@ -77,16 +78,16 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 15 * 1024 * 1024 }, // 15 MB Limit
+    limits: { fileSize: 25 * 1024 * 1024 }, // 25 MB Limit
     fileFilter: (req, file, cb) => {
-        const allowedTypes = /jpeg|jpg|png|gif|pdf|webp|mp4|webm|quicktime/;
+        const allowedTypes = /jpeg|jpg|png|gif|pdf|webp|mp4|webm|ogg|mov/;
         const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
         const mimetype = allowedTypes.test(file.mimetype);
 
-        if (extname && mimetype) {
+        if (extname || mimetype) {
             return cb(null, true);
         }
-        cb(new Error("Unsupported file format!"));
+        cb(null, false);
     }
 });
 
@@ -95,9 +96,10 @@ const upload = multer({
 // Profile APIs
 app.get('/api/profile', async (req, res) => {
     try {
-        let profile = await Profile.findOne({ userId: 'default_user' });
+        const userId = req.query.userId || 'default_user';
+        let profile = await Profile.findOne({ userId });
         if (!profile) {
-            profile = await Profile.create({});
+            profile = await Profile.create({ userId });
         }
         res.json(profile);
     } catch (err) {
@@ -107,9 +109,9 @@ app.get('/api/profile', async (req, res) => {
 
 app.put('/api/profile', async (req, res) => {
     try {
-        const { name, img } = req.body;
-        let profile = await Profile.findOne({ userId: 'default_user' });
-        if (!profile) profile = new Profile({ userId: 'default_user' });
+        const { userId = 'default_user', name, img } = req.body;
+        let profile = await Profile.findOne({ userId });
+        if (!profile) profile = new Profile({ userId });
         
         if (name !== undefined) profile.name = name;
         if (img !== undefined) profile.img = img;
@@ -208,13 +210,14 @@ app.get('/api/notes', async (req, res) => {
 
 app.post('/api/notes', async (req, res) => {
     try {
-        const { title, content, subject, isPrivate, isPinned, createdAt } = req.body;
+        const { title, content, subject, isPrivate, isPinned, createdAt, userId } = req.body;
         const newNote = new Note({
+            userId: userId || 'default_user',
             title: title || 'Untitled Note',
             content: content || '',
             subject: subject || 'General',
-            isPrivate: typeof isPrivate === 'boolean' ? isPrivate : true,
-            isPinned: typeof isPinned === 'boolean' ? isPinned : false,
+            isPrivate: !!isPrivate,
+            isPinned: !!isPinned,
             createdAt: createdAt || new Date().toLocaleString()
         });
         await newNote.save();
@@ -224,41 +227,26 @@ app.post('/api/notes', async (req, res) => {
     }
 });
 
-// Partial Safe Update Note API
 app.put('/api/notes/:id', async (req, res) => {
     try {
-        const updateFields = {};
-        const { title, content, subject, isPrivate, isPinned } = req.body;
-
-        if (title !== undefined) updateFields.title = title;
-        if (content !== undefined) updateFields.content = content;
-        if (subject !== undefined) updateFields.subject = subject;
-        if (isPrivate !== undefined) updateFields.isPrivate = isPrivate;
-        if (isPinned !== undefined) updateFields.isPinned = isPinned;
+        const { title, content, subject, isPrivate, isPinned, views } = req.body;
+        const updateData = {};
+        
+        if (title !== undefined) updateData.title = title;
+        if (content !== undefined) updateData.content = content;
+        if (subject !== undefined) updateData.subject = subject;
+        if (isPrivate !== undefined) updateData.isPrivate = isPrivate;
+        if (isPinned !== undefined) updateData.isPinned = isPinned;
+        if (views !== undefined) updateData.views = views;
         
         const updatedNote = await Note.findByIdAndUpdate(
             req.params.id, 
-            { $set: updateFields }, 
+            updateData, 
             { new: true, runValidators: true }
         );
 
         if (!updatedNote) return res.status(404).json({ error: "Note not found" });
         res.json(updatedNote);
-    } catch (err) {
-        res.status(500).json({ error: "Internal Server Error" });
-    }
-});
-
-// View Count Increment Route
-app.post('/api/notes/:id/view', async (req, res) => {
-    try {
-        const note = await Note.findByIdAndUpdate(
-            req.params.id,
-            { $inc: { views: 1 } },
-            { new: true }
-        );
-        if (!note) return res.status(404).json({ error: "Note not found" });
-        res.json({ views: note.views });
     } catch (err) {
         res.status(500).json({ error: "Internal Server Error" });
     }
@@ -288,6 +276,7 @@ app.post('/api/notes/:id/like', async (req, res) => {
 
         res.json({
             likes: note.likedUsers.length,
+            likedUsers: note.likedUsers,
             userLiked: userLiked
         });
     } catch (err) {
@@ -297,38 +286,24 @@ app.post('/api/notes/:id/like', async (req, res) => {
 
 app.delete('/api/notes/:id', async (req, res) => {
     try {
-        const deletedNote = await Note.findByIdAndDelete(req.params.id);
-        if (!deletedNote) return res.status(404).json({ error: "Note not found" });
+        await Note.findByIdAndDelete(req.params.id);
         res.json({ message: "Note deleted successfully from server", id: req.params.id });
     } catch (err) {
         res.status(500).json({ error: "Internal Server Error" });
     }
 });
 
-// File Upload Endpoint with Safe Error Catching
-app.post('/api/upload', (req, res) => {
-    upload.single('media')(req, res, (err) => {
-        if (err instanceof multer.MulterError) {
-            return res.status(400).json({ error: `Multer Error: ${err.message}` });
-        } else if (err) {
-            return res.status(400).json({ error: err.message });
-        }
-        if (!req.file) {
-            return res.status(400).json({ error: 'No file uploaded or file rejected' });
-        }
-        const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-        res.json({ url: fileUrl, fileType: req.file.mimetype });
-    });
+// File Upload Endpoint
+app.post('/api/upload', upload.single('media'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded or invalid file format' });
+    }
+    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    res.json({ url: fileUrl, fileType: req.file.mimetype });
 });
 
-// Safe Catch-All Route for Single Page Apps
 app.get('*', (req, res) => {
-    const indexPath = path.join(__dirname, 'index.html');
-    if (fs.existsSync(indexPath)) {
-        res.sendFile(indexPath);
-    } else {
-        res.status(404).json({ error: "Frontend entry (index.html) not found on server." });
-    }
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(PORT, () => {
