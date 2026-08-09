@@ -4,11 +4,12 @@ const cors = require('cors');
 
 const app = express();
 
-// Middleware
-app.use(express.json());
-app.use(cors()); // Blogger se Requests Allow karne ke liye
+// Middleware: GB scale payloads allow karne ke liye
+app.use(express.json({ limit: '2gb' }));
+app.use(express.urlencoded({ limit: '2gb', extended: true }));
+app.use(cors()); // Allow Cross-Origin Requests
 
-// 1. MongoDB Database Connection (Securely using Environment Variable)
+// 1. MongoDB Database Connection
 const MONGO_URI = process.env.MONGO_URI;
 
 if (!MONGO_URI) {
@@ -32,7 +33,17 @@ const Note = mongoose.model('Note', noteSchema);
 
 // 3. API Routes
 
-// GET: Sabhi Public Notes Fetch Karne Ke Liye (All Users)
+// GET: Fetch ALL Notes from MongoDB
+app.get('/api/notes', async (req, res) => {
+  try {
+    const allNotes = await Note.find().sort({ _id: -1 });
+    res.json(allNotes);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET: Fetch ONLY Public Notes
 app.get('/api/notes/public', async (req, res) => {
   try {
     const publicNotes = await Note.find({ isPrivate: false }).sort({ _id: -1 });
@@ -42,7 +53,7 @@ app.get('/api/notes/public', async (req, res) => {
   }
 });
 
-// POST: Naya Note Create Karne Ke Liye
+// POST: Create New Note
 app.post('/api/notes', async (req, res) => {
   try {
     const { title, content, subject, isPrivate, createdAt } = req.body;
@@ -54,7 +65,7 @@ app.post('/api/notes', async (req, res) => {
   }
 });
 
-// PUT: Note Update Karne Ke Liye (Edit ya Public/Private Change)
+// PUT: Update Note
 app.put('/api/notes/:id', async (req, res) => {
   try {
     const updatedNote = await Note.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -64,7 +75,7 @@ app.put('/api/notes/:id', async (req, res) => {
   }
 });
 
-// DELETE: Note Permanently Delete Karne Ke Liye
+// DELETE: Permanently Delete Note
 app.delete('/api/notes/:id', async (req, res) => {
   try {
     await Note.findByIdAndDelete(req.params.id);
