@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+    <meta charset="UTF-8"></meta>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"></meta>
     <title>My Note Pro - NEET Edition</title>
 
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght=300;400;500;600;700&family=Playfair+Display:ital,wght@1,500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght=300;400;500;600;700&amp;family=Playfair+Display:ital,wght@1,500&amp;display=swap" rel="stylesheet"></link>
     <!-- FontAwesome for Icons -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"></link>
     <!-- html2pdf Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
@@ -162,7 +162,7 @@
         .btn-add { background: linear-gradient(135deg, var(--primary-color), var(--primary-hover)) !important; color: #ffffff !important; border: none !important; padding: 12px 24px !important; border-radius: var(--radius-pill) !important; font-size: 15px !important; font-weight: 600 !important; gap: 8px !important; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4) !important; transition: var(--transition) !important; white-space: nowrap !important; }
         .btn-add:hover { transform: translateY(-2px) !important; box-shadow: 0 6px 20px rgba(79, 70, 229, 0.5) !important; }
 
-        /* --- 1. Circle Slider --- */
+        /* --- Circle Slider --- */
         .quick-subjects-wrapper { 
             display: flex !important; 
             gap: 22px; 
@@ -196,11 +196,16 @@
         .note-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-5px); }
         .note-card:hover::before { opacity: 1; }
         
-        .privacy-badge { position: absolute; top: 12px; right: 15px; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: var(--radius-pill); display: inline-flex; align-items: center; gap: 5px; cursor: pointer; transition: var(--transition); }
-        .privacy-badge.private { background: rgba(229, 62, 62, 0.1); color: var(--danger-color); }
-        .privacy-badge.public { background: rgba(56, 161, 105, 0.1); color: var(--success-color); }
-        
-        .note-card-header { display: flex !important; align-items: center; gap: 15px; width: 100%; margin-top: 10px; }
+        /* Top Right Corner Status Icons (Public/Private, Likes, Views, Pin) */
+        .card-top-corner { position: absolute; top: 12px; right: 15px; display: flex !important; align-items: center; gap: 10px; font-size: 12px; font-weight: 600; }
+        .stat-badge { display: flex !important; align-items: center; gap: 4px; background: var(--editor-toolbar-bg); padding: 4px 8px; border-radius: var(--radius-pill); border: 1px solid var(--border-color); color: var(--text-muted); cursor: pointer; transition: var(--transition); }
+        .stat-badge.like-btn:hover { color: #e53e3e; background: rgba(229, 62, 62, 0.1); }
+        .privacy-icon { font-size: 14px; cursor: pointer; padding: 4px 6px; border-radius: 50%; }
+        .privacy-icon.private { color: var(--danger-color); }
+        .privacy-icon.public { color: var(--success-color); }
+        .pin-indicator { color: var(--primary-color); }
+
+        .note-card-header { display: flex !important; align-items: center; gap: 15px; width: 100%; margin-top: 18px; }
         .note-header-text { display: flex !important; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
         .note-circle-logo { width: 50px; height: 50px; border-radius: 50%; overflow: hidden; background: var(--editor-toolbar-bg); display: flex !important; align-items: center; justify-content: center; flex-shrink: 0; }
         .note-author-tag { font-size: 11px; font-weight: 600; color: var(--primary-color); display: inline-flex !important; align-items: center; gap: 6px; background: rgba(79, 70, 229, 0.08); padding: 3px 10px; border-radius: var(--radius-pill); width: fit-content; }
@@ -227,7 +232,6 @@
         .modal-overlay.active { opacity: 1 !important; pointer-events: auto !important; }
         .modal-content.full-screen { width: 100%; height: 100%; max-width: 100vw; max-height: 100vh; background: var(--surface-color); display: flex !important; flex-direction: column; overflow: hidden; }
 
-        /* --- Modal Header Controls --- */
         .modal-header { padding: 15px 20px; border-bottom: 1px solid var(--border-color); display: flex !important; flex-direction: row !important; justify-content: space-between; align-items: center !important; background: var(--surface-color); gap: 15px; flex-shrink: 0; }
         .modal-header h2 { font-size: 18px; font-weight: 600; color: var(--text-main); display: flex !important; align-items: center; gap: 8px; margin: 0; white-space: nowrap; }
         
@@ -255,6 +259,7 @@
         .editor-toolbar button.btn-yt { color: #ff0000 !important; }
         .editor-toolbar button.btn-drive { color: #0f9d58 !important; }
         .editor-toolbar button.btn-media { color: #8b5cf6 !important; }
+        .editor-toolbar button.btn-pin-protect { color: var(--primary-color) !important; font-weight: 600; }
 
         /* Color Highlighter Circles */
         .color-circles-group { display: flex !important; align-items: center; gap: 6px; border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); padding: 0 8px; }
@@ -270,18 +275,7 @@
         
         .rich-editor-area img { max-width: 100%; border-radius: var(--radius-md); margin: 10px 0; display: block; box-shadow: var(--shadow-sm); }
         .rich-editor-area video { max-width: 100%; border-radius: var(--radius-md); margin: 10px 0; display: block; }
-        
-        .pdf-attachment-card { display: flex; align-items: center; gap: 12px; background: var(--editor-toolbar-bg); border: 1px dashed var(--primary-color); padding: 12px 16px; border-radius: var(--radius-md); margin: 10px 0; width: fit-content; text-decoration: none; color: var(--text-main); font-weight: 500; }
-        .pdf-attachment-card i { font-size: 24px; color: #e53e3e; }
 
-        /* Media Slider Frames inside Note */
-        .media-slider-container { display: flex !important; gap: 15px; overflow-x: auto; padding: 10px 0; margin: 10px 0; width: 100% !important; scroll-snap-type: x mandatory; scrollbar-width: thin; }
-        .media-slider-card { flex: 0 0 auto; scroll-snap-align: start; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-color); background: #000; position: relative; }
-        .media-slider-card.yt-card { width: 280px; height: 160px; }
-        .media-slider-card.drive-card { width: 300px; height: 380px; background: var(--surface-color); }
-        .media-slider-card iframe { width: 100%; height: 100%; border: none; }
-
-        /* View-Only Note Display */
         .view-note-title { font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 15px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; }
         .view-note-body { font-size: 16px; line-height: 1.8; color: var(--text-main); word-break: break-word; }
 
@@ -317,7 +311,7 @@
             
             <div class="profile-section">
                 <div class="profile-img-wrapper" onclick="document.getElementById('profile-img-upload').click()" title="Change Profile Picture">
-                    <img alt="Profile" id="profile-img" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80" />
+                    <img alt="Profile" id="profile-img" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&amp;fit=crop&amp;w=150&amp;h=150&amp;q=80" />
                     <input accept="image/*" id="profile-img-upload" onchange="updateProfileImg(event)" style="display: none;" type="file" />
                 </div>
                 <div class="profile-name" contenteditable="true" id="profile-name" onblur="saveProfileName()" title="Click to edit name">NEET Aspirant</div>
@@ -355,29 +349,29 @@
             </button>
         </div>
 
-        <!-- Quick Subject Slider -->
+        <!-- Subject Slider -->
         <div class="quick-subjects-wrapper" id="quick-subjects-slider">
             <div class="subject-circle-item" onclick="filterBySubject('Biology')">
                 <div class="subject-ring bio-ring">
-                    <img alt="Biology" src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=150&h=150&q=80" />
+                    <img alt="Biology" src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&amp;fit=crop&amp;w=150&amp;h=150&amp;q=80" />
                 </div>
                 <span>Biology</span>
             </div>
             <div class="subject-circle-item" onclick="filterBySubject('Zoology')">
                 <div class="subject-ring zoo-ring">
-                    <img alt="Zoology" src="https://images.unsplash.com/photo-1530026405186-ed1ea0ac7a63?auto=format&fit=crop&w=150&h=150&q=80" />
+                    <img alt="Zoology" src="https://images.unsplash.com/photo-1530026405186-ed1ea0ac7a63?auto=format&amp;fit=crop&amp;w=150&amp;h=150&amp;q=80" />
                 </div>
                 <span>Zoology</span>
             </div>
             <div class="subject-circle-item" onclick="filterBySubject('Physics')">
                 <div class="subject-ring phy-ring">
-                    <img alt="Physics" src="https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=120&120&q=80" />
+                    <img alt="Physics" src="https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&amp;fit=crop&amp;w=120&amp;120&amp;q=80" />
                 </div>
                 <span>Physics</span>
             </div>
             <div class="subject-circle-item" onclick="filterBySubject('Chemistry')">
                 <div class="subject-ring chem-ring">
-                    <img alt="Chemistry" src="https://images.unsplash.com/photo-1532187863486-abf9d39d66e8?auto=format&fit=crop&w=120&120&q=80" />
+                    <img alt="Chemistry" src="https://images.unsplash.com/photo-1532187863486-abf9d39d66e8?auto=format&amp;fit=crop&amp;w=120&amp;120&amp;q=80" />
                 </div>
                 <span>Chemistry</span>
             </div>
@@ -389,7 +383,7 @@
             </div>
             <div class="subject-circle-item" onclick="filterBySubject('')">
                 <div class="subject-ring all-ring">
-                    <img alt="All Notes" src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&w=120&120&q=80" />
+                    <img alt="All Notes" src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&amp;fit=crop&amp;w=120&amp;120&amp;q=80" />
                 </div>
                 <span>All Notes</span>
             </div>
@@ -447,7 +441,7 @@
                     <input class="editor-title" id="note-title" placeholder="Note Title..." type="text" />
                 </div>
 
-                <!-- Editor Toolbar with Color Circles and Media Button -->
+                <!-- Editor Toolbar -->
                 <div class="editor-toolbar">
                     <button onclick="execCmd('bold')" title="Bold"><i class="fas fa-bold"></i></button>
                     
@@ -463,18 +457,19 @@
                     <button onclick="execCmd('underline')" title="Underline"><i class="fas fa-underline"></i></button>
                     <button onclick="execCmd('insertUnorderedList')" title="Bullet List"><i class="fas fa-list-ul"></i></button>
                     <button onclick="execCmd('insertOrderedList')" title="Numbered List"><i class="fas fa-list-ol"></i></button>
-                    <input onchange="execCmd('foreColor', this.value)" title="Text Color" type="color" />
                     
+                    <!-- PIN Lock Protection Feature Button -->
+                    <button class="btn-pin-protect" onclick="setPinProtection()" title="Set/Change PIN Code Protection">
+                        <i class="fas fa-key"></i> PIN Security
+                    </button>
+
                     <button onclick="insertCustomLink()" title="Add URL Link"><i class="fas fa-link"></i> Link</button>
-                    <button class="btn-yt" onclick="insertYouTubeEmbed()" title="Add YouTube Video/Shorts/Live"><i class="fab fa-youtube"></i> YouTube</button>
-                    
-                    <!-- Media Button (Upload PDF, Image, Video) -->
-                    <button class="btn-media" onclick="document.getElementById('multiple-media-input').click()" title="Upload Images, PDFs, Videos">
+                    <button class="btn-yt" onclick="insertYouTubeEmbed()" title="Add YouTube Video"><i class="fab fa-youtube"></i> YouTube</button>
+                    <button class="btn-media" onclick="document.getElementById('multiple-media-input').click()" title="Upload Media">
                         <i class="fas fa-photo-video"></i> Media
                     </button>
-                    <input id="multiple-media-input" type="file" accept="image/*,video/*,application/pdf" multiple style="display: none;" onchange="handleMultipleMediaUpload(event)">
-
-                    <button class="btn-drive" onclick="insertDriveEmbed()" title="Add Google Drive PDF/Image/Video"><i class="fab fa-google-drive"></i> Drive</button>
+                    <input accept="image/*,video/*,application/pdf" id="multiple-media-input" multiple="" onchange="handleMultipleMediaUpload(event)" style="display: none;" type="file" />
+                    <button class="btn-drive" onclick="insertDriveEmbed()" title="Add Google Drive Link"><i class="fab fa-google-drive"></i> Drive</button>
                 </div>
 
                 <div class="editor-container">
@@ -487,7 +482,6 @@
     <!-- Toast Notifications -->
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- JavaScript Logic -->
     <script>
         const API_BASE_URL = 'https://my-note-pro-1.onrender.com/api/notes';
 
@@ -500,31 +494,16 @@
                 isPrivate: false,
                 isPermanent: true,
                 inTrash: false,
-                subject: 'Biology'
-            },
-            {
-                id: 'neet-perm-2',
-                title: '⚡ NEET Physics: Important Formulae Sheet',
-                content: '<b>Quick Formulae:</b><br>1. Ohm\'s Law: <i>V = IR</i><br>2. Kinetic Energy: <i>KE = ½ mv²</i><br>3. Force: <i>F = ma</i>',
-                createdAt: 'Permanent Note',
-                isPermanent: true,
-                inTrash: false,
-                subject: 'Physics'
-            },
-            {
-                id: 'neet-perm-3',
-                title: '🧪 NEET Chemistry: Organic Named Reactions',
-                content: '<b>Must-Remember Reactions:</b><br>1. <b>Wurtz Reaction:</b> Alkyl halide + Na in dry ether → Higher Alkane.<br>2. <b>Aldol Condensation:</b> Aldehydes/Ketones with α-hydrogen.<br>3. <b>Kolbe\'s Reaction:</b> Phenol to Salicylic acid.',
-                createdAt: 'Permanent Note',
-                isPrivate: false,
-                isPermanent: true,
-                inTrash: false,
-                subject: 'Chemistry'
+                subject: 'Biology',
+                likes: 12,
+                views: 45,
+                pinCode: ''
             }
         ];
 
         let notes = JSON.parse(localStorage.getItem('my_pro_notes')) || [];
-        
+        let currentPinCode = ''; // Active PIN during note editing
+
         function initializeNeetNotes() {
             DEFAULT_NEET_NOTES.forEach(permNote => {
                 if (!notes.some(n => n.id === permNote.id || n._id === permNote.id)) {
@@ -554,6 +533,9 @@
                             subject: serverNote.subject || 'NEET',
                             isPrivate: serverNote.isPrivate,
                             createdAt: serverNote.createdAt,
+                            views: serverNote.views || 0,
+                            likes: serverNote.likes || 0,
+                            pinCode: serverNote.pinCode || '',
                             inTrash: false
                         };
 
@@ -583,11 +565,8 @@
 
         function updateClock() {
             const now = new Date();
-            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            const dateStr = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-            
-            document.getElementById('live-time').innerText = timeStr;
-            document.getElementById('live-date').innerText = dateStr;
+            document.getElementById('live-time').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('live-date').innerText = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
         }
 
         function saveProfileName() {
@@ -623,133 +602,54 @@
             document.execCommand(command, false, value);
         }
 
-        /* --- Text Highlighter Circle Logic --- */
         function highlightText(color) {
             document.execCommand('hiliteColor', false, color);
         }
 
-        /* --- Media Upload (Multiple Files: Image, Video, PDF) --- */
-        function handleMultipleMediaUpload(event) {
-            const files = event.target.files;
-            if (!files || files.length === 0) return;
-
-            const editor = document.getElementById('note-editor');
-
-            Array.from(files).forEach(file => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const result = e.target.result;
-                    if (file.type.startsWith('image/')) {
-                        const img = document.createElement('img');
-                        img.src = result;
-                        editor.appendChild(img);
-                    } else if (file.type.startsWith('video/')) {
-                        const video = document.createElement('video');
-                        video.src = result;
-                        video.controls = true;
-                        editor.appendChild(video);
-                    } else if (file.type === 'application/pdf') {
-                        const pdfCard = document.createElement('a');
-                        pdfCard.className = 'pdf-attachment-card';
-                        pdfCard.href = result;
-                        pdfCard.target = '_blank';
-                        pdfCard.download = file.name;
-                        pdfCard.innerHTML = `<i class="fas fa-file-pdf"></i> <span>${file.name} (Click to View/Download)</span>`;
-                        editor.appendChild(pdfCard);
-                    }
-                };
-                reader.readAsDataURL(file);
-            });
-
-            showToast(`${files.length} media file(s) attached!`, 'success');
-            event.target.value = '';
-        }
-
-        /* --- URL / YOUTUBE / DRIVE EMBED LOGIC --- */
-        function insertCustomLink() {
-            const url = prompt('Enter URL link:');
-            if (url) {
-                document.execCommand('createLink', false, url);
+        // Set Security PIN Code
+        function setPinProtection() {
+            const pin = prompt("Set/Update a 4-Digit Security PIN to lock editing (Leave blank to remove PIN):", currentPinCode);
+            if (pin !== null) {
+                currentPinCode = pin.trim();
+                showToast(currentPinCode ? "Security PIN Set!" : "Security PIN Removed!", "info");
             }
         }
 
-        function insertYouTubeEmbed() {
-            const url = prompt('Paste YouTube URL (Video, Shorts, Live, Embed, Share link):');
-            if (!url) return;
-
-            let videoId = '';
-            if (url.includes('shorts/')) {
-                videoId = url.split('shorts/')[1].split('?')[0];
-            } else if (url.includes('youtu.be/')) {
-                videoId = url.split('youtu.be/')[1].split('?')[0];
-            } else if (url.includes('watch?v=')) {
-                videoId = url.split('watch?v=')[1].split('&')[0];
-            } else if (url.includes('embed/')) {
-                videoId = url.split('embed/')[1].split('?')[0];
-            } else if (url.includes('live/')) {
-                videoId = url.split('live/')[1].split('?')[0];
-            }
-
-            if (videoId) {
-                const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=0`;
-                const editor = document.getElementById('note-editor');
-                
-                let slider = editor.querySelector('.media-slider-container');
-                if (!slider) {
-                    slider = document.createElement('div');
-                    slider.className = 'media-slider-container';
-                    editor.appendChild(slider);
-                }
-
-                const card = document.createElement('div');
-                card.className = 'media-slider-card yt-card';
-                card.innerHTML = `<iframe src="${embedUrl}" allowfullscreen loading="lazy"></iframe>`;
-                slider.appendChild(card);
-                showToast('YouTube video added to slider!', 'success');
-            } else {
-                showToast('Invalid YouTube URL format!', 'error');
-            }
-        }
-
-        function insertDriveEmbed() {
-            const url = prompt('Paste Google Drive File/Share/Embed URL:');
-            if (!url) return;
-
-            let embedUrl = url;
-            if (url.includes('/view')) {
-                embedUrl = url.replace('/view', '/preview');
-            } else if (!url.includes('/preview')) {
-                const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                if (match && match[1]) {
-                    embedUrl = `https://drive.google.com/file/d/${match[1]}/preview`;
-                }
-            }
-
-            const editor = document.getElementById('note-editor');
-            let slider = editor.querySelector('.media-slider-container');
-            if (!slider) {
-                slider = document.createElement('div');
-                slider.className = 'media-slider-container';
-                editor.appendChild(slider);
-            }
-
-            const card = document.createElement('div');
-            card.className = 'media-slider-card drive-card';
-            card.innerHTML = `<iframe src="${embedUrl}" allow="autoplay" loading="lazy"></iframe>`;
-            slider.appendChild(card);
-            showToast('Google Drive media added in A4 slider!', 'success');
-        }
-
-        /* --- READ-ONLY NOTE VIEWER --- */
-        function viewNote(noteId) {
+        /* --- READ-ONLY NOTE VIEWER WITH VIEW INCREMENT --- */
+        async function viewNote(noteId) {
             const note = notes.find(n => n.id === noteId || n._id === noteId);
             if(!note) return;
+
+            note.views = (note.views || 0) + 1;
+            renderNotes();
 
             document.getElementById('view-note-title').innerText = note.title;
             document.getElementById('view-note-content').innerHTML = note.content;
             document.getElementById('view-date-stamp').innerHTML = `<i class="fas fa-clock"></i> ${note.createdAt} | Subject: ${note.subject || 'NEET'}`;
             
             document.getElementById('view-modal').classList.add('active');
+
+            if (note._id && !note._id.startsWith('neet-perm-')) {
+                try {
+                    await fetch(`${API_BASE_URL}/${note._id}/view`, { method: 'POST' });
+                } catch(err) { console.error('Failed to update views count', err); }
+            }
+        }
+
+        /* --- LIKE INCREMENT FUNCTION --- */
+        async function likeNote(noteId, event) {
+            event.stopPropagation();
+            const note = notes.find(n => n.id === noteId || n._id === noteId);
+            if(note) {
+                note.likes = (note.likes || 0) + 1;
+                renderNotes();
+
+                if (note._id && !note._id.startsWith('neet-perm-')) {
+                    try {
+                        await fetch(`${API_BASE_URL}/${note._id}/like`, { method: 'POST' });
+                    } catch(err) { console.error('Failed to register like', err); }
+                }
+            }
         }
 
         function closeViewModal() {
@@ -766,15 +666,25 @@
             if(noteId !== null) {
                 const note = notes.find(n => n.id === noteId || n._id === noteId);
                 if(note) {
+                    // PIN verification before edit
+                    if (note.pinCode) {
+                        const enteredPin = prompt("🔑 Note is PIN Protected! Enter 4-digit PIN to edit:");
+                        if (enteredPin !== note.pinCode) {
+                            showToast("Incorrect PIN! Access Denied.", "error");
+                            return;
+                        }
+                    }
                     titleInput.value = note.title;
                     editor.innerHTML = note.content;
                     currentModalIsPrivate = note.isPrivate !== undefined ? note.isPrivate : true;
+                    currentPinCode = note.pinCode || '';
                     headingText.innerText = 'Edit Note';
                 }
             } else {
                 titleInput.value = '';
                 editor.innerHTML = '';
                 currentModalIsPrivate = true;
+                currentPinCode = '';
                 headingText.innerText = 'Create New Note';
             }
 
@@ -825,10 +735,11 @@
                 content: content,
                 subject: selectedSubjectFilter || 'NEET',
                 isPrivate: currentModalIsPrivate,
+                pinCode: currentPinCode,
                 createdAt: timeStamp
             };
 
-            showToast('Saving note to MongoDB...', 'info');
+            showToast('Saving note...', 'info');
 
             try {
                 if (currentEditId !== null) {
@@ -839,7 +750,7 @@
                         const res = await fetch(`${API_BASE_URL}/${targetNote._id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(notePayload)
+                            body: JSON.stringify({ ...notePayload, enteredPin: currentPinCode })
                         });
                         const updated = await res.json();
                         notes[noteIndex] = { ...updated, id: updated._id };
@@ -857,14 +768,14 @@
                         const createdNote = await res.json();
                         notes.unshift({ ...createdNote, id: createdNote._id });
                     } else {
-                        const localNote = { id: 'note-' + Date.now(), ...notePayload, inTrash: false };
+                        const localNote = { id: 'note-' + Date.now(), ...notePayload, views: 0, likes: 0, inTrash: false };
                         notes.unshift(localNote);
                     }
                 }
             } catch (err) {
                 console.error('API Error, saved locally:', err);
                 if (currentEditId === null) {
-                    notes.unshift({ id: 'note-' + Date.now(), ...notePayload, inTrash: false });
+                    notes.unshift({ id: 'note-' + Date.now(), ...notePayload, views: 0, likes: 0, inTrash: false });
                 }
             }
 
@@ -885,7 +796,7 @@
                         await fetch(`${API_BASE_URL}/${note._id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ isPrivate: note.isPrivate })
+                            body: JSON.stringify({ isPrivate: note.isPrivate, enteredPin: note.pinCode })
                         });
                     } catch(err) { console.error('Failed to update privacy', err); }
                 }
@@ -932,8 +843,21 @@
                 const noteId = note._id || note.id;
 
                 card.innerHTML = `
-                    <div class="privacy-badge ${isPrivate ? 'private' : 'public'}" onclick="toggleCardPrivacy('${noteId}', event)" title="Click to toggle Private/Public">
-                        <i class="fas ${isPrivate ? 'fa-lock' : 'fa-globe'}"></i> ${isPrivate ? 'Private' : 'Public'}
+                    <!-- Top Corner Icons: Likes, Views, Public/Private, PIN -->
+                    <div class="card-top-corner">
+                        ${note.pinCode ? `<span class="pin-indicator" title="PIN Protected Note"><i class="fas fa-key"></i></span>` : ''}
+                        
+                        <span class="stat-badge like-btn" onclick="likeNote('${noteId}', event)" title="Like Note">
+                            <i class="fas fa-heart" style="color: #e53e3e;"></i> <span>${note.likes || 0}</span>
+                        </span>
+                        
+                        <span class="stat-badge" title="Total Views">
+                            <i class="fas fa-eye"></i> <span>${note.views || 0}</span>
+                        </span>
+
+                        <span class="privacy-icon ${isPrivate ? 'private' : 'public'}" onclick="toggleCardPrivacy('${noteId}', event)" title="${isPrivate ? 'Private Note' : 'Public Note'}">
+                            <i class="fas ${isPrivate ? 'fa-lock' : 'fa-globe'}"></i>
+                        </span>
                     </div>
 
                     <div class="note-card-header">
