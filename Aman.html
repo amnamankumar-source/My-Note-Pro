@@ -185,6 +185,8 @@
         .chem-ring { border: 2.5px solid #f59e0b; }
         .zoo-ring { border: 2.5px solid #d946ef; }
         .all-ring { border: 2.5px solid var(--primary-color); }
+        .add-ring { border: 2.5px dashed var(--primary-color); }
+        .custom-ring { border: 2.5px solid #8b5cf6; }
         .trash-ring { border: 2.5px solid var(--danger-color); }
         .subject-ring img { width: 100% !important; height: 100% !important; object-fit: cover; border-radius: 50%; }
         .subject-circle-item span { font-size: 12px; font-weight: 600; color: var(--text-main); }
@@ -351,6 +353,27 @@
 
         <!-- Subject Slider -->
         <div class="quick-subjects-wrapper" id="quick-subjects-slider">
+            <!-- 1. All Notes First -->
+            <div class="subject-circle-item" onclick="filterBySubject('')">
+                <div class="subject-ring all-ring">
+                    <img alt="All Notes" src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&amp;fit=crop&amp;w=120&amp;120&amp;q=80" />
+                </div>
+                <span>All Notes</span>
+            </div>
+
+            <!-- 2. Add Custom Subject Button -->
+            <div class="subject-circle-item" onclick="document.getElementById('custom-subject-img-upload').click()">
+                <div class="subject-ring add-ring" style="align-items: center; background: var(--surface-color); display: flex; justify-content: center;">
+                    <i class="fas fa-plus" style="color: var(--primary-color); font-size: 24px;"></i>
+                </div>
+                <span>Add Category</span>
+                <input accept="image/*" id="custom-subject-img-upload" onchange="addCustomSubject(event)" style="display: none;" type="file" />
+            </div>
+
+            <!-- Container for dynamically added subjects -->
+            <div id="dynamic-subjects-container" style="display: flex; gap: 22px;"></div>
+
+            <!-- Default Subjects -->
             <div class="subject-circle-item" onclick="filterBySubject('Biology')">
                 <div class="subject-ring bio-ring">
                     <img alt="Biology" src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&amp;fit=crop&amp;w=150&amp;h=150&amp;q=80" />
@@ -380,12 +403,6 @@
                     <i class="fas fa-trash-alt" style="color: var(--danger-color); font-size: 26px;"></i>
                 </div>
                 <span style="color: var(--danger-color);">Recycle Bin</span>
-            </div>
-            <div class="subject-circle-item" onclick="filterBySubject('')">
-                <div class="subject-ring all-ring">
-                    <img alt="All Notes" src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&amp;fit=crop&amp;w=120&amp;120&amp;q=80" />
-                </div>
-                <span>All Notes</span>
             </div>
         </div>
 
@@ -444,6 +461,8 @@
                 <!-- Editor Toolbar -->
                 <div class="editor-toolbar">
                     <button onclick="execCmd('bold')" title="Bold"><i class="fas fa-bold"></i></button>
+                    <!-- Added Heading (H) Button right after Bold (B) -->
+                    <button onclick="execCmd('formatBlock', '<h2>')" title="Heading"><i class="fas fa-heading"></i></button>
                     
                     <!-- Color Highlighter Circles -->
                     <div class="color-circles-group" title="Text Highlighter Circles">
@@ -502,7 +521,8 @@
         ];
 
         let notes = JSON.parse(localStorage.getItem('my_pro_notes')) || [];
-        let currentPinCode = ''; // Active PIN during note editing
+        let customSubjects = JSON.parse(localStorage.getItem('custom_subjects')) || [];
+        let currentPinCode = ''; 
 
         function initializeNeetNotes() {
             DEFAULT_NEET_NOTES.forEach(permNote => {
@@ -559,9 +579,50 @@
             setInterval(updateClock, 1000);
             initializeNeetNotes();
             loadProfile();
+            renderCustomSubjects();
             renderNotes();
             fetchNotesFromBackend();
         });
+
+        /* --- Dynamic Subject Feature --- */
+        function addCustomSubject(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const name = prompt("Enter Category/Subject Name:");
+            if (!name || !name.trim()) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const newSubject = {
+                    id: 'sub-' + Date.now(),
+                    name: name.trim(),
+                    img: e.target.result
+                };
+                customSubjects.push(newSubject);
+                localStorage.setItem('custom_subjects', JSON.stringify(customSubjects));
+                renderCustomSubjects();
+                showToast(`Category "${newSubject.name}" added!`, 'success');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function renderCustomSubjects() {
+            const container = document.getElementById('dynamic-subjects-container');
+            container.innerHTML = '';
+            customSubjects.forEach(sub => {
+                const item = document.createElement('div');
+                item.className = 'subject-circle-item';
+                item.onclick = () => filterBySubject(sub.name);
+                item.innerHTML = `
+                    <div class="subject-ring custom-ring">
+                        <img src="${sub.img}" alt="${escapeHtml(sub.name)}" />
+                    </div>
+                    <span>${escapeHtml(sub.name)}</span>
+                `;
+                container.appendChild(item);
+            });
+        }
 
         function updateClock() {
             const now = new Date();
@@ -606,7 +667,6 @@
             document.execCommand('hiliteColor', false, color);
         }
 
-        // Set Security PIN Code
         function setPinProtection() {
             const pin = prompt("Set/Update a 4-Digit Security PIN to lock editing (Leave blank to remove PIN):", currentPinCode);
             if (pin !== null) {
@@ -615,7 +675,6 @@
             }
         }
 
-        /* --- READ-ONLY NOTE VIEWER WITH VIEW INCREMENT --- */
         async function viewNote(noteId) {
             const note = notes.find(n => n.id === noteId || n._id === noteId);
             if(!note) return;
@@ -636,7 +695,6 @@
             }
         }
 
-        /* --- LIKE INCREMENT FUNCTION --- */
         async function likeNote(noteId, event) {
             event.stopPropagation();
             const note = notes.find(n => n.id === noteId || n._id === noteId);
@@ -666,7 +724,6 @@
             if(noteId !== null) {
                 const note = notes.find(n => n.id === noteId || n._id === noteId);
                 if(note) {
-                    // PIN verification before edit
                     if (note.pinCode) {
                         const enteredPin = prompt("🔑 Note is PIN Protected! Enter 4-digit PIN to edit:");
                         if (enteredPin !== note.pinCode) {
@@ -843,7 +900,6 @@
                 const noteId = note._id || note.id;
 
                 card.innerHTML = `
-                    <!-- Top Corner Icons: Likes, Views, Public/Private, PIN -->
                     <div class="card-top-corner">
                         ${note.pinCode ? `<span class="pin-indicator" title="PIN Protected Note"><i class="fas fa-key"></i></span>` : ''}
                         
