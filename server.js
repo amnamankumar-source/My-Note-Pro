@@ -5,7 +5,7 @@ const cloudinary = require('cloudinary').v2;
 
 const app = express();
 
-// 1. Hardcoded Secrets हटाकर केवल Environment Variables का उपयोग करें
+// 1. Cloudinary Configuration
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -13,16 +13,28 @@ cloudinary.config({
   secure: true
 });
 
-// 2. CORS को केवल अपनी डोमेन तक सीमित करें
-const allowedOrigins = [process.env.FRONTEND_URL || 'http://localhost:3000'];
+// 2. Updated CORS Configuration (Blogger + Localhost support)
+const allowedOrigins = [
+  'https://neetas1.blogspot.com',
+  'http://neetas1.blogspot.com',
+  'https://www.neetas1.blogspot.com',
+  'http://localhost:3000',
+  'http://127.0.0.1:5500',
+  'http://127.0.0.1:3000'
+];
+
 app.use(cors({
   origin: (origin, callback) => {
+    // Allows requests with no origin (mobile apps, postman, direct browser tests)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('CORS Policy: Access Denied'));
+      callback(new Error('CORS policy violation: Access Denied'));
     }
-  }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-pin-code']
 }));
 
 app.use(express.json({ limit: '10mb' }));
@@ -57,22 +69,26 @@ const Note = mongoose.model('Note', noteSchema);
 app.get('/api/cloudinary-signature', (req, res) => {
   try {
     const timestamp = Math.round(new Date().getTime() / 1000);
+    const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET || 'ml_default';
+    
     const signature = cloudinary.utils.api_sign_request(
-      { timestamp: timestamp, upload_preset: process.env.CLOUDINARY_UPLOAD_PRESET || 'ml_default' },
+      { timestamp: timestamp, upload_preset: uploadPreset },
       process.env.CLOUDINARY_API_SECRET
     );
+    
     res.json({
       timestamp,
       signature,
       cloudName: process.env.CLOUDINARY_CLOUD_NAME,
-      apiKey: process.env.CLOUDINARY_API_KEY
+      apiKey: process.env.CLOUDINARY_API_KEY,
+      uploadPreset
     });
   } catch (err) {
     res.status(500).json({ error: 'Signature generation failed' });
   }
 });
 
-// GET: Fetch ONLY Public Notes (Private Notes छिपाने के लिए)
+// GET: Fetch ONLY Public Notes
 app.get('/api/notes/public', async (req, res) => {
   try {
     const publicNotes = await Note.find({ isPrivate: false }).sort({ _id: -1 });
@@ -94,7 +110,7 @@ app.post('/api/notes', async (req, res) => {
   }
 });
 
-// PUT: Update Note (PIN Protection Verified)
+// PUT: Update Note
 app.put('/api/notes/:id', async (req, res) => {
   try {
     const existingNote = await Note.findById(req.params.id);
@@ -111,7 +127,7 @@ app.put('/api/notes/:id', async (req, res) => {
   }
 });
 
-// DELETE: Protected Delete (PIN Check required if PIN exists)
+// DELETE: Protected Delete
 app.delete('/api/notes/:id', async (req, res) => {
   try {
     const existingNote = await Note.findById(req.params.id);
