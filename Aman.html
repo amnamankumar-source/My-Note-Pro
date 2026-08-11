@@ -198,7 +198,6 @@
         .note-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-5px); }
         .note-card:hover::before { opacity: 1; }
         
-        /* Top Right Corner Status Icons (Public/Private, Likes, Views, Pin) */
         .card-top-corner { position: absolute; top: 12px; right: 15px; display: flex !important; align-items: center; gap: 10px; font-size: 12px; font-weight: 600; }
         .stat-badge { display: flex !important; align-items: center; gap: 4px; background: var(--editor-toolbar-bg); padding: 4px 8px; border-radius: var(--radius-pill); border: 1px solid var(--border-color); color: var(--text-muted); cursor: pointer; transition: var(--transition); }
         .stat-badge.like-btn:hover { color: #e53e3e; background: rgba(229, 62, 62, 0.1); }
@@ -260,7 +259,7 @@
         .editor-toolbar button { background: var(--surface-color) !important; border: 1px solid var(--border-color) !important; color: var(--text-main) !important; padding: 8px 12px !important; border-radius: var(--radius-sm) !important; font-size: 14px !important; }
         .editor-toolbar button.btn-yt { color: #ff0000 !important; }
         .editor-toolbar button.btn-drive { color: #0f9d58 !important; }
-        .editor-toolbar button.btn-media { color: #8b5cf6 !important; }
+        .editor-toolbar button.btn-media { color: #8b5cf6 !important; font-weight:600; }
         .editor-toolbar button.btn-pin-protect { color: var(--primary-color) !important; font-weight: 600; }
 
         /* Color Highlighter Circles */
@@ -277,6 +276,9 @@
         
         .rich-editor-area img { max-width: 100%; border-radius: var(--radius-md); margin: 10px 0; display: block; box-shadow: var(--shadow-sm); }
         .rich-editor-area video { max-width: 100%; border-radius: var(--radius-md); margin: 10px 0; display: block; }
+
+        .pdf-embed-box { background: var(--editor-toolbar-bg); border: 1px solid var(--border-color); padding: 12px; border-radius: var(--radius-md); margin: 10px 0; display: flex; align-items: center; justify-content: space-between; }
+        .pdf-embed-box a { color: var(--primary-color); font-weight: 600; text-decoration: none; }
 
         .view-note-title { font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 15px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; }
         .view-note-body { font-size: 16px; line-height: 1.8; color: var(--text-main); word-break: break-word; }
@@ -353,7 +355,6 @@
 
         <!-- Subject Slider -->
         <div class="quick-subjects-wrapper" id="quick-subjects-slider">
-            <!-- 1. All Notes First -->
             <div class="subject-circle-item" onclick="filterBySubject('')">
                 <div class="subject-ring all-ring">
                     <img alt="All Notes" src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&amp;fit=crop&amp;w=120&amp;120&amp;q=80" />
@@ -361,7 +362,6 @@
                 <span>All Notes</span>
             </div>
 
-            <!-- 2. Add Custom Subject Button -->
             <div class="subject-circle-item" onclick="document.getElementById('custom-subject-img-upload').click()">
                 <div class="subject-ring add-ring" style="align-items: center; background: var(--surface-color); display: flex; justify-content: center;">
                     <i class="fas fa-plus" style="color: var(--primary-color); font-size: 24px;"></i>
@@ -370,10 +370,8 @@
                 <input accept="image/*" id="custom-subject-img-upload" onchange="addCustomSubject(event)" style="display: none;" type="file" />
             </div>
 
-            <!-- Container for dynamically added subjects -->
             <div id="dynamic-subjects-container" style="display: flex; gap: 22px;"></div>
 
-            <!-- Default Subjects -->
             <div class="subject-circle-item" onclick="filterBySubject('Biology')">
                 <div class="subject-ring bio-ring">
                     <img alt="Biology" src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&amp;fit=crop&amp;w=150&amp;h=150&amp;q=80" />
@@ -406,11 +404,9 @@
             </div>
         </div>
 
-        <!-- Notes Grid Area -->
         <div class="notes-grid" id="notes-container"></div>
     </div>
 
-    <!-- Floating Action Button -->
     <button class="fab-add-btn" id="fab-add-btn" onclick="openModal()" title="Add New Note">
         <i class="fas fa-plus"></i>
     </button>
@@ -461,10 +457,8 @@
                 <!-- Editor Toolbar -->
                 <div class="editor-toolbar">
                     <button onclick="execCmd('bold')" title="Bold"><i class="fas fa-bold"></i></button>
-                    <!-- Added Heading (H) Button right after Bold (B) -->
                     <button onclick="execCmd('formatBlock', '<h2>')" title="Heading"><i class="fas fa-heading"></i></button>
                     
-                    <!-- Color Highlighter Circles -->
                     <div class="color-circles-group" title="Text Highlighter Circles">
                         <button class="color-circle-btn bg-yellow" onclick="highlightText('#fef08a')" title="Yellow Highlight"></button>
                         <button class="color-circle-btn bg-green" onclick="highlightText('#bbf7d0')" title="Green Highlight"></button>
@@ -477,17 +471,19 @@
                     <button onclick="execCmd('insertUnorderedList')" title="Bullet List"><i class="fas fa-list-ul"></i></button>
                     <button onclick="execCmd('insertOrderedList')" title="Numbered List"><i class="fas fa-list-ol"></i></button>
                     
-                    <!-- PIN Lock Protection Feature Button -->
                     <button class="btn-pin-protect" onclick="setPinProtection()" title="Set/Change PIN Code Protection">
                         <i class="fas fa-key"></i> PIN Security
                     </button>
 
                     <button onclick="insertCustomLink()" title="Add URL Link"><i class="fas fa-link"></i> Link</button>
                     <button class="btn-yt" onclick="insertYouTubeEmbed()" title="Add YouTube Video"><i class="fab fa-youtube"></i> YouTube</button>
-                    <button class="btn-media" onclick="document.getElementById('multiple-media-input').click()" title="Upload Media">
-                        <i class="fas fa-photo-video"></i> Media
+                    
+                    <!-- Direct Cloudinary Upload Button -->
+                    <button class="btn-media" onclick="document.getElementById('multiple-media-input').click()" title="Upload Image, Video, PDF">
+                        <i class="fas fa-cloud-upload-alt"></i> Upload Media
                     </button>
-                    <input accept="image/*,video/*,application/pdf" id="multiple-media-input" multiple="" onchange="handleMultipleMediaUpload(event)" style="display: none;" type="file" />
+                    <input accept="image/*,video/*,application/pdf,audio/*" id="multiple-media-input" multiple="" onchange="handleCloudinaryUpload(event)" style="display: none;" type="file" />
+                    
                     <button class="btn-drive" onclick="insertDriveEmbed()" title="Add Google Drive Link"><i class="fab fa-google-drive"></i> Drive</button>
                 </div>
 
@@ -503,6 +499,8 @@
 
     <script>
         const API_BASE_URL = 'https://my-note-pro-1.onrender.com/api/notes';
+        const CLOUDINARY_CLOUD_NAME = 'ktlwem2b';
+        const CLOUDINARY_PRESET = 'ml_default'; // Default preset or unsigned preset
 
         const DEFAULT_NEET_NOTES = [
             {
@@ -584,7 +582,86 @@
             fetchNotesFromBackend();
         });
 
-        /* --- Dynamic Subject Feature --- */
+        /* --- DIRECT CLOUDINARY UPLOAD FUNCTION --- */
+        async function handleCloudinaryUpload(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            showToast('Uploading media to Cloudinary...', 'info');
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('upload_preset', CLOUDINARY_PRESET);
+
+                let resourceType = 'auto';
+                if (file.type.includes('pdf')) {
+                    resourceType = 'raw';
+                }
+
+                try {
+                    const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`;
+                    const res = await fetch(uploadUrl, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await res.json();
+
+                    if (data.secure_url) {
+                        const fileUrl = data.secure_url;
+                        const editor = document.getElementById('note-editor');
+
+                        if (file.type.startsWith('image/')) {
+                            editor.innerHTML += `<br><img src="${fileUrl}" alt="Uploaded Image"><br>`;
+                        } else if (file.type.startsWith('video/')) {
+                            editor.innerHTML += `<br><video controls src="${fileUrl}" style="max-width:100%; border-radius:8px;"></video><br>`;
+                        } else if (file.type.includes('pdf')) {
+                            editor.innerHTML += `<br><div class="pdf-embed-box"><i class="fas fa-file-pdf" style="color:red; font-size:20px;"></i> <a href="${fileUrl}" target="_blank">📄 View PDF Document (${file.name})</a></div><br>`;
+                        } else {
+                            editor.innerHTML += `<br><a href="${fileUrl}" target="_blank">📎 Attachment: ${file.name}</a><br>`;
+                        }
+
+                        showToast(`Uploaded ${file.name} successfully!`, 'success');
+                    } else {
+                        showToast(`Upload failed for ${file.name}`, 'error');
+                    }
+                } catch (err) {
+                    console.error('Cloudinary Upload Error:', err);
+                    showToast('Error uploading file to Cloudinary', 'error');
+                }
+            }
+            event.target.value = '';
+        }
+
+        /* --- Custom Link, YouTube, Drive Embedding --- */
+        function insertCustomLink() {
+            const url = prompt("Enter Web URL / Link:");
+            if(url) execCmd('createLink', url);
+        }
+
+        function insertYouTubeEmbed() {
+            const url = prompt("Paste YouTube Video Link:");
+            if (!url) return;
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            if (match && match[2].length === 11) {
+                const embedHtml = `<br><iframe width="100%" height="315" src="https://www.youtube.com/embed/${match[2]}" frameborder="0" allowfullscreen></iframe><br>`;
+                document.getElementById('note-editor').innerHTML += embedHtml;
+            } else {
+                showToast("Invalid YouTube URL", "error");
+            }
+        }
+
+        function insertDriveEmbed() {
+            const url = prompt("Paste Google Drive Link:");
+            if (url) {
+                const embedHtml = `<br><div class="pdf-embed-box"><i class="fab fa-google-drive" style="color:#0f9d58; font-size:20px;"></i> <a href="${url}" target="_blank">View Google Drive File</a></div><br>`;
+                document.getElementById('note-editor').innerHTML += embedHtml;
+            }
+        }
+
         function addCustomSubject(event) {
             const file = event.target.files[0];
             if (!file) return;
