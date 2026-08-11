@@ -13,7 +13,11 @@ cloudinary.config({
   secure: true
 });
 
-// 2. Updated CORS Configuration (Blogger + Localhost support)
+// 2. Body Parser Limits (Base64 Images ke liye limit 50mb kar di hai)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// 3. CORS Configuration
 const allowedOrigins = [
   'https://neetas1.blogspot.com',
   'http://neetas1.blogspot.com',
@@ -25,7 +29,6 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allows requests with no origin (mobile apps, postman, direct browser tests)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -36,9 +39,6 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-pin-code']
 }));
-
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI;
@@ -65,14 +65,31 @@ const noteSchema = new mongoose.Schema({
 
 const Note = mongoose.model('Note', noteSchema);
 
-// --- CLOUDINARY SIGNATURE API ---
+// --- 1. DIRECT CLOUDINARY UPLOAD API ROUTE ---
+app.post('/api/upload', async (req, res) => {
+  try {
+    const { image } = req.body; // Base64 string from frontend
+    if (!image) {
+      return res.status(400).json({ error: 'Image data is required' });
+    }
+
+    const uploadResponse = await cloudinary.uploader.upload(image, {
+      folder: 'neet_notes'
+    });
+
+    res.json({ url: uploadResponse.secure_url });
+  } catch (err) {
+    console.error('Cloudinary Upload Error:', err);
+    res.status(500).json({ error: 'Cloudinary upload failed', details: err.message });
+  }
+});
+
+// --- 2. SIGNATURE API ROUTE (FIXED) ---
 app.get('/api/cloudinary-signature', (req, res) => {
   try {
     const timestamp = Math.round(new Date().getTime() / 1000);
-    const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET || 'ml_default';
-    
     const signature = cloudinary.utils.api_sign_request(
-      { timestamp: timestamp, upload_preset: uploadPreset },
+      { timestamp: timestamp },
       process.env.CLOUDINARY_API_SECRET
     );
     
@@ -80,8 +97,7 @@ app.get('/api/cloudinary-signature', (req, res) => {
       timestamp,
       signature,
       cloudName: process.env.CLOUDINARY_CLOUD_NAME,
-      apiKey: process.env.CLOUDINARY_API_KEY,
-      uploadPreset
+      apiKey: process.env.CLOUDINARY_API_KEY
     });
   } catch (err) {
     res.status(500).json({ error: 'Signature generation failed' });
