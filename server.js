@@ -36,6 +36,7 @@ const SubjectSchema = new mongoose.Schema({
 });
 
 const NoteSchema = new mongoose.Schema({
+    userId: { type: String, required: true }, // 🔥 ID of the user who created the note
     title: { type: String, default: "Untitled Note" },
     content: { type: String, default: "" },
     subject: { type: String, default: "General" },
@@ -139,32 +140,60 @@ app.delete('/api/subjects/:id', async (req, res) => {
 });
 
 // --- NOTES APIs ---
+
+// 🔥 FETCH NOTES WITH PRIVACY PROTECTION
 app.get('/api/notes', async (req, res) => {
     try {
         let { page = 1, limit = 9, search = '', subject = '', date = '', userId = '' } = req.query;
         page = parseInt(page);
         limit = parseInt(limit);
 
-        let query = {};
+        let conditions = [];
 
+        // 1. Privacy Logic: User sees all public notes + ONLY their own private notes
+        if (userId) {
+            conditions.push({
+                $or: [
+                    { isPrivate: false },
+                    { isPrivate: { $exists: false } },
+                    { isPrivate: true, userId: userId }
+                ]
+            });
+        } else {
+            // If no userId sent, show ONLY public notes
+            conditions.push({
+                $or: [
+                    { isPrivate: false },
+                    { isPrivate: { $exists: false } }
+                ]
+            });
+        }
+
+        // 2. Search Filter
         if (search) {
-            query.$or = [
-                { title: { $regex: search, $options: 'i' } },
-                { content: { $regex: search, $options: 'i' } }
-            ];
+            conditions.push({
+                $or: [
+                    { title: { $regex: search, $options: 'i' } },
+                    { content: { $regex: search, $options: 'i' } }
+                ]
+            });
         }
 
+        // 3. Subject Filter
         if (subject) {
-            query.subject = { $regex: new RegExp(`^${subject}$`, 'i') };
+            conditions.push({ subject: { $regex: new RegExp(`^${subject}$`, 'i') } });
         }
 
+        // 4. Date Filter
         if (date) {
-            query.createdAt = { $regex: date, $options: 'i' };
+            conditions.push({ createdAt: { $regex: date, $options: 'i' } });
         }
+
+        const query = conditions.length > 0 ? { $and: conditions } : {};
 
         const skip = (page - 1) * limit;
         const totalNotes = await Note.countDocuments(query);
-        
+
         const notes = await Note.find(query)
             .sort({ isPinned: -1, _id: -1 })
             .skip(skip)
@@ -190,10 +219,17 @@ app.get('/api/notes', async (req, res) => {
     }
 });
 
+// 🔥 CREATE NOTE WITH USER ID
 app.post('/api/notes', async (req, res) => {
     try {
-        const { title, content, subject, isPrivate, isPinned, createdAt } = req.body;
+        const { title, content, subject, isPrivate, isPinned, createdAt, userId } = req.body;
+
+        if (!userId) {
+            return res.status(400).json({ error: "userId is required to create a note" });
+        }
+
         const newNote = await Note.create({
+            userId,
             title: title || 'Untitled Note',
             content: content || '',
             subject: subject || 'General',
@@ -213,8 +249,8 @@ app.put('/api/notes/:id', async (req, res) => {
             return res.status(400).json({ error: "Invalid Note ID format" });
         }
         const updatedNote = await Note.findByIdAndUpdate(
-            req.params.id, 
-            { $set: req.body }, 
+            req.params.id,
+            { $set: req.body },
             { new: true }
         );
         if (!updatedNote) return res.status(404).json({ error: "Note not found" });
@@ -258,26 +294,21 @@ app.post('/api/notes/:id/like', async (req, res) => {
     }
 });
 
-// -------------------------------------------------------------
-// 🔥 FIXED DELETE NOTE API (MongoDB + Local Storage File Clean)
-// -------------------------------------------------------------
+// DELETE NOTE API
 app.delete('/api/notes/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        // 1. Valid MongoDB ID Check
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ error: "Invalid MongoDB ObjectId" });
         }
 
-        // 2. Note ko dhundho aur delete karo
         const deletedNote = await Note.findByIdAndDelete(id);
 
         if (!deletedNote) {
             return res.status(404).json({ error: "Note MongoDB me nahi mila" });
         }
 
-        // 3. Storage File Cleanup (Agar content me koi local uploaded file thi to usko bhi uploads folder se delete kar do)
         if (deletedNote.content) {
             const fileMatches = deletedNote.content.match(/\/uploads\/[a-zA-Z0-9.-]+/g);
             if (fileMatches) {
@@ -285,16 +316,16 @@ app.delete('/api/notes/:id', async (req, res) => {
                     const fileName = path.basename(filePath);
                     const fullPath = path.join(uploadsDir, fileName);
                     if (fs.existsSync(fullPath)) {
-                        fs.unlinkSync(fullPath); // Local server storage se file delete karna
+                        fs.unlinkSync(fullPath);
                     }
                 });
             }
         }
 
-        res.json({ 
-            success: true, 
-            message: "Note & storage files permanently deleted from MongoDB", 
-            id: id 
+        res.json({
+            success: true,
+            message: "Note & storage files permanently deleted from MongoDB",
+            id: id
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
