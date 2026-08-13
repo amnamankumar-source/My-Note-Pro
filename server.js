@@ -1,4 +1,4 @@
-Const express = require('express');
+const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
@@ -41,6 +41,7 @@ const NoteSchema = new mongoose.Schema({
     subject: { type: String, default: "General" },
     isPrivate: { type: Boolean, default: false },
     isPinned: { type: Boolean, default: false },
+    userId: { type: String, required: true }, // 👈 User ID stored to verify note ownership
     likedUsers: { type: [String], default: [] },
     views: { type: Number, default: 0 },
     createdAt: { type: String, default: () => new Date().toLocaleString() }
@@ -139,28 +140,56 @@ app.delete('/api/subjects/:id', async (req, res) => {
 });
 
 // --- NOTES APIs ---
+
+// 🔒 GET NOTES (WITH PRIVACY LOGIC)
 app.get('/api/notes', async (req, res) => {
     try {
         let { page = 1, limit = 9, search = '', subject = '', date = '', userId = '' } = req.query;
         page = parseInt(page);
         limit = parseInt(limit);
 
-        let query = {};
+        const conditions = [];
+
+        // Privacy Logic: Show public notes OR notes owned by the current requesting user
+        if (userId) {
+            conditions.push({
+                $or: [
+                    { isPrivate: false },
+                    { isPrivate: { $exists: false } },
+                    { isPrivate: true, userId: userId }
+                ]
+            });
+        } else {
+            conditions.push({
+                $or: [
+                    { isPrivate: false },
+                    { isPrivate: { $exists: false } }
+                ]
+            });
+        }
 
         if (search) {
-            query.$or = [
-                { title: { $regex: search, $options: 'i' } },
-                { content: { $regex: search, $options: 'i' } }
-            ];
+            conditions.push({
+                $or: [
+                    { title: { $regex: search, $options: 'i' } },
+                    { content: { $regex: search, $options: 'i' } }
+                ]
+            });
         }
 
         if (subject) {
-            query.subject = { $regex: new RegExp(`^${subject}$`, 'i') };
+            conditions.push({
+                subject: { $regex: new RegExp(`^${subject}$`, 'i') }
+            });
         }
 
         if (date) {
-            query.createdAt = { $regex: date, $options: 'i' };
+            conditions.push({
+                createdAt: { $regex: date, $options: 'i' }
+            });
         }
+
+        const query = { $and: conditions };
 
         const skip = (page - 1) * limit;
         const totalNotes = await Note.countDocuments(query);
@@ -190,15 +219,22 @@ app.get('/api/notes', async (req, res) => {
     }
 });
 
+// 🔒 POST NEW NOTE (STORES USER ID)
 app.post('/api/notes', async (req, res) => {
     try {
-        const { title, content, subject, isPrivate, isPinned, createdAt } = req.body;
+        const { title, content, subject, isPrivate, isPinned, createdAt, userId } = req.body;
+
+        if (!userId) {
+            return res.status(400).json({ error: "userId required to create a note" });
+        }
+
         const newNote = await Note.create({
             title: title || 'Untitled Note',
             content: content || '',
             subject: subject || 'General',
             isPrivate: !!isPrivate,
             isPinned: !!isPinned,
+            userId: userId, // 👈 Saved creator's userId
             createdAt: createdAt || undefined
         });
         res.status(201).json(newNote);
@@ -259,25 +295,22 @@ app.post('/api/notes/:id/like', async (req, res) => {
 });
 
 // -------------------------------------------------------------
-// 🔥 FIXED DELETE NOTE API (MongoDB + Local Storage File Clean)
+// 🔥 DELETE NOTE API (MongoDB + Local Storage File Clean)
 // -------------------------------------------------------------
 app.delete('/api/notes/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        // 1. Valid MongoDB ID Check
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ error: "Invalid MongoDB ObjectId" });
         }
 
-        // 2. Note ko dhundho aur delete karo
         const deletedNote = await Note.findByIdAndDelete(id);
 
         if (!deletedNote) {
             return res.status(404).json({ error: "Note MongoDB me nahi mila" });
         }
 
-        // 3. Storage File Cleanup (Agar content me koi local uploaded file thi to usko bhi uploads folder se delete kar do)
         if (deletedNote.content) {
             const fileMatches = deletedNote.content.match(/\/uploads\/[a-zA-Z0-9.-]+/g);
             if (fileMatches) {
@@ -285,7 +318,7 @@ app.delete('/api/notes/:id', async (req, res) => {
                     const fileName = path.basename(filePath);
                     const fullPath = path.join(uploadsDir, fileName);
                     if (fs.existsSync(fullPath)) {
-                        fs.unlinkSync(fullPath); // Local server storage se file delete karna
+                        fs.unlinkSync(fullPath);
                     }
                 });
             }
@@ -316,4 +349,4 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
-}); 
+});
