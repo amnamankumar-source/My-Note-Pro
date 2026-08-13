@@ -16,7 +16,6 @@ app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 // -------------------------------------------------------------
 // 1. MONGODB CONNECTION
 // -------------------------------------------------------------
-// Apne MongoDB Atlas Connection String se replace karein agar online database use kar rahe hain
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/notes_app';
 
 mongoose.connect(MONGO_URI)
@@ -129,6 +128,9 @@ app.post('/api/subjects', async (req, res) => {
 
 app.delete('/api/subjects/:id', async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ error: "Invalid Subject ID format" });
+        }
         await Subject.findByIdAndDelete(req.params.id);
         res.json({ message: "Subject deleted successfully from MongoDB", id: req.params.id });
     } catch (err) {
@@ -136,17 +138,15 @@ app.delete('/api/subjects/:id', async (req, res) => {
     }
 });
 
-// --- NOTES APIs (PAGINATION + MONGODB REAL-TIME SEARCH) ---
+// --- NOTES APIs ---
 app.get('/api/notes', async (req, res) => {
     try {
         let { page = 1, limit = 9, search = '', subject = '', date = '', userId = '' } = req.query;
         page = parseInt(page);
         limit = parseInt(limit);
 
-        // MongoDB Search Query Filter
         let query = {};
 
-        // 1. Direct Search in MongoDB (Title ya Content dono me search karega)
         if (search) {
             query.$or = [
                 { title: { $regex: search, $options: 'i' } },
@@ -154,27 +154,22 @@ app.get('/api/notes', async (req, res) => {
             ];
         }
 
-        // 2. Subject Filter
         if (subject) {
             query.subject = { $regex: new RegExp(`^${subject}$`, 'i') };
         }
 
-        // 3. Date Filter
         if (date) {
             query.createdAt = { $regex: date, $options: 'i' };
         }
 
-        // Database Level Pagination (Skip & Limit for Fast Mobile Experience)
         const skip = (page - 1) * limit;
         const totalNotes = await Note.countDocuments(query);
         
-        // Mongo query: Har call par sirf utna hi batch fetch hoga (e.g. 9 notes at a time)
         const notes = await Note.find(query)
-            .sort({ isPinned: -1, _id: -1 }) // Pehle Pinned notes, fir Naye notes
+            .sort({ isPinned: -1, _id: -1 })
             .skip(skip)
             .limit(limit);
 
-        // Likes & User Liked Check format
         const formattedNotes = notes.map(n => {
             const noteObj = n.toObject();
             const userLiked = userId ? (noteObj.likedUsers || []).includes(userId) : false;
@@ -187,7 +182,7 @@ app.get('/api/notes', async (req, res) => {
 
         res.json({
             notes: formattedNotes,
-            hasMore: (skip + notes.length) < totalNotes, // Frontend ko bataega ki aur notes bache hain ya nahi
+            hasMore: (skip + notes.length) < totalNotes,
             totalNotes: totalNotes
         });
     } catch (err) {
@@ -214,6 +209,9 @@ app.post('/api/notes', async (req, res) => {
 
 app.put('/api/notes/:id', async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ error: "Invalid Note ID format" });
+        }
         const updatedNote = await Note.findByIdAndUpdate(
             req.params.id, 
             { $set: req.body }, 
@@ -226,12 +224,14 @@ app.put('/api/notes/:id', async (req, res) => {
     }
 });
 
-// Like / Unlike Endpoint
 app.post('/api/notes/:id/like', async (req, res) => {
     try {
         const { id } = req.params;
         const { userId } = req.body;
         if (!userId) return res.status(400).json({ error: "userId is required" });
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ error: "Invalid Note ID" });
+        }
 
         const note = await Note.findById(id);
         if (!note) return res.status(404).json({ error: "Note not found" });
@@ -258,14 +258,44 @@ app.post('/api/notes/:id/like', async (req, res) => {
     }
 });
 
-// DELETE Note from MongoDB
+// -------------------------------------------------------------
+// 🔥 FIXED DELETE NOTE API (MongoDB + Local Storage File Clean)
+// -------------------------------------------------------------
 app.delete('/api/notes/:id', async (req, res) => {
     try {
-        const deletedNote = await Note.findByIdAndDelete(req.params.id);
+        const { id } = req.params;
+
+        // 1. Valid MongoDB ID Check
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ error: "Invalid MongoDB ObjectId" });
+        }
+
+        // 2. Note ko dhundho aur delete karo
+        const deletedNote = await Note.findByIdAndDelete(id);
+
         if (!deletedNote) {
             return res.status(404).json({ error: "Note MongoDB me nahi mila" });
         }
-        res.json({ message: "Note permanently deleted from MongoDB", id: req.params.id });
+
+        // 3. Storage File Cleanup (Agar content me koi local uploaded file thi to usko bhi uploads folder se delete kar do)
+        if (deletedNote.content) {
+            const fileMatches = deletedNote.content.match(/\/uploads\/[a-zA-Z0-9.-]+/g);
+            if (fileMatches) {
+                fileMatches.forEach(filePath => {
+                    const fileName = path.basename(filePath);
+                    const fullPath = path.join(uploadsDir, fileName);
+                    if (fs.existsSync(fullPath)) {
+                        fs.unlinkSync(fullPath); // Local server storage se file delete karna
+                    }
+                });
+            }
+        }
+
+        res.json({ 
+            success: true, 
+            message: "Note & storage files permanently deleted from MongoDB", 
+            id: id 
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
