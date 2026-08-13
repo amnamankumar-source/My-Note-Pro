@@ -1,4 +1,4 @@
-User Const express = require('express');
+Const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
@@ -316,4 +316,4 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
+}); 
