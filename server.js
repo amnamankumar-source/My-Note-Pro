@@ -1,4 +1,4 @@
-require('dotenv').config(); // Load environment variables at the top
+require('dotenv').config(); // Sabse upar environment variables load honge
 
 const express = require('express');
 const cors = require('cors');
@@ -16,12 +16,12 @@ app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // -------------------------------------------------------------
-// 1. MONGODB CONNECTION (SECURE WITH DOTENV)
+// 1. MONGODB CONNECTION
 // -------------------------------------------------------------
 const MONGO_URI = process.env.MONGO_URI;
 
 if (!MONGO_URI) {
-    console.error('❌ ERROR: MONGO_URI .env file me missing hai!');
+    console.error('❌ Error: .env file me MONGO_URI missing hai!');
     process.exit(1);
 }
 
@@ -60,7 +60,7 @@ const Profile = mongoose.model('Profile', ProfileSchema);
 const Subject = mongoose.model('Subject', SubjectSchema);
 const Note = mongoose.model('Note', NoteSchema);
 
-// Helper function to escape special regex chars for safe searching
+// Safe regex helper for search
 function escapeRegex(text) {
     return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
 }
@@ -73,7 +73,6 @@ if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Static serve for uploaded files
 app.use('/uploads', express.static(uploadsDir));
 app.use(express.static(__dirname));
 
@@ -161,7 +160,6 @@ app.delete('/api/subjects/:id', async (req, res) => {
 
 // --- NOTES APIs ---
 
-// 📌 10 Notes per batch + Live Search from MongoDB
 app.get('/api/notes', async (req, res) => {
     try {
         let { page = 1, limit = 10, search = '', subject = '', date = '', userId = '' } = req.query;
@@ -170,7 +168,6 @@ app.get('/api/notes', async (req, res) => {
 
         let conditions = [];
 
-        // Privacy Check
         if (userId) {
             conditions.push({
                 $or: [
@@ -182,7 +179,6 @@ app.get('/api/notes', async (req, res) => {
             conditions.push({ isPrivate: false });
         }
 
-        // Search Condition (Title, Content, Subject)
         if (search) {
             const cleanSearch = escapeRegex(search.trim());
             conditions.push({
@@ -236,13 +232,11 @@ app.get('/api/notes', async (req, res) => {
     }
 });
 
-// 📌 SAFE SAVE NOTE ROUTE
 app.post('/api/notes', async (req, res) => {
     try {
         const { id, _id, title, content, subject, isPrivate, isPinned, userId, mediaUrl, mediaType, createdAt } = req.body;
         const noteId = id || _id;
 
-        // Valid ObjectId hone par Update karein
         if (noteId && mongoose.Types.ObjectId.isValid(noteId)) {
             const updatedNote = await Note.findByIdAndUpdate(
                 noteId,
@@ -261,11 +255,10 @@ app.post('/api/notes', async (req, res) => {
                 { new: true }
             );
             if (updatedNote) {
-                return res.json({ success: true, note: updatedNote });
+                return res.json(updatedNote);
             }
         }
 
-        // Naya note create karein
         const newNote = await Note.create({
             title: title || 'Untitled Note',
             content: content || '',
@@ -278,7 +271,7 @@ app.post('/api/notes', async (req, res) => {
             createdAt: createdAt || undefined
         });
 
-        res.status(201).json({ success: true, note: newNote });
+        res.status(201).json(newNote);
     } catch (err) {
         console.error("❌ Note Save Error:", err);
         res.status(500).json({ error: err.message });
@@ -296,7 +289,7 @@ app.put('/api/notes/:id', async (req, res) => {
             { new: true }
         );
         if (!updatedNote) return res.status(404).json({ error: "Note not found" });
-        res.json({ success: true, note: updatedNote });
+        res.json(updatedNote);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -410,7 +403,7 @@ app.get('*', (req, res) => {
     if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
     } else {
-        res.status(404).send("File index.html not found.");
+        res.status(404).send("index.html not found");
     }
 });
 
