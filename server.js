@@ -4,32 +4,26 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
-const compression = require('compression'); // ⚡ Speed Boost: Response compression
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware Setup
-app.use(compression()); // ⚡ Gzip compression enable kiya
 app.use(cors());
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // -------------------------------------------------------------
-// 1. MONGODB CONNECTION (Optimized Connection Pool)
+// 1. MONGODB CONNECTION
 // -------------------------------------------------------------
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/notes_app';
 
-mongoose.connect(MONGO_URI, {
-    maxPoolSize: 10, // Max 10 parallel connections to DB
-    serverSelectionTimeoutMS: 5000,
-    socketTimeoutMS: 45000,
-})
+mongoose.connect(MONGO_URI)
     .then(() => console.log('✅ Connected to MongoDB successfully!'))
     .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
 // -------------------------------------------------------------
-// 2. MONGOOSE SCHEMAS & MODELS WITH INDEXES
+// 2. MONGOOSE SCHEMAS & MODELS
 // -------------------------------------------------------------
 const ProfileSchema = new mongoose.Schema({
     name: { type: String, default: "Note Author" },
@@ -47,15 +41,13 @@ const NoteSchema = new mongoose.Schema({
     subject: { type: String, default: "General" },
     isPrivate: { type: Boolean, default: false },
     isPinned: { type: Boolean, default: false },
+    userId: { type: String, default: "anonymous" },
+    mediaUrl: { type: String, default: "" },
+    mediaType: { type: String, default: "" },
     likedUsers: { type: [String], default: [] },
     views: { type: Number, default: 0 },
     createdAt: { type: String, default: () => new Date().toLocaleString() }
 }, { timestamps: true });
-
-// ⚡ INDEXING (For Lightning-Fast Query Execution)
-NoteSchema.index({ isPinned: -1, _id: -1 }); // Fast sorting
-NoteSchema.index({ subject: 1 });             // Fast subject filter
-NoteSchema.index({ title: 'text', content: 'text' }); // Fast full-text search
 
 const Profile = mongoose.model('Profile', ProfileSchema);
 const Subject = mongoose.model('Subject', SubjectSchema);
@@ -66,9 +58,11 @@ const Note = mongoose.model('Note', NoteSchema);
 // -------------------------------------------------------------
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir);
+    fs.mkdirSync(uploadsDir, { recursive: true });
 }
-app.use('/uploads', express.static(uploadsDir, { maxAge: '1d' })); // Cache static files 1 day
+
+// Static serve for uploaded files
+app.use('/uploads', express.static(uploadsDir));
 app.use(express.static(__dirname));
 
 const storage = multer.diskStorage({
@@ -78,16 +72,20 @@ const storage = multer.diskStorage({
         cb(null, uniqueSuffix + path.extname(file.originalname));
     }
 });
-const upload = multer({ storage, limits: { fileSize: 100 * 1024 * 1024 } });
+
+const upload = multer({ 
+    storage, 
+    limits: { fileSize: 100 * 1024 * 1024 } // 100 MB Limit
+});
 
 // -------------------------------------------------------------
-// 4. API ROUTES (FAST & OPTIMIZED)
+// 4. API ROUTES
 // -------------------------------------------------------------
 
 // --- PROFILE APIs ---
 app.get('/api/profile', async (req, res) => {
     try {
-        let profile = await Profile.findOne().lean(); // ⚡ .lean() used
+        let profile = await Profile.findOne();
         if (!profile) {
             profile = await Profile.create({});
         }
@@ -100,12 +98,14 @@ app.get('/api/profile', async (req, res) => {
 app.put('/api/profile', async (req, res) => {
     try {
         const { name, img } = req.body;
-        const profile = await Profile.findOneAndUpdate(
-            {},
-            { $set: { name, img } },
-            { new: true, upsert: true, runValidators: true }
-        ).lean();
-        
+        let profile = await Profile.findOne();
+        if (!profile) {
+            profile = new Profile({ name, img });
+        } else {
+            if (name) profile.name = name;
+            if (img) profile.img = img;
+        }
+        await profile.save();
         res.json({ message: "Profile updated successfully", profile });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -115,7 +115,7 @@ app.put('/api/profile', async (req, res) => {
 // --- SUBJECTS APIs ---
 app.get('/api/subjects', async (req, res) => {
     try {
-        const subjects = await Subject.find().sort({ _id: -1 }).lean(); // ⚡ .lean() used
+        const subjects = await Subject.find().sort({ _id: -1 });
         res.json(subjects);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -141,52 +141,66 @@ app.delete('/api/subjects/:id', async (req, res) => {
             return res.status(400).json({ error: "Invalid Subject ID format" });
         }
         await Subject.findByIdAndDelete(req.params.id);
-        res.json({ message: "Subject deleted successfully from MongoDB", id: req.params.id });
+        res.json({ message: "Subject deleted successfully", id: req.params.id });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// --- NOTES APIs (ULTRA-FAST GET NOTES) ---
+// --- NOTES APIs ---
 app.get('/api/notes', async (req, res) => {
     try {
         let { page = 1, limit = 9, search = '', subject = '', date = '', userId = '' } = req.query;
-        page = Math.max(1, parseInt(page));
-        limit = Math.max(1, parseInt(limit));
+        page = parseInt(page);
+        limit = parseInt(limit);
 
-        let query = {};
+        let conditions = [];
 
-        // Fast Text Search indexing utilization if search term exists
+        if (userId) {
+            conditions.push({
+                $or: [
+                    { isPrivate: false },
+                    { isPrivate: true, userId: userId }
+                ]
+            });
+        } else {
+            conditions.push({ isPrivate: false });
+        }
+
         if (search) {
-            query.$text = { $search: search };
+            conditions.push({
+                $or: [
+                    { title: { $regex: search, $options: 'i' } },
+                    { content: { $regex: search, $options: 'i' } }
+                ]
+            });
         }
 
         if (subject) {
-            query.subject = { $regex: new RegExp(`^${subject}$`, 'i') };
+            conditions.push({ subject: { $regex: new RegExp(`^${subject}$`, 'i') } });
         }
 
         if (date) {
-            query.createdAt = { $regex: date, $options: 'i' };
+            conditions.push({ createdAt: { $regex: date, $options: 'i' } });
         }
 
+        const query = conditions.length > 0 ? { $and: conditions } : {};
+
         const skip = (page - 1) * limit;
+        const totalNotes = await Note.countDocuments(query);
 
-        // ⚡ PARALLEL EXECUTION with Promise.all + .lean()
-        const [totalNotes, notes] = await Promise.all([
-            Note.countDocuments(query),
-            Note.find(query)
-                .sort({ isPinned: -1, _id: -1 })
-                .skip(skip)
-                .limit(limit)
-                .lean() // Direct Plain JSON return (No Mongoose overhead)
-        ]);
+        const notes = await Note.find(query)
+            .sort({ isPinned: -1, _id: -1 })
+            .skip(skip)
+            .limit(limit);
 
-        const formattedNotes = notes.map(noteObj => {
-            const likedUsers = noteObj.likedUsers || [];
+        const formattedNotes = notes.map(n => {
+            const noteObj = n.toObject();
+            const userLiked = userId ? (noteObj.likedUsers || []).includes(userId) : false;
             return {
                 ...noteObj,
-                likes: likedUsers.length,
-                userLiked: userId ? likedUsers.includes(userId) : false
+                likes: (noteObj.likedUsers || []).length,
+                userLiked: userLiked
             };
         });
 
@@ -202,15 +216,43 @@ app.get('/api/notes', async (req, res) => {
 
 app.post('/api/notes', async (req, res) => {
     try {
-        const { title, content, subject, isPrivate, isPinned, createdAt } = req.body;
+        const { id, _id, title, content, subject, isPrivate, isPinned, userId, mediaUrl, mediaType, createdAt } = req.body;
+        const noteId = id || _id;
+
+        if (noteId && mongoose.Types.ObjectId.isValid(noteId)) {
+            const updatedNote = await Note.findByIdAndUpdate(
+                noteId,
+                { 
+                    $set: { 
+                        title, 
+                        content, 
+                        subject, 
+                        isPrivate: !!isPrivate, 
+                        isPinned: !!isPinned, 
+                        userId, 
+                        mediaUrl, 
+                        mediaType 
+                    } 
+                },
+                { new: true }
+            );
+            if (updatedNote) {
+                return res.json(updatedNote);
+            }
+        }
+
         const newNote = await Note.create({
             title: title || 'Untitled Note',
             content: content || '',
             subject: subject || 'General',
             isPrivate: !!isPrivate,
             isPinned: !!isPinned,
+            userId: userId || 'anonymous',
+            mediaUrl: mediaUrl || '',
+            mediaType: mediaType || '',
             createdAt: createdAt || undefined
         });
+
         res.status(201).json(newNote);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -226,8 +268,7 @@ app.put('/api/notes/:id', async (req, res) => {
             req.params.id, 
             { $set: req.body }, 
             { new: true }
-        ).lean();
-        
+        );
         if (!updatedNote) return res.status(404).json({ error: "Note not found" });
         res.json(updatedNote);
     } catch (err) {
@@ -269,7 +310,6 @@ app.post('/api/notes/:id/like', async (req, res) => {
     }
 });
 
-// DELETE NOTE API
 app.delete('/api/notes/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -282,6 +322,14 @@ app.delete('/api/notes/:id', async (req, res) => {
 
         if (!deletedNote) {
             return res.status(404).json({ error: "Note MongoDB me nahi mila" });
+        }
+
+        if (deletedNote.mediaUrl) {
+            const fileName = path.basename(deletedNote.mediaUrl);
+            const fullPath = path.join(uploadsDir, fileName);
+            if (fs.existsSync(fullPath)) {
+                fs.unlinkSync(fullPath);
+            }
         }
 
         if (deletedNote.content) {
@@ -299,7 +347,7 @@ app.delete('/api/notes/:id', async (req, res) => {
 
         res.json({ 
             success: true, 
-            message: "Note & storage files permanently deleted from MongoDB", 
+            message: "Note permanently deleted", 
             id: id 
         });
     } catch (err) {
@@ -307,13 +355,28 @@ app.delete('/api/notes/:id', async (req, res) => {
     }
 });
 
-// File Upload Endpoint
+// 🔥 FIXED FILE UPLOAD ROUTE (Matches frontend expectation fileType & mediaType)
 app.post('/api/upload', upload.single('media'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
     }
+
+    const mime = req.file.mimetype;
+    let type = 'file';
+
+    if (mime.startsWith('image/')) type = 'image';
+    else if (mime.startsWith('video/')) type = 'video';
+    else if (mime === 'application/pdf') type = 'pdf';
+
     const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-    res.json({ url: fileUrl, fileType: req.file.mimetype });
+
+    res.json({ 
+        url: fileUrl, 
+        fileType: mime,        // 🔥 Frontend data.fileType expect karta tha
+        mediaType: type,       // Categorized type
+        mimeType: mime,
+        originalName: req.file.originalname 
+    });
 });
 
 app.get('*', (req, res) => {
