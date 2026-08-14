@@ -35,16 +35,15 @@ const SubjectSchema = new mongoose.Schema({
     img: { type: String, default: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=120&120&q=80" }
 });
 
-// 🔥 Updated NoteSchema: Included userId, mediaUrl, mediaType
 const NoteSchema = new mongoose.Schema({
     title: { type: String, default: "Untitled Note" },
     content: { type: String, default: "" },
     subject: { type: String, default: "General" },
     isPrivate: { type: Boolean, default: false },
     isPinned: { type: Boolean, default: false },
-    userId: { type: String, default: "anonymous" }, // Note Owner Identifier
-    mediaUrl: { type: String, default: "" },         // Media file URL
-    mediaType: { type: String, default: "" },        // 'image', 'video', 'pdf', or 'file'
+    userId: { type: String, default: "anonymous" },
+    mediaUrl: { type: String, default: "" },
+    mediaType: { type: String, default: "" },
     likedUsers: { type: [String], default: [] },
     views: { type: Number, default: 0 },
     createdAt: { type: String, default: () => new Date().toLocaleString() }
@@ -59,7 +58,7 @@ const Note = mongoose.model('Note', NoteSchema);
 // -------------------------------------------------------------
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir);
+    fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
 // Static serve for uploaded files
@@ -149,8 +148,6 @@ app.delete('/api/subjects/:id', async (req, res) => {
 });
 
 // --- NOTES APIs ---
-
-// 🔥 FIXED GET NOTES: Privacy Logic Added
 app.get('/api/notes', async (req, res) => {
     try {
         let { page = 1, limit = 9, search = '', subject = '', date = '', userId = '' } = req.query;
@@ -159,7 +156,6 @@ app.get('/api/notes', async (req, res) => {
 
         let conditions = [];
 
-        // 1. Privacy Logic: Show public notes OR private notes owned by current userId
         if (userId) {
             conditions.push({
                 $or: [
@@ -171,7 +167,6 @@ app.get('/api/notes', async (req, res) => {
             conditions.push({ isPrivate: false });
         }
 
-        // 2. Search Filter
         if (search) {
             conditions.push({
                 $or: [
@@ -181,12 +176,10 @@ app.get('/api/notes', async (req, res) => {
             });
         }
 
-        // 3. Subject Filter
         if (subject) {
             conditions.push({ subject: { $regex: new RegExp(`^${subject}$`, 'i') } });
         }
 
-        // 4. Date Filter
         if (date) {
             conditions.push({ createdAt: { $regex: date, $options: 'i' } });
         }
@@ -221,13 +214,11 @@ app.get('/api/notes', async (req, res) => {
     }
 });
 
-// 🔥 FIXED CREATE/UPDATE NOTE: Prevents Duplication on Save
 app.post('/api/notes', async (req, res) => {
     try {
         const { id, _id, title, content, subject, isPrivate, isPinned, userId, mediaUrl, mediaType, createdAt } = req.body;
         const noteId = id || _id;
 
-        // Agar noteId present hai aur valid ObjectId hai, to UPDATE karo
         if (noteId && mongoose.Types.ObjectId.isValid(noteId)) {
             const updatedNote = await Note.findByIdAndUpdate(
                 noteId,
@@ -250,7 +241,6 @@ app.post('/api/notes', async (req, res) => {
             }
         }
 
-        // Agar bilkul new note hai tabhi CREATE karo
         const newNote = await Note.create({
             title: title || 'Untitled Note',
             content: content || '',
@@ -334,7 +324,6 @@ app.delete('/api/notes/:id', async (req, res) => {
             return res.status(404).json({ error: "Note MongoDB me nahi mila" });
         }
 
-        // Single media file clean up
         if (deletedNote.mediaUrl) {
             const fileName = path.basename(deletedNote.mediaUrl);
             const fullPath = path.join(uploadsDir, fileName);
@@ -343,7 +332,6 @@ app.delete('/api/notes/:id', async (req, res) => {
             }
         }
 
-        // Inline upload content clean up
         if (deletedNote.content) {
             const fileMatches = deletedNote.content.match(/\/uploads\/[a-zA-Z0-9.-]+/g);
             if (fileMatches) {
@@ -367,7 +355,7 @@ app.delete('/api/notes/:id', async (req, res) => {
     }
 });
 
-// 🔥 FIXED FILE UPLOAD ROUTE (Categorizes image, video, pdf)
+// 🔥 FIXED FILE UPLOAD ROUTE (Matches frontend expectation fileType & mediaType)
 app.post('/api/upload', upload.single('media'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
@@ -384,7 +372,8 @@ app.post('/api/upload', upload.single('media'), (req, res) => {
 
     res.json({ 
         url: fileUrl, 
-        mediaType: type,
+        fileType: mime,        // 🔥 Frontend data.fileType expect karta tha
+        mediaType: type,       // Categorized type
         mimeType: mime,
         originalName: req.file.originalname 
     });
