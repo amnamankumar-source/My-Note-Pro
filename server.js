@@ -25,6 +25,14 @@ mongoose.connect(MONGO_URI)
 // -------------------------------------------------------------
 // 2. MONGOOSE SCHEMAS & MODELS
 // -------------------------------------------------------------
+
+// 🔥 FIXED & ADDED: User Schema for Storing Gmail Logins
+const UserSchema = new mongoose.Schema({
+    name: { type: String, default: "User" },
+    email: { type: String, required: true, unique: true },
+    loginAt: { type: Date, default: Date.now }
+});
+
 const ProfileSchema = new mongoose.Schema({
     name: { type: String, default: "Note Author" },
     img: { type: String, default: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80" }
@@ -49,21 +57,21 @@ const NoteSchema = new mongoose.Schema({
     createdAt: { type: String, default: () => new Date().toLocaleString() }
 }, { timestamps: true });
 
+// Models
+const User = mongoose.model('User', UserSchema);
 const Profile = mongoose.model('Profile', ProfileSchema);
 const Subject = mongoose.model('Subject', SubjectSchema);
 const Note = mongoose.model('Note', NoteSchema);
 
 // -------------------------------------------------------------
-// 3. FILE UPLOAD CONFIGURATION (MULTER) - FIXED
+// 3. FILE UPLOAD CONFIGURATION (MULTER)
 // -------------------------------------------------------------
 const uploadsDir = path.join(__dirname, 'uploads');
 
-// Safe Directory Creation
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Static serve for uploaded files
 app.use('/uploads', express.static(uploadsDir));
 
 const storage = multer.diskStorage({
@@ -83,6 +91,40 @@ const upload = multer({
 // -------------------------------------------------------------
 // 4. API ROUTES
 // -------------------------------------------------------------
+
+// --- 🔥 USER / LOGIN APIs ---
+
+// 1. User Login Info Save karne ke liye
+app.post('/api/users/login', async (req, res) => {
+    try {
+        const { name, email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ error: "Email zaroori hai!" });
+        }
+
+        // Agar user pehle se hai toh loginAt time update hoga, nahi toh naya save hoga
+        const user = await User.findOneAndUpdate(
+            { email: email },
+            { name: name || "User", loginAt: new Date() },
+            { new: true, upsert: true }
+        );
+
+        res.status(200).json({ message: "User login recorded successfully", user });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 2. Sabhi Users ki list dekhne ke liye (Aap dekh sakte ho kitne Gmail IDs ne login kiya hai)
+app.get('/api/users', async (req, res) => {
+    try {
+        const users = await User.find().sort({ loginAt: -1 });
+        res.json({ totalUsers: users.length, users });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // --- PROFILE APIs ---
 app.get('/api/profile', async (req, res) => {
@@ -357,17 +399,15 @@ app.delete('/api/notes/:id', async (req, res) => {
     }
 });
 
-// 🔥 FIXED FILE UPLOAD ROUTE WITH MULTER ERROR HANDLER
+// --- FILE UPLOAD ROUTE ---
 app.post('/api/upload', (req, res) => {
     upload.single('media')(req, res, (err) => {
-        // Handle Multer specific errors (e.g., wrong field key, file size exceeds limit)
         if (err instanceof multer.MulterError) {
             return res.status(400).json({ error: `Multer Error: ${err.message}` });
         } else if (err) {
             return res.status(500).json({ error: `Upload Error: ${err.message}` });
         }
 
-        // Check if file was provided
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded. Make sure field name is "media".' });
         }
