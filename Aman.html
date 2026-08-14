@@ -201,11 +201,7 @@
         .rich-editor-area { width: 100%; height: 100%; flex: 1; font-size: 15px; line-height: 1.8; color: var(--text-main) !important; outline: none; padding: 15px; overflow-y: auto; box-sizing: border-box !important; }
         .rich-editor-area img { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; display: block; }
         .rich-editor-area video { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; display: block; }
-        .rich-editor-area iframe { max-width: 100%; border-radius: 8px; margin: 10px 0; }
         .rich-editor-area a { color: #4f46e5 !important; text-decoration: underline !important; font-weight: 500; }
-
-        .pdf-preview-box { background: var(--editor-toolbar-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; margin: 10px 0; display: flex; align-items: center; justify-content: space-between; }
-        .pdf-preview-box a { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; text-decoration: none !important; }
 
         .media-slider-container { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 15px; overflow-x: auto !important; overflow-y: hidden !important; padding: 10px 5px !important; margin: 10px 0 !important; width: 100% !important; scrollbar-width: thin; -webkit-overflow-scrolling: touch; border-radius: 12px; background: rgba(0,0,0,0.02); }
         .media-slider-card { flex: 0 0 auto !important; border-radius: 14px !important; overflow: hidden; border: 1px solid var(--border-color); background: #000; position: relative; box-shadow: var(--shadow-md); }
@@ -465,14 +461,14 @@
                         </div>
                     </div>
 
-                    <!-- FIXED MEDIA BUTTON SECTION (IMAGE, VIDEO, PDF SUPPORT) -->
+                    <!-- FIXED MEDIA BUTTON SECTION -->
                     <div style="position:relative; flex-shrink:0;">
                         <button onclick="togglePopup('media-popup', this)" title="Insert Media" style="color: #4f46e5 !important; font-weight: 600;">
                             <i class="fas fa-paperclip"></i> Media
                         </button>
                         <div class="toolbar-popup" id="media-popup">
-                            <div class="popup-option" onclick="triggerMediaUpload('image/*,video/*,application/pdf')">
-                                <i class="fas fa-upload"></i> Upload Files (Images/Videos/PDF)
+                            <div class="popup-option" onclick="triggerMediaUpload('image/*,video/*')">
+                                <i class="fas fa-upload"></i> Upload Files (Multiple)
                             </div>
                             <div class="popup-option" onclick="triggerMediaUpload('image/*')">
                                 <i class="fas fa-image"></i> Insert Image(s)
@@ -480,16 +476,13 @@
                             <div class="popup-option" onclick="triggerMediaUpload('video/*')">
                                 <i class="fas fa-video"></i> Insert Video(s)
                             </div>
-                            <div class="popup-option" onclick="triggerMediaUpload('application/pdf')">
-                                <i class="fas fa-file-pdf"></i> Insert PDF Document
-                            </div>
                             <div class="popup-option" onclick="insertMediaByUrl()">
                                 <i class="fas fa-link"></i> Insert via Web URL
                             </div>
                         </div>
                     </div>
                     <!-- File Input for Media Uploads -->
-                    <input type="file" id="media-file-input" multiple accept="image/*,video/*,application/pdf" style="display:none;" onchange="uploadAndInsertMediaFiles(event)">
+                    <input type="file" id="media-file-input" multiple accept="image/*,video/*" style="display:none;" onchange="uploadAndInsertMediaFiles(event)">
 
                     <button onclick="insertUrlPinLink()" title="Attach URL link" style="color:#0284c7 !important; font-weight:600;">
                         <i class="fas fa-link"></i> URL Pin
@@ -525,8 +518,8 @@
     <script>
         // API Base URL Setup
         const API_BASE_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
-            ? `${window.location.protocol}//${window.location.host}/api`
-            : `${window.location.origin}/api`;
+            ? 'http://localhost:5000/api'
+            : 'https://my-note-pro-1.onrender.com/api';
 
         // User Client Tracking Identifier (Unique per Browser/Device)
         let userId = localStorage.getItem('note_pro_user_id');
@@ -666,7 +659,7 @@
             });
         }
 
-        // Toggle Like API Call
+        // Toggle Like API Call (Per User Like System)
         async function toggleLike(event, noteId) {
             event.stopPropagation();
             const note = notes.find(n => n._id === noteId);
@@ -690,7 +683,7 @@
             }
         }
 
-        // 🔥 FIXED Upload Media Files with Real-time 1% - 100% Progress Popup (Images, Videos, PDFs)
+        // Upload Media Files with Real-time 1% - 100% Progress Popup
         async function uploadAndInsertMediaFiles(event) {
             const files = event.target.files;
             if (!files || files.length === 0) return;
@@ -706,45 +699,26 @@
                 showProgressPopup(`Uploading File ${i + 1}/${files.length}...`);
 
                 try {
-                    const responseText = await uploadWithProgress(`${API_BASE_URL}/upload`, formData, (percent) => {
+                    const response = await uploadWithProgress(`${API_BASE_URL}/upload`, formData, (percent) => {
                         updateProgressUI(percent);
                     });
 
-                    const data = JSON.parse(responseText);
-                    
+                    const data = JSON.parse(response);
                     if (data.url) {
-                        const fileMime = (data.fileType || data.mimeType || '').toLowerCase();
-                        const mediaType = (data.mediaType || '').toLowerCase();
-                        let mediaHtml = '';
-
-                        if (mediaType === 'image' || fileMime.startsWith('image/')) {
-                            mediaHtml = `<p><img src="${data.url}" style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></p><br>`;
-                        } else if (mediaType === 'video' || fileMime.startsWith('video/')) {
-                            mediaHtml = `<p><video src="${data.url}" controls style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></video></p><br>`;
-                        } else if (mediaType === 'pdf' || fileMime === 'application/pdf') {
-                            mediaHtml = `
-                                <div class="pdf-preview-box" contenteditable="false">
-                                    <a href="${data.url}" target="_blank">
-                                        <i class="fas fa-file-pdf" style="color:#e53e3e; font-size:20px;"></i>
-                                        <span>${data.originalName || 'PDF Document'}</span>
-                                    </a>
-                                    <a href="${data.url}" download style="font-size:12px; color:#4f46e5;">Download</a>
-                                </div><br>`;
-                        } else {
-                            mediaHtml = `<p><a href="${data.url}" target="_blank">📎 Download ${data.originalName || 'Attachment'}</a></p><br>`;
-                        }
-
+                        let mediaHtml = data.fileType.startsWith('image/') ? 
+                            `<p><img src="${data.url}" style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></p><br>` :
+                            `<p><video src="${data.url}" controls style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></video></p><br>`;
                         document.execCommand('insertHTML', false, mediaHtml);
                     }
                 } catch (err) {
-                    showToast(`Failed to upload ${file.name}`, 'error');
+                    showToast('Failed to upload media file', 'error');
                 }
             }
             hideProgressPopup();
             event.target.value = '';
         }
 
-        // Save Note with Progress
+        // Save Note with 1% to 100% Saving Progress Popup
         async function saveNoteAndClose() {
             const title = document.getElementById('note-title').value.trim();
             const content = document.getElementById('note-editor').innerHTML.trim();
@@ -763,7 +737,6 @@
                 subject: currentAuthorTag,
                 isPrivate: currentModalIsPrivate,
                 isPinned: currentModalIsPinned,
-                userId: userId,
                 createdAt: timeStamp
             };
 
@@ -782,7 +755,7 @@
                     hideProgressPopup();
                     showToast('Note Saved Successfully!', 'success');
                     closeModal();
-                    fetchNotesFromBackend(true);
+                    fetchNotesFromBackend(true); // Complete hone par naye note ke saath render hoga
                 }, 400);
 
             } catch (err) {
@@ -791,7 +764,7 @@
             }
         }
 
-        // XMLHttpRequest Helpers
+        // Custom XMLHttpRequest Helpers for Uploading & Saving Progress
         function uploadWithProgress(url, formData, onProgress) {
             return new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
@@ -843,6 +816,7 @@
             });
         }
 
+        // Progress Modal Helpers
         function showProgressPopup(title) {
             document.getElementById('progress-title').innerHTML = `<i class="fas fa-spinner fa-spin" style="color:#4f46e5;"></i> ${title}`;
             updateProgressUI(1);
@@ -852,7 +826,7 @@
         function updateProgressUI(percent) {
             const p = Math.min(100, Math.max(1, percent));
             document.getElementById('progress-bar-fill').style.width = `${p}%`;
-            document.getElementById('progress-text').innerText = `${p}%`;
+            document.getElementById('progress-text').innerText = `${p}% Saved`;
         }
 
         function hideProgressPopup() {
