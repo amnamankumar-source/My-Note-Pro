@@ -13,6 +13,9 @@ app.use(cors());
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
+// Helper function to handle String to Boolean conversion properly
+const parseBoolean = (val) => val === true || val === 'true';
+
 // -------------------------------------------------------------
 // 1. MONGODB CONNECTION
 // -------------------------------------------------------------
@@ -148,6 +151,8 @@ app.delete('/api/subjects/:id', async (req, res) => {
 });
 
 // --- NOTES APIs ---
+
+// 1. GET ALL NOTES (Private Notes Filter + Pagination)
 app.get('/api/notes', async (req, res) => {
     try {
         let { page = 1, limit = 9, search = '', subject = '', date = '', userId = '' } = req.query;
@@ -156,6 +161,7 @@ app.get('/api/notes', async (req, res) => {
 
         let conditions = [];
 
+        // Private Note Logic: Show public notes TO EVERYONE, but private notes ONLY to creator
         if (userId) {
             conditions.push({
                 $or: [
@@ -214,24 +220,30 @@ app.get('/api/notes', async (req, res) => {
     }
 });
 
+// 2. CREATE / UPDATE NOTE (Fixed Boolean & ID handling)
 app.post('/api/notes', async (req, res) => {
     try {
         const { id, _id, title, content, subject, isPrivate, isPinned, userId, mediaUrl, mediaType, createdAt } = req.body;
         const noteId = id || _id;
 
+        // Clean Boolean Conversion
+        const formattedIsPrivate = parseBoolean(isPrivate);
+        const formattedIsPinned = parseBoolean(isPinned);
+
+        // Update Note if valid ID provided
         if (noteId && mongoose.Types.ObjectId.isValid(noteId)) {
             const updatedNote = await Note.findByIdAndUpdate(
                 noteId,
                 { 
                     $set: { 
-                        title, 
-                        content, 
-                        subject, 
-                        isPrivate: !!isPrivate, 
-                        isPinned: !!isPinned, 
-                        userId, 
-                        mediaUrl, 
-                        mediaType 
+                        title: title || 'Untitled Note', 
+                        content: content || '', 
+                        subject: subject || 'General', 
+                        isPrivate: formattedIsPrivate, 
+                        isPinned: formattedIsPinned, 
+                        userId: userId || 'anonymous', 
+                        mediaUrl: mediaUrl || '', 
+                        mediaType: mediaType || '' 
                     } 
                 },
                 { new: true }
@@ -241,12 +253,13 @@ app.post('/api/notes', async (req, res) => {
             }
         }
 
+        // Create New Note
         const newNote = await Note.create({
             title: title || 'Untitled Note',
             content: content || '',
             subject: subject || 'General',
-            isPrivate: !!isPrivate,
-            isPinned: !!isPinned,
+            isPrivate: formattedIsPrivate,
+            isPinned: formattedIsPinned,
             userId: userId || 'anonymous',
             mediaUrl: mediaUrl || '',
             mediaType: mediaType || '',
@@ -255,6 +268,7 @@ app.post('/api/notes', async (req, res) => {
 
         res.status(201).json(newNote);
     } catch (err) {
+        console.error("Error creating note:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -264,9 +278,14 @@ app.put('/api/notes/:id', async (req, res) => {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(400).json({ error: "Invalid Note ID format" });
         }
+
+        const updateData = { ...req.body };
+        if (updateData.isPrivate !== undefined) updateData.isPrivate = parseBoolean(updateData.isPrivate);
+        if (updateData.isPinned !== undefined) updateData.isPinned = parseBoolean(updateData.isPinned);
+
         const updatedNote = await Note.findByIdAndUpdate(
             req.params.id, 
-            { $set: req.body }, 
+            { $set: updateData }, 
             { new: true }
         );
         if (!updatedNote) return res.status(404).json({ error: "Note not found" });
@@ -324,6 +343,7 @@ app.delete('/api/notes/:id', async (req, res) => {
             return res.status(404).json({ error: "Note MongoDB me nahi mila" });
         }
 
+        // Cleanup associated media file from uploads folder
         if (deletedNote.mediaUrl) {
             const fileName = path.basename(deletedNote.mediaUrl);
             const fullPath = path.join(uploadsDir, fileName);
@@ -355,7 +375,7 @@ app.delete('/api/notes/:id', async (req, res) => {
     }
 });
 
-// 🔥 FIXED FILE UPLOAD ROUTE (Matches frontend expectation fileType & mediaType)
+// --- UPLOAD API (Images, Videos, PDFs) ---
 app.post('/api/upload', upload.single('media'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
@@ -368,12 +388,13 @@ app.post('/api/upload', upload.single('media'), (req, res) => {
     else if (mime.startsWith('video/')) type = 'video';
     else if (mime === 'application/pdf') type = 'pdf';
 
-    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    // Relative URL works smoothly across all devices and frontend localhosts
+    const relativeUrl = `/uploads/${req.file.filename}`;
 
     res.json({ 
-        url: fileUrl, 
-        fileType: mime,        // 🔥 Frontend data.fileType expect karta tha
-        mediaType: type,       // Categorized type
+        url: relativeUrl, 
+        fileType: mime,
+        mediaType: type,
         mimeType: mime,
         originalName: req.file.originalname 
     });
