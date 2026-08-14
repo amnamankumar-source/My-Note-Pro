@@ -53,6 +53,11 @@ const Profile = mongoose.model('Profile', ProfileSchema);
 const Subject = mongoose.model('Subject', SubjectSchema);
 const Note = mongoose.model('Note', NoteSchema);
 
+// Helper function to escape special regex chars for safe searching
+function escapeRegex(text) {
+    return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+}
+
 // -------------------------------------------------------------
 // 3. FILE UPLOAD CONFIGURATION (MULTER)
 // -------------------------------------------------------------
@@ -149,9 +154,10 @@ app.delete('/api/subjects/:id', async (req, res) => {
 
 // --- NOTES APIs ---
 
-// 🔥 FETCH NOTES WITH PAGINATION (10 per page) & TOPIC/SEARCH FILTER
+// 📌 REQUIREMENT 2 & 3: 10 Notes per batch + Live Search from MongoDB
 app.get('/api/notes', async (req, res) => {
     try {
+        // Default limit is set to 10 notes per call
         let { page = 1, limit = 10, search = '', subject = '', date = '', userId = '' } = req.query;
         page = parseInt(page);
         limit = parseInt(limit);
@@ -170,31 +176,34 @@ app.get('/api/notes', async (req, res) => {
             conditions.push({ isPrivate: false });
         }
 
-        // 🔥 Search across Title, Content, and Subject (Topic)
+        // Search Condition (Title, Content, Subject)
         if (search) {
+            const cleanSearch = escapeRegex(search.trim());
             conditions.push({
                 $or: [
-                    { title: { $regex: search, $options: 'i' } },
-                    { content: { $regex: search, $options: 'i' } },
-                    { subject: { $regex: search, $options: 'i' } }
+                    { title: { $regex: cleanSearch, $options: 'i' } },
+                    { content: { $regex: cleanSearch, $options: 'i' } },
+                    { subject: { $regex: cleanSearch, $options: 'i' } }
                 ]
             });
         }
 
         if (subject) {
-            conditions.push({ subject: { $regex: new RegExp(`^${subject}$`, 'i') } });
+            const cleanSubject = escapeRegex(subject.trim());
+            conditions.push({ subject: { $regex: new RegExp(`^${cleanSubject}$`, 'i') } });
         }
 
         if (date) {
-            conditions.push({ createdAt: { $regex: date, $options: 'i' } });
+            const cleanDate = escapeRegex(date.trim());
+            conditions.push({ createdAt: { $regex: cleanDate, $options: 'i' } });
         }
 
         const query = conditions.length > 0 ? { $and: conditions } : {};
 
-        // 🎯 Infinite Scroll Pagination Logic (10 notes at a time)
         const skip = (page - 1) * limit;
         const totalNotes = await Note.countDocuments(query);
 
+        // Fetching notes directly from MongoDB with pagination (10 per page)
         const notes = await Note.find(query)
             .sort({ isPinned: -1, _id: -1 })
             .skip(skip)
@@ -212,23 +221,23 @@ app.get('/api/notes', async (req, res) => {
 
         res.json({
             notes: formattedNotes,
-            page: page,
-            limit: limit,
             hasMore: (skip + notes.length) < totalNotes,
-            totalNotes: totalNotes
+            totalNotes: totalNotes,
+            currentPage: page
         });
     } catch (err) {
+        console.error("Error fetching notes:", err);
         res.status(500).json({ error: err.message });
     }
 });
 
-// 🔥 FIXED NOTE SAVE ROUTE
+// 📌 REQUIREMENT 1 FIX: Safe Save Route
 app.post('/api/notes', async (req, res) => {
     try {
         const { id, _id, title, content, subject, isPrivate, isPinned, userId, mediaUrl, mediaType, createdAt } = req.body;
         const noteId = id || _id;
 
-        // Agar Valid ObjectId hai toh Update karega
+        // Agar Valid ObjectId hai, tabhi Update karein
         if (noteId && mongoose.Types.ObjectId.isValid(noteId)) {
             const updatedNote = await Note.findByIdAndUpdate(
                 noteId,
@@ -237,9 +246,9 @@ app.post('/api/notes', async (req, res) => {
                         title: title || 'Untitled Note', 
                         content: content || '', 
                         subject: subject || 'General', 
-                        isPrivate: !!isPrivate, 
-                        isPinned: !!isPinned, 
-                        userId: userId || 'anonymous', 
+                        isPrivate: Boolean(isPrivate), 
+                        isPinned: Boolean(isPinned), 
+                        userId, 
                         mediaUrl: mediaUrl || '', 
                         mediaType: mediaType || '' 
                     } 
@@ -251,22 +260,22 @@ app.post('/api/notes', async (req, res) => {
             }
         }
 
-        // 🔥 Naya Note Create karne ke liye cleanly create call karega
+        // Agar Naya note hai, to Bina kisi invalid _id ke direct create karein
         const newNote = await Note.create({
             title: title || 'Untitled Note',
             content: content || '',
             subject: subject || 'General',
-            isPrivate: !!isPrivate,
-            isPinned: !!isPinned,
+            isPrivate: Boolean(isPrivate),
+            isPinned: Boolean(isPinned),
             userId: userId || 'anonymous',
             mediaUrl: mediaUrl || '',
             mediaType: mediaType || '',
-            createdAt: createdAt || new Date().toLocaleString()
+            createdAt: createdAt || undefined
         });
 
         res.status(201).json(newNote);
     } catch (err) {
-        console.error("Save Note Error:", err);
+        console.error("❌ Note Save Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
