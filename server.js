@@ -1,3 +1,5 @@
+require('dotenv').config(); // Load environment variables at the top
+
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
@@ -14,12 +16,17 @@ app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // -------------------------------------------------------------
-// 1. MONGODB CONNECTION
+// 1. MONGODB CONNECTION (SECURE WITH DOTENV)
 // -------------------------------------------------------------
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/notes_app';
+const MONGO_URI = process.env.MONGO_URI;
+
+if (!MONGO_URI) {
+    console.error('❌ ERROR: MONGO_URI .env file me missing hai!');
+    process.exit(1);
+}
 
 mongoose.connect(MONGO_URI)
-    .then(() => console.log('✅ Connected to MongoDB successfully!'))
+    .then(() => console.log('✅ Connected to MongoDB Atlas successfully!'))
     .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
 // -------------------------------------------------------------
@@ -154,10 +161,9 @@ app.delete('/api/subjects/:id', async (req, res) => {
 
 // --- NOTES APIs ---
 
-// 📌 REQUIREMENT 2 & 3: 10 Notes per batch + Live Search from MongoDB
+// 📌 10 Notes per batch + Live Search from MongoDB
 app.get('/api/notes', async (req, res) => {
     try {
-        // Default limit is set to 10 notes per call
         let { page = 1, limit = 10, search = '', subject = '', date = '', userId = '' } = req.query;
         page = parseInt(page);
         limit = parseInt(limit);
@@ -203,7 +209,6 @@ app.get('/api/notes', async (req, res) => {
         const skip = (page - 1) * limit;
         const totalNotes = await Note.countDocuments(query);
 
-        // Fetching notes directly from MongoDB with pagination (10 per page)
         const notes = await Note.find(query)
             .sort({ isPinned: -1, _id: -1 })
             .skip(skip)
@@ -231,13 +236,13 @@ app.get('/api/notes', async (req, res) => {
     }
 });
 
-// 📌 REQUIREMENT 1 FIX: Safe Save Route
+// 📌 SAFE SAVE NOTE ROUTE
 app.post('/api/notes', async (req, res) => {
     try {
         const { id, _id, title, content, subject, isPrivate, isPinned, userId, mediaUrl, mediaType, createdAt } = req.body;
         const noteId = id || _id;
 
-        // Agar Valid ObjectId hai, tabhi Update karein
+        // Valid ObjectId hone par Update karein
         if (noteId && mongoose.Types.ObjectId.isValid(noteId)) {
             const updatedNote = await Note.findByIdAndUpdate(
                 noteId,
@@ -256,11 +261,11 @@ app.post('/api/notes', async (req, res) => {
                 { new: true }
             );
             if (updatedNote) {
-                return res.json(updatedNote);
+                return res.json({ success: true, note: updatedNote });
             }
         }
 
-        // Agar Naya note hai, to Bina kisi invalid _id ke direct create karein
+        // Naya note create karein
         const newNote = await Note.create({
             title: title || 'Untitled Note',
             content: content || '',
@@ -273,7 +278,7 @@ app.post('/api/notes', async (req, res) => {
             createdAt: createdAt || undefined
         });
 
-        res.status(201).json(newNote);
+        res.status(201).json({ success: true, note: newNote });
     } catch (err) {
         console.error("❌ Note Save Error:", err);
         res.status(500).json({ error: err.message });
@@ -291,7 +296,7 @@ app.put('/api/notes/:id', async (req, res) => {
             { new: true }
         );
         if (!updatedNote) return res.status(404).json({ error: "Note not found" });
-        res.json(updatedNote);
+        res.json({ success: true, note: updatedNote });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -401,7 +406,12 @@ app.post('/api/upload', upload.single('media'), (req, res) => {
 });
 
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    const indexPath = path.join(__dirname, 'index.html');
+    if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        res.status(404).send("File index.html not found.");
+    }
 });
 
 app.listen(PORT, () => {
