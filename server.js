@@ -148,14 +148,17 @@ app.delete('/api/subjects/:id', async (req, res) => {
 });
 
 // --- NOTES APIs ---
+
+// 🔥 FETCH NOTES WITH PAGINATION (10 per page) & TOPIC/SEARCH FILTER
 app.get('/api/notes', async (req, res) => {
     try {
-        let { page = 1, limit = 9, search = '', subject = '', date = '', userId = '' } = req.query;
+        let { page = 1, limit = 10, search = '', subject = '', date = '', userId = '' } = req.query;
         page = parseInt(page);
         limit = parseInt(limit);
 
         let conditions = [];
 
+        // Privacy Check
         if (userId) {
             conditions.push({
                 $or: [
@@ -167,11 +170,13 @@ app.get('/api/notes', async (req, res) => {
             conditions.push({ isPrivate: false });
         }
 
+        // 🔥 Search across Title, Content, and Subject (Topic)
         if (search) {
             conditions.push({
                 $or: [
                     { title: { $regex: search, $options: 'i' } },
-                    { content: { $regex: search, $options: 'i' } }
+                    { content: { $regex: search, $options: 'i' } },
+                    { subject: { $regex: search, $options: 'i' } }
                 ]
             });
         }
@@ -186,6 +191,7 @@ app.get('/api/notes', async (req, res) => {
 
         const query = conditions.length > 0 ? { $and: conditions } : {};
 
+        // 🎯 Infinite Scroll Pagination Logic (10 notes at a time)
         const skip = (page - 1) * limit;
         const totalNotes = await Note.countDocuments(query);
 
@@ -206,6 +212,8 @@ app.get('/api/notes', async (req, res) => {
 
         res.json({
             notes: formattedNotes,
+            page: page,
+            limit: limit,
             hasMore: (skip + notes.length) < totalNotes,
             totalNotes: totalNotes
         });
@@ -214,24 +222,26 @@ app.get('/api/notes', async (req, res) => {
     }
 });
 
+// 🔥 FIXED NOTE SAVE ROUTE
 app.post('/api/notes', async (req, res) => {
     try {
         const { id, _id, title, content, subject, isPrivate, isPinned, userId, mediaUrl, mediaType, createdAt } = req.body;
         const noteId = id || _id;
 
+        // Agar Valid ObjectId hai toh Update karega
         if (noteId && mongoose.Types.ObjectId.isValid(noteId)) {
             const updatedNote = await Note.findByIdAndUpdate(
                 noteId,
                 { 
                     $set: { 
-                        title, 
-                        content, 
-                        subject, 
+                        title: title || 'Untitled Note', 
+                        content: content || '', 
+                        subject: subject || 'General', 
                         isPrivate: !!isPrivate, 
                         isPinned: !!isPinned, 
-                        userId, 
-                        mediaUrl, 
-                        mediaType 
+                        userId: userId || 'anonymous', 
+                        mediaUrl: mediaUrl || '', 
+                        mediaType: mediaType || '' 
                     } 
                 },
                 { new: true }
@@ -241,6 +251,7 @@ app.post('/api/notes', async (req, res) => {
             }
         }
 
+        // 🔥 Naya Note Create karne ke liye cleanly create call karega
         const newNote = await Note.create({
             title: title || 'Untitled Note',
             content: content || '',
@@ -250,11 +261,12 @@ app.post('/api/notes', async (req, res) => {
             userId: userId || 'anonymous',
             mediaUrl: mediaUrl || '',
             mediaType: mediaType || '',
-            createdAt: createdAt || undefined
+            createdAt: createdAt || new Date().toLocaleString()
         });
 
         res.status(201).json(newNote);
     } catch (err) {
+        console.error("Save Note Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -355,7 +367,7 @@ app.delete('/api/notes/:id', async (req, res) => {
     }
 });
 
-// 🔥 FIXED FILE UPLOAD ROUTE (Matches frontend expectation fileType & mediaType)
+// FILE UPLOAD ROUTE
 app.post('/api/upload', upload.single('media'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
@@ -372,8 +384,8 @@ app.post('/api/upload', upload.single('media'), (req, res) => {
 
     res.json({ 
         url: fileUrl, 
-        fileType: mime,        // 🔥 Frontend data.fileType expect karta tha
-        mediaType: type,       // Categorized type
+        fileType: mime,
+        mediaType: type,
         mimeType: mime,
         originalName: req.file.originalname 
     });
