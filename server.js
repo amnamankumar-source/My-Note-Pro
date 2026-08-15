@@ -35,7 +35,6 @@ const noteSchema = new mongoose.Schema({
     isPrivate: { type: Boolean, default: false },
     isPinned: { type: Boolean, default: false },
     likes: { type: Number, default: 0 },
-    userLiked: { type: Boolean, default: false },
     views: { type: Number, default: 0 }
 }, { timestamps: true });
 
@@ -122,7 +121,7 @@ app.delete('/api/subjects/:id', async (req, res) => {
     }
 });
 
-// 3. Optimized Notes APIs (Strict Limit of 10 Notes per request)
+// 3. Notes APIs (10 Notes per request Limit)
 app.get('/api/notes', async (req, res) => {
     try {
         let { page = 1, limit = 10, search = '', subject = '' } = req.query;
@@ -131,7 +130,6 @@ app.get('/api/notes', async (req, res) => {
 
         let query = {};
 
-        // MongoDB Regex Search
         if (search) {
             query.$or = [
                 { title: { $regex: search, $options: 'i' } },
@@ -145,7 +143,6 @@ app.get('/api/notes', async (req, res) => {
 
         const skip = (page - 1) * limit;
 
-        // DB level pagination: strictly fetches only requested page size
         const [notes, totalNotes] = await Promise.all([
             Note.find(query)
                 .sort({ isPinned: -1, createdAt: -1 })
@@ -176,20 +173,68 @@ app.post('/api/notes', async (req, res) => {
     }
 });
 
-app.put('/api/notes/:id', async (req, res) => {
+// Real-Time Global Like Incrementor
+app.patch('/api/notes/:id/like', async (req, res) => {
     try {
-        const updatedNote = await Note.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const updatedNote = await Note.findByIdAndUpdate(
+            req.params.id,
+            { $inc: { likes: 1 } },
+            { new: true }
+        );
         if (!updatedNote) return res.status(404).json({ error: "Note not found" });
-        res.json(updatedNote);
+        res.json({ likes: updatedNote.likes });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
+// Real-Time Global View Incrementor
+app.patch('/api/notes/:id/view', async (req, res) => {
+    try {
+        const updatedNote = await Note.findByIdAndUpdate(
+            req.params.id,
+            { $inc: { views: 1 } },
+            { new: true }
+        );
+        if (!updatedNote) return res.status(404).json({ error: "Note not found" });
+        res.json({ views: updatedNote.views });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Update Note (Protected if Pinned)
+app.put('/api/notes/:id', async (req, res) => {
+    try {
+        const note = await Note.findById(req.params.id);
+        if (!note) return res.status(404).json({ error: "Note not found" });
+
+        // Agar note pinned hai aur user unpin nahi kar raha, toh edit block karein
+        if (note.isPinned && req.body.isPinned !== false) {
+            return res.status(403).json({ error: "Pinned note edit nahi ho sakta. Pehle unpin karein!" });
+        }
+
+        Object.assign(note, req.body);
+        await note.save();
+        res.json(note);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Delete Note (Protected if Pinned)
 app.delete('/api/notes/:id', async (req, res) => {
     try {
+        const note = await Note.findById(req.params.id);
+        if (!note) return res.status(404).json({ error: "Note not found" });
+
+        // Agar note pinned hai toh delete block karein
+        if (note.isPinned) {
+            return res.status(403).json({ error: "Pinned note delete nahi ho sakta. Pehle unpin karein!" });
+        }
+
         await Note.findByIdAndDelete(req.params.id);
-        res.json({ message: "Note deleted successfully from DB", id: req.params.id });
+        res.json({ message: "Note deleted successfully", id: req.params.id });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
