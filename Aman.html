@@ -5,9 +5,6 @@
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
     <title>My Note Pro</title>
 
-    <!-- Google Identity Services Library -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght=300;400;500;600;700&family=Playfair+Display:ital,wght@1,500&family=Roboto+Mono&family=Caveat:wght@600&family=Lobster&family=Pacifico&display=swap" rel="stylesheet">
     <!-- FontAwesome for Icons -->
@@ -16,7 +13,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <style>
-        /* Reset & Base Layout */
+        /* ===== Reset & Base Layout ===== */
         header, .header, #header, .Header, .header-widget,
         .navbar, nav, #navbar-iframe,
         #sidebar-wrapper, .sidebar, .sidebar-container,
@@ -34,6 +31,7 @@
           opacity: 0 !important;
         }
 
+        /* --- Pro Design Variables --- */
         :root {
             --bg-color: #f4f7f6 !important; 
             --surface-color: #ffffff !important;
@@ -101,67 +99,6 @@
         .live-clock { text-align: right; background: var(--surface-color) !important; padding: 8px 16px; border-radius: 9999px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); }
         .live-clock .time { font-size: 16px; font-weight: 600; color: #4f46e5; line-height: 1.2; }
         .live-clock .date { font-size: 11px; color: var(--text-muted) !important; font-weight: 500; }
-
-        /* Top-Right Circular Login Button & User Avatar CSS */
-        .login-btn-circle {
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #4f46e5, #d53f8c);
-            color: #ffffff;
-            border: 2px solid var(--surface-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            cursor: pointer;
-            box-shadow: var(--shadow-md);
-            transition: var(--transition);
-            flex-shrink: 0;
-            position: relative;
-        }
-        .login-btn-circle:hover {
-            transform: scale(1.08);
-            box-shadow: 0 0 12px rgba(79, 70, 229, 0.4);
-        }
-        .user-logged-avatar {
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            border: 2px solid #38a169;
-            object-fit: cover;
-            cursor: pointer;
-            box-shadow: var(--shadow-sm);
-        }
-        .user-menu-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-
-        /* Social Login Buttons CSS */
-        .social-btn {
-            width: 100%;
-            padding: 10px 16px;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            background: var(--surface-color);
-            color: var(--text-main);
-            font-size: 14px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-        .social-btn:hover {
-            background: var(--editor-toolbar-bg);
-            transform: translateY(-1px);
-        }
-        .social-btn.google-btn { border-color: #ea4335; color: #ea4335; }
-        .social-btn.facebook-btn { border-color: #1877f2; color: #1877f2; }
 
         /* Toolbar */
         .toolbar { display: flex !important; justify-content: space-between; align-items: center; gap: 15px; position: relative; z-index: 10; padding: 0 15px; flex-wrap: wrap; }
@@ -265,42 +202,25 @@
         .rich-editor-area { width: 100%; height: 100%; flex: 1; font-size: 15px; line-height: 1.8; color: var(--text-main) !important; outline: none; padding: 15px; overflow-y: auto; box-sizing: border-box !important; }
         .rich-editor-area img { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; display: block; }
         .rich-editor-area video { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; display: block; }
-        .rich-editor-area iframe { max-width: 100%; border-radius: 8px; margin: 10px 0; }
         .rich-editor-area a { color: #4f46e5 !important; text-decoration: underline !important; font-weight: 500; }
-
-        .pdf-preview-box { background: var(--editor-toolbar-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; margin: 10px 0; display: flex; align-items: center; justify-content: space-between; }
-        .pdf-preview-box a { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; text-decoration: none !important; }
 
         .media-slider-container { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 15px; overflow-x: auto !important; overflow-y: hidden !important; padding: 10px 5px !important; margin: 10px 0 !important; width: 100% !important; scrollbar-width: thin; -webkit-overflow-scrolling: touch; border-radius: 12px; background: rgba(0,0,0,0.02); }
         .media-slider-card { flex: 0 0 auto !important; border-radius: 14px !important; overflow: hidden; border: 1px solid var(--border-color); background: #000; position: relative; box-shadow: var(--shadow-md); }
         .media-slider-card.yt-card { width: 280px !important; height: 480px !important; max-height: 65vh !important; border-radius: 16px !important; }
         .media-slider-card.drive-card { width: 320px !important; height: 420px !important; background: var(--surface-color) !important; display: flex !important; flex-direction: column !important; }
         .media-slider-card iframe { width: 100%; height: 100%; border: none; }
-        
+        .drive-card-frame { flex: 1; width: 100%; position: relative; }
+        .drive-card-footer { height: 35px; background: var(--editor-toolbar-bg); border-top: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font-size: 11px; font-weight: 600; color: var(--text-muted); }
+
+        .view-note-title { font-size: 22px; font-weight: 700; color: var(--text-main) !important; margin-bottom: 12px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; word-break: break-word; }
+        .view-note-body { font-size: 15px; line-height: 1.8; color: var(--text-main) !important; word-break: break-word; }
+        .view-note-body img, .view-note-body video { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; }
+
+        .fab-add-btn { position: fixed; bottom: 30px; right: 30px; width: 55px; height: 55px; border-radius: 50% !important; background: linear-gradient(135deg, #4f46e5, #d53f8c) !important; color: white !important; font-size: 22px !important; border: none !important; box-shadow: 0 10px 25px rgba(79, 70, 229, 0.5) !important; z-index: 900; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; }
+
         .toast-container { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 50000; display: flex !important; flex-direction: column; gap: 10px; pointer-events: none; align-items: center; }
         .toast { background: rgba(15, 23, 42, 0.95); color: white; padding: 10px 20px; border-radius: 9999px; font-size: 13px; font-weight: 500; display: flex !important; align-items: center; gap: 8px; opacity: 0; transform: translateY(30px); transition: all 0.4s ease; }
         .toast.show { opacity: 1 !important; transform: translateY(0) !important; }
-
-        /* Progress Bar Popup Modal */
-        .progress-modal-card {
-            background: var(--surface-color) !important;
-            width: 90%; max-width: 380px;
-            border-radius: 20px; padding: 25px 20px;
-            box-shadow: var(--shadow-lg);
-            border: 1px solid var(--border-color);
-            display: flex; flex-direction: column; gap: 15px; text-align: center;
-        }
-        .progress-bar-container {
-            width: 100%; height: 12px;
-            background: var(--editor-toolbar-bg);
-            border-radius: 9999px; overflow: hidden;
-            border: 1px solid var(--border-color);
-        }
-        .progress-bar-fill {
-            height: 100%; width: 0%;
-            background: linear-gradient(90deg, #4f46e5, #d53f8c);
-            transition: width 0.2s ease-out; border-radius: 9999px;
-        }
 
         .simple-modal-card { background: var(--surface-color) !important; width: 90%; max-width: 400px; border-radius: 20px; padding: 20px; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 15px; }
         .simple-modal-card h3 { font-size: 16px; font-weight: 600; color: var(--text-main) !important; }
@@ -309,8 +229,6 @@
         .input-group input { padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border-color); outline: none; background: var(--editor-toolbar-bg); color: var(--text-main) !important; font-size: 13px; }
         .preview-img-box { width: 60px; height: 60px; border-radius: 50%; border: 2px dashed var(--border-color); display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 5px auto; }
         .preview-img-box img { width: 100%; height: 100%; object-fit: cover; }
-
-        .fab-add-btn { position: fixed; bottom: 30px; right: 30px; width: 55px; height: 55px; border-radius: 50% !important; background: linear-gradient(135deg, #4f46e5, #d53f8c) !important; color: white !important; font-size: 22px !important; border: none !important; box-shadow: 0 10px 25px rgba(79, 70, 229, 0.5) !important; z-index: 900; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; }
 
         @media (max-width: 768px) {
             .btn-add { display: none !important; } 
@@ -350,13 +268,6 @@
                 <div class="live-clock">
                     <div class="time" id="live-time">00:00:00 AM</div>
                     <div class="date" id="live-date">...</div>
-                </div>
-
-                <!-- Circular Top-Right Corner Login Profile Button -->
-                <div class="user-menu-wrapper" id="user-menu-wrapper">
-                    <button class="login-btn-circle" id="top-login-circle-btn" onclick="openLoginModal()" title="User Login">
-                        <i class="fas fa-user"></i>
-                    </button>
                 </div>
             </div>
         </div>
@@ -414,43 +325,6 @@
     <button class="fab-add-btn" id="fab-add-btn" onclick="openModal()" title="Add New Note">
         <i class="fas fa-plus"></i>
     </button>
-
-    <!-- LOGIN & AUTHENTICATION MODAL -->
-    <div class="modal-overlay" id="login-modal" style="z-index: 99999;">
-        <div class="simple-modal-card" style="text-align: center; max-width: 360px;">
-            <div style="font-size: 40px; color: #4f46e5; margin-bottom: 5px;">
-                <i class="fas fa-user-circle"></i>
-            </div>
-            <h3>Login to My Note Pro</h3>
-            <p style="font-size: 12px; color: var(--text-muted);">Sign in with your Google or Facebook ID to access your personal account & sync notes.</p>
-            
-            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
-                <button class="social-btn google-btn" onclick="loginWithGoogle()">
-                    <i class="fab fa-google" style="font-size: 18px;"></i> Sign in with Google / Gmail
-                </button>
-                <button class="social-btn facebook-btn" onclick="loginWithFacebook()">
-                    <i class="fab fa-facebook-f" style="font-size: 18px;"></i> Sign in with Facebook
-                </button>
-            </div>
-
-            <div style="margin-top: 15px;">
-                <button class="close-modal-btn" onclick="closeLoginModal()" style="width: 100%; justify-content: center;">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- PROGRESS BAR POPUP MODAL -->
-    <div class="modal-overlay" id="progress-modal" style="z-index: 99999;">
-        <div class="progress-modal-card">
-            <h3 id="progress-title" style="font-size:16px; font-weight:600;"><i class="fas fa-spinner fa-spin" style="color:#4f46e5;"></i> Uploading...</h3>
-            <div class="progress-bar-container">
-                <div class="progress-bar-fill" id="progress-bar-fill"></div>
-            </div>
-            <p id="progress-text" style="font-size:14px; font-weight:600; color:#4f46e5;">0%</p>
-        </div>
-    </div>
 
     <!-- ADD CUSTOM CIRCLE LOGO MODAL -->
     <div class="modal-overlay" id="add-subject-modal">
@@ -562,14 +436,14 @@
                         </div>
                     </div>
 
-                    <!-- FIXED MEDIA BUTTON SECTION (IMAGE, VIDEO, PDF SUPPORT) -->
+                    <!-- FIXED MEDIA BUTTON SECTION -->
                     <div style="position:relative; flex-shrink:0;">
                         <button onclick="togglePopup('media-popup', this)" title="Insert Media" style="color: #4f46e5 !important; font-weight: 600;">
                             <i class="fas fa-paperclip"></i> Media
                         </button>
                         <div class="toolbar-popup" id="media-popup">
-                            <div class="popup-option" onclick="triggerMediaUpload('image/*,video/*,application/pdf')">
-                                <i class="fas fa-upload"></i> Upload Files (Images/Videos/PDF)
+                            <div class="popup-option" onclick="triggerMediaUpload('image/*,video/*')">
+                                <i class="fas fa-upload"></i> Upload Files (Multiple)
                             </div>
                             <div class="popup-option" onclick="triggerMediaUpload('image/*')">
                                 <i class="fas fa-image"></i> Insert Image(s)
@@ -577,16 +451,13 @@
                             <div class="popup-option" onclick="triggerMediaUpload('video/*')">
                                 <i class="fas fa-video"></i> Insert Video(s)
                             </div>
-                            <div class="popup-option" onclick="triggerMediaUpload('application/pdf')">
-                                <i class="fas fa-file-pdf"></i> Insert PDF Document
-                            </div>
                             <div class="popup-option" onclick="insertMediaByUrl()">
                                 <i class="fas fa-link"></i> Insert via Web URL
                             </div>
                         </div>
                     </div>
-                    <!-- File Input for Media Uploads -->
-                    <input type="file" id="media-file-input" multiple accept="image/*,video/*,application/pdf" style="display:none;" onchange="uploadAndInsertMediaFiles(event)">
+                    <!-- Single File Input -->
+                    <input type="file" id="media-file-input" multiple accept="image/*,video/*" style="display:none;" onchange="handleMediaFilesSelect(event)">
 
                     <button onclick="insertUrlPinLink()" title="Attach URL link" style="color:#0284c7 !important; font-weight:600;">
                         <i class="fas fa-link"></i> URL Pin
@@ -606,7 +477,7 @@
                     </button>
 
                     <button style="color: #ff0000 !important;" onclick="insertYouTubeEmbed()" title="Add YouTube Video Link"><i class="fab fa-youtube"></i> YouTube Slider</button>
-                    <button style="color: #0f9d58 !important;" onclick="insertDriveEmbed()" title="Add Google Drive Link"><i class="fab fa-google-drive"></i> Drive Slider</button>
+                    <button style="color: #0f9d58 !important;" onclick="insertDriveEmbed()" title="Add Google Drive File Link"><i class="fab fa-google-drive"></i> Drive Slider</button>
                 </div>
 
                 <div class="editor-container">
@@ -619,110 +490,10 @@
     <!-- Toast Notifications -->
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- FIREBASE INTEGRATION MODULE SCRIPT -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
-        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-
-        const firebaseConfig = {
-          apiKey: "AiZaSyD3fop0X0_KA39Mez3U9dWBT2V9xxs81s",
-          authDomain: "my-note-pro-a9df6.firebaseapp.com",
-          projectId: "my-note-pro-a9df6",
-          storageBucket: "my-note-pro-a9df6.firebasestorage.app",
-          messagingSenderId: "181073640358",
-          appId: "1:181073640358:web:94c4a231b8c18caeddad67",
-          measurementId: "G-XEM3EZFJDH"
-        };
-
-        // Initialize Firebase, Auth & Firestore
-        const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        const googleProvider = new GoogleAuthProvider();
-
-        // Firebase Google Sign-In Handler
-        window.loginWithFirebaseGoogle = async function() {
-            try {
-                const result = await signInWithPopup(auth, googleProvider);
-                const user = result.user;
-
-                const userAccount = {
-                    id: user.uid,
-                    name: user.displayName,
-                    email: user.email,
-                    avatar: user.photoURL,
-                    provider: 'Google'
-                };
-
-                // Save to LocalStorage
-                localStorage.setItem('note_pro_user_account', JSON.stringify(userAccount));
-                document.getElementById('profile-name').innerText = userAccount.name;
-                document.getElementById('profile-img').src = userAccount.avatar;
-
-                // Sync with Firestore Database
-                await setDoc(doc(db, "users", user.uid), {
-                    name: userAccount.name,
-                    email: userAccount.email,
-                    avatar: userAccount.avatar,
-                    provider: userAccount.provider,
-                    lastLogin: new Date().toISOString()
-                }, { merge: true });
-
-                window.checkLoggedInUserUI();
-                window.closeLoginModal();
-                window.showToast(`Welcome ${userAccount.name}! Logged in via Firebase Google.`, "success");
-
-            } catch (error) {
-                console.error("Firebase Login Error:", error);
-                window.showToast("Google Login Failed: " + error.message, "error");
-            }
-        };
-
-        // Firebase Sign-Out Handler
-        window.logoutUserFirebase = async function() {
-            if (confirm("Are you sure you want to sign out from your account?")) {
-                try {
-                    await signOut(auth);
-                    localStorage.removeItem('note_pro_user_account');
-                    window.checkLoggedInUserUI();
-                    window.showToast("Signed out successfully!", "info");
-                } catch (error) {
-                    console.error("Sign Out Error:", error);
-                }
-            }
-        };
-
-        // Expose to window
-        window.saveUserToFirebase = async function(userAccount) {
-            try {
-                await setDoc(doc(db, "users", userAccount.id), {
-                    name: userAccount.name,
-                    email: userAccount.email,
-                    avatar: userAccount.avatar,
-                    provider: userAccount.provider,
-                    lastLogin: new Date().toISOString()
-                }, { merge: true });
-            } catch (error) {
-                console.error("Firebase sync error:", error);
-            }
-        };
-    </script>
-
+    <!-- JavaScript Logic (Backend Driven + Downward Infinite Scroll) -->
     <script>
-        // API Base URL Setup
-        const API_BASE_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
-            ? `${window.location.protocol}//${window.location.host}/api`
-            : `${window.location.origin}/api`;
-
-        // User Client Tracking Identifier
-        let userId = localStorage.getItem('note_pro_user_id');
-        if (!userId) {
-            userId = 'user_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('note_pro_user_id', userId);
-        }
+        // API Endpoint (Change to Render URL when deployed)
+        const API_BASE_URL = 'https://my-note-pro-1.onrender.com/api';
 
         let notes = [];
         let customSubjects = [];
@@ -731,6 +502,7 @@
         let currentSearchQuery = '';
         let currentDateFilter = '';
 
+        // Pagination State
         let currentPage = 1;
         let hasMoreNotes = true;
         let isLoadingNotes = false;
@@ -740,28 +512,16 @@
         let currentAuthorTag = 'Custom Author';
         let tempNewSubjectImgData = '';
 
-        /* --- GOOGLE IDENTITY SERVICES SDK CONFIG --- */
-        const GOOGLE_CLIENT_ID = "332820686777-404g1bbhae45tbt148lc5i3opbt24p16.apps.googleusercontent.com";
-
-        function initGoogleAuth() {
-            if (window.google && window.google.accounts) {
-                google.accounts.id.initialize({
-                    client_id: GOOGLE_CLIENT_ID,
-                    callback: handleGoogleResponse
-                });
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
             updateClock();
             setInterval(updateClock, 1000);
             
-            initGoogleAuth(); // Google Auth Init
-            checkLoggedInUserUI();
+            // Backend Data Loading
             fetchProfileFromBackend();
             fetchSubjectsFromBackend();
-            fetchNotesFromBackend(true);
+            fetchNotesFromBackend(true); // Reset & load page 1
 
+            // Infinite Scroll Trigger (Downward Scroll)
             window.addEventListener('scroll', handleInfiniteScroll);
 
             document.addEventListener('click', (e) => {
@@ -771,136 +531,19 @@
             });
         });
 
-        /* --- LOGIN & USER AUTHENTICATION FUNCTIONS --- */
-        function openLoginModal() {
-            document.getElementById('login-modal').classList.add('active');
-        }
-
-        function closeLoginModal() {
-            document.getElementById('login-modal').classList.remove('active');
-        }
-
-        function checkLoggedInUserUI() {
-            const savedUser = localStorage.getItem('note_pro_user_account');
-            const wrapper = document.getElementById('user-menu-wrapper');
-
-            if (savedUser) {
-                const userData = JSON.parse(savedUser);
-                wrapper.innerHTML = `
-                    <img src="${userData.avatar}" alt="${userData.name}" class="user-logged-avatar" title="${userData.name} (${userData.email}) - Click to Logout" onclick="logoutUser()" />
-                `;
-            } else {
-                wrapper.innerHTML = `
-                    <button class="login-btn-circle" id="top-login-circle-btn" onclick="openLoginModal()" title="User Login">
-                        <i class="fas fa-user"></i>
-                    </button>
-                `;
-            }
-        }
-
-        // Trigger Firebase Google Authentication
-        function loginWithGoogle() {
-            if (window.loginWithFirebaseGoogle) {
-                window.loginWithFirebaseGoogle();
-            } else {
-                // Fallback to Google SDK One Tap
-                closeLoginModal();
-                if (window.google && window.google.accounts) {
-                    google.accounts.id.prompt();
-                } else {
-                    showToast("Google Auth Loading... Please try again.", "error");
-                }
-            }
-        }
-
-        // Helper: Decode Google JWT Token
-        function parseJwt(token) {
-            try {
-                const base64Url = token.split('.')[1];
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                }).join(''));
-                return JSON.parse(jsonPayload);
-            } catch (e) {
-                return null;
-            }
-        }
-
-        // Google Login Response Handler
-        function handleGoogleResponse(response) {
-            const userData = parseJwt(response.credential);
-            
-            if (userData) {
-                const userAccount = {
-                    id: 'google_' + userData.sub,
-                    name: userData.name,
-                    email: userData.email,
-                    avatar: userData.picture,
-                    provider: 'Google'
-                };
-
-                localStorage.setItem('note_pro_user_account', JSON.stringify(userAccount));
-                document.getElementById('profile-name').innerText = userAccount.name;
-                document.getElementById('profile-img').src = userAccount.avatar;
-                saveProfileName();
-
-                if (window.saveUserToFirebase) {
-                    window.saveUserToFirebase(userAccount);
-                }
-
-                checkLoggedInUserUI();
-                showToast(`Welcome ${userAccount.name}! Logged in via Google.`, "success");
-            } else {
-                showToast("Google login failed!", "error");
-            }
-        }
-
-        function loginWithFacebook() {
-            closeLoginModal();
-            const userAccount = {
-                id: 'fb_' + Date.now(),
-                name: 'Facebook User',
-                email: 'facebook_user@fb.com',
-                avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80',
-                provider: 'Facebook'
-            };
-
-            localStorage.setItem('note_pro_user_account', JSON.stringify(userAccount));
-            document.getElementById('profile-name').innerText = userAccount.name;
-            document.getElementById('profile-img').src = userAccount.avatar;
-            saveProfileName();
-
-            if (window.saveUserToFirebase) {
-                window.saveUserToFirebase(userAccount);
-            }
-
-            checkLoggedInUserUI();
-            showToast("Successfully logged in via Facebook!", "success");
-        }
-
-        function logoutUser() {
-            if (window.logoutUserFirebase) {
-                window.logoutUserFirebase();
-            } else {
-                if (confirm("Are you sure you want to sign out from your account?")) {
-                    localStorage.removeItem('note_pro_user_account');
-                    checkLoggedInUserUI();
-                    showToast("Signed out successfully!", "info");
-                }
-            }
-        }
-
+        // Downward Infinite Scroll Listener
         function handleInfiniteScroll() {
             if (isLoadingNotes || !hasMoreNotes) return;
+
             const scrollPosition = window.innerHeight + window.scrollY;
             const threshold = document.documentElement.offsetHeight - 300;
+
             if (scrollPosition >= threshold) {
-                fetchNotesFromBackend(false);
+                fetchNotesFromBackend(false); // Fetch next page
             }
         }
 
-        // Fetch Notes from Backend
+        // Fetch Notes from Backend with Pagination
         async function fetchNotesFromBackend(reset = false) {
             if (isLoadingNotes) return;
             isLoadingNotes = true;
@@ -915,7 +558,7 @@
             document.getElementById('loading-spinner').style.display = 'block';
 
             try {
-                let url = `${API_BASE_URL}/notes?page=${currentPage}&limit=9&userId=${userId}`;
+                let url = `${API_BASE_URL}/notes?page=${currentPage}&limit=9`;
                 if (currentSearchQuery) url += `&search=${encodeURIComponent(currentSearchQuery)}`;
                 if (selectedSubjectFilter) url += `&subject=${encodeURIComponent(selectedSubjectFilter)}`;
                 if (currentDateFilter) url += `&date=${encodeURIComponent(currentDateFilter)}`;
@@ -923,9 +566,11 @@
                 const res = await fetch(url);
                 if (res.ok) {
                     const data = await res.json();
+                    
                     notes = reset ? data.notes : [...notes, ...data.notes];
                     hasMoreNotes = data.hasMore;
                     currentPage++;
+
                     renderNotesGrid();
                 }
             } catch (err) {
@@ -989,195 +634,7 @@
             });
         }
 
-        async function toggleLike(event, noteId) {
-            event.stopPropagation();
-            const note = notes.find(n => n._id === noteId);
-            if (!note) return;
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/notes/${noteId}/like`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: userId })
-                });
-
-                if (res.ok) {
-                    const updated = await res.json();
-                    note.likes = updated.likes;
-                    note.userLiked = updated.userLiked;
-                    renderNotesGrid();
-                }
-            } catch (err) {
-                console.warn('Like toggle error:', err);
-            }
-        }
-
-        async function uploadAndInsertMediaFiles(event) {
-            const files = event.target.files;
-            if (!files || files.length === 0) return;
-
-            const editor = document.getElementById('note-editor');
-            editor.focus();
-
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const formData = new FormData();
-                formData.append('media', file);
-
-                showProgressPopup(`Uploading File ${i + 1}/${files.length}...`);
-
-                try {
-                    const responseText = await uploadWithProgress(`${API_BASE_URL}/upload`, formData, (percent) => {
-                        updateProgressUI(percent);
-                    });
-
-                    const data = JSON.parse(responseText);
-                    
-                    if (data.url) {
-                        const fileMime = (data.fileType || data.mimeType || '').toLowerCase();
-                        const mediaType = (data.mediaType || '').toLowerCase();
-                        let mediaHtml = '';
-
-                        if (mediaType === 'image' || fileMime.startsWith('image/')) {
-                            mediaHtml = `<p><img src="${data.url}" style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></p><br>`;
-                        } else if (mediaType === 'video' || fileMime.startsWith('video/')) {
-                            mediaHtml = `<p><video src="${data.url}" controls style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></video></p><br>`;
-                        } else if (mediaType === 'pdf' || fileMime === 'application/pdf') {
-                            mediaHtml = `
-                                <div class="pdf-preview-box" contenteditable="false">
-                                    <a href="${data.url}" target="_blank">
-                                        <i class="fas fa-file-pdf" style="color:#e53e3e; font-size:20px;"></i>
-                                        <span>${data.originalName || 'PDF Document'}</span>
-                                    </a>
-                                    <a href="${data.url}" download style="font-size:12px; color:#4f46e5;">Download</a>
-                                </div><br>`;
-                        } else {
-                            mediaHtml = `<p><a href="${data.url}" target="_blank">📎 Download ${data.originalName || 'Attachment'}</a></p><br>`;
-                        }
-
-                        document.execCommand('insertHTML', false, mediaHtml);
-                    }
-                } catch (err) {
-                    showToast(`Failed to upload ${file.name}`, 'error');
-                }
-            }
-            hideProgressPopup();
-            event.target.value = '';
-        }
-
-        async function saveNoteAndClose() {
-            const title = document.getElementById('note-title').value.trim();
-            const content = document.getElementById('note-editor').innerHTML.trim();
-
-            if(!title && !content) {
-                showToast('Cannot save an empty note!', 'error');
-                return;
-            }
-
-            const now = new Date();
-            const timeStamp = now.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            const payload = {
-                title: title || 'Untitled Note',
-                content: content,
-                subject: currentAuthorTag,
-                isPrivate: currentModalIsPrivate,
-                isPinned: currentModalIsPinned,
-                userId: userId,
-                createdAt: timeStamp
-            };
-
-            showProgressPopup(currentEditId ? 'Updating Note...' : 'Saving Note to Server...');
-
-            const endpoint = currentEditId ? `${API_BASE_URL}/notes/${currentEditId}` : `${API_BASE_URL}/notes`;
-            const method = currentEditId ? 'PUT' : 'POST';
-
-            try {
-                await sendJSONWithProgress(endpoint, method, payload, (percent) => {
-                    updateProgressUI(percent);
-                });
-
-                updateProgressUI(100);
-                setTimeout(() => {
-                    hideProgressPopup();
-                    showToast('Note Saved Successfully!', 'success');
-                    closeModal();
-                    fetchNotesFromBackend(true);
-                }, 400);
-
-            } catch (err) {
-                hideProgressPopup();
-                showToast('Failed to save note to server', 'error');
-            }
-        }
-
-        function uploadWithProgress(url, formData, onProgress) {
-            return new Promise((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', url, true);
-
-                xhr.upload.onprogress = (e) => {
-                    if (e.lengthComputable) {
-                        const percent = Math.round((e.loaded / e.total) * 100);
-                        onProgress(percent);
-                    }
-                };
-
-                xhr.onload = () => {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        resolve(xhr.responseText);
-                    } else {
-                        reject(new Error('Upload failed'));
-                    }
-                };
-
-                xhr.onerror = () => reject(new Error('Upload error'));
-                xhr.send(formData);
-            });
-        }
-
-        function sendJSONWithProgress(url, method, data, onProgress) {
-            return new Promise((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                xhr.open(method, url, true);
-                xhr.setRequestHeader('Content-Type', 'application/json');
-
-                xhr.upload.onprogress = (e) => {
-                    if (e.lengthComputable) {
-                        const percent = Math.round((e.loaded / e.total) * 100);
-                        onProgress(percent);
-                    }
-                };
-
-                xhr.onload = () => {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        resolve(xhr.responseText);
-                    } else {
-                        reject(new Error('Save failed'));
-                    }
-                };
-
-                xhr.onerror = () => reject(new Error('Network error'));
-                xhr.send(JSON.stringify(data));
-            });
-        }
-
-        function showProgressPopup(title) {
-            document.getElementById('progress-title').innerHTML = `<i class="fas fa-spinner fa-spin" style="color:#4f46e5;"></i> ${title}`;
-            updateProgressUI(1);
-            document.getElementById('progress-modal').classList.add('active');
-        }
-
-        function updateProgressUI(percent) {
-            const p = Math.min(100, Math.max(1, percent));
-            document.getElementById('progress-bar-fill').style.width = `${p}%`;
-            document.getElementById('progress-text').innerText = `${p}%`;
-        }
-
-        function hideProgressPopup() {
-            document.getElementById('progress-modal').classList.remove('active');
-        }
-
+        // Profile API Operations
         async function fetchProfileFromBackend() {
             try {
                 const res = await fetch(`${API_BASE_URL}/profile`);
@@ -1186,7 +643,9 @@
                     document.getElementById('profile-name').innerText = profile.name;
                     document.getElementById('profile-img').src = profile.img;
                 }
-            } catch (err) { console.warn('Profile error:', err); }
+            } catch (err) {
+                console.warn('Profile fetch error:', err);
+            }
         }
 
         async function saveProfileName() {
@@ -1198,7 +657,9 @@
                     body: JSON.stringify({ name: newName })
                 });
                 showToast('Profile name updated!', 'success');
-            } catch (err) { showToast('Failed to update profile name', 'error'); }
+            } catch (err) {
+                showToast('Failed to update profile name', 'error');
+            }
         }
 
         async function updateProfileImg(event) {
@@ -1217,11 +678,14 @@
                         body: JSON.stringify({ img: imgData })
                     });
                     showToast('Profile image updated!', 'success');
-                } catch (err) { showToast('Failed to save profile image', 'error'); }
+                } catch (err) {
+                    showToast('Failed to save profile image', 'error');
+                }
             };
             reader.readAsDataURL(file);
         }
 
+        // Subjects API Operations
         async function fetchSubjectsFromBackend() {
             try {
                 const res = await fetch(`${API_BASE_URL}/subjects`);
@@ -1229,7 +693,9 @@
                     customSubjects = await res.json();
                     renderSubjectCircles();
                 }
-            } catch (err) { console.warn('Subjects error:', err); }
+            } catch (err) {
+                console.warn('Subjects fetch error:', err);
+            }
         }
 
         function renderSubjectCircles() {
@@ -1275,9 +741,60 @@
                     closeAddSubjectModal();
                     showToast(`Subject '${name}' added!`, 'success');
                 }
-            } catch (err) { showToast('Failed to save custom subject', 'error'); }
+            } catch (err) {
+                showToast('Failed to save custom subject', 'error');
+            }
         }
 
+        // Save / Update Note to Backend
+        async function saveNoteAndClose() {
+            const title = document.getElementById('note-title').value.trim();
+            const content = document.getElementById('note-editor').innerHTML.trim();
+
+            if(!title && !content) {
+                showToast('Cannot save an empty note!', 'error');
+                return;
+            }
+
+            const now = new Date();
+            const timeStamp = now.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            const payload = {
+                title: title || 'Untitled Note',
+                content: content,
+                subject: currentAuthorTag,
+                isPrivate: currentModalIsPrivate,
+                isPinned: currentModalIsPinned,
+                createdAt: timeStamp
+            };
+
+            try {
+                let res;
+                if (currentEditId) {
+                    res = await fetch(`${API_BASE_URL}/notes/${currentEditId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    res = await fetch(`${API_BASE_URL}/notes`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                }
+
+                if (res.ok) {
+                    showToast('Note Saved to Server!', 'success');
+                    closeModal();
+                    fetchNotesFromBackend(true); // Reload notes list
+                }
+            } catch (err) {
+                showToast('Failed to save note to server', 'error');
+            }
+        }
+
+        // Delete Note API Call
         async function deleteNote(id) {
             if(confirm('Delete this note permanently?')) {
                 try {
@@ -1286,10 +803,35 @@
                         showToast('Note deleted from backend!', 'error');
                         fetchNotesFromBackend(true);
                     }
-                } catch (err) { showToast('Failed to delete note', 'error'); }
+                } catch (err) {
+                    showToast('Failed to delete note', 'error');
+                }
             }
         }
 
+        // Like Toggle API Call
+        async function toggleLike(event, noteId) {
+            event.stopPropagation();
+            const note = notes.find(n => n._id === noteId);
+            if (!note) return;
+
+            note.userLiked = !note.userLiked;
+            note.likes = note.userLiked ? (note.likes || 0) + 1 : Math.max(0, (note.likes || 0) - 1);
+
+            renderNotesGrid();
+
+            try {
+                await fetch(`${API_BASE_URL}/notes/${noteId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ likes: note.likes, userLiked: note.userLiked })
+                });
+            } catch (err) {
+                console.warn('Like update failed:', err);
+            }
+        }
+
+        // View Note API Call
         async function viewNote(noteId) {
             const note = notes.find(n => n._id === noteId);
             if(!note) return;
@@ -1310,9 +852,12 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ views: note.views })
                 });
-            } catch(err) { console.warn('Views update error:', err); }
+            } catch(err) {
+                console.warn('Views update failed:', err);
+            }
         }
 
+        // Search & Filter Operations
         let searchTimeout;
         function handleSearch() {
             clearTimeout(searchTimeout);
@@ -1356,6 +901,7 @@
             clearDateFilter();
         }
 
+        // Helper UI Functions
         function openModal(noteId = null) {
             currentEditId = noteId;
             const modal = document.getElementById('editor-modal');
@@ -1400,7 +946,9 @@
             document.getElementById('add-subject-modal').classList.add('active');
         }
 
-        function closeAddSubjectModal() { document.getElementById('add-subject-modal').classList.remove('active'); }
+        function closeAddSubjectModal() {
+            document.getElementById('add-subject-modal').classList.remove('active');
+        }
 
         function previewSubjectImage(event) {
             const file = event.target.files[0];
@@ -1431,7 +979,9 @@
             closeAllPopups();
         }
 
-        function closeViewModal() { document.getElementById('view-modal').classList.remove('active'); }
+        function closeViewModal() {
+            document.getElementById('view-modal').classList.remove('active');
+        }
 
         function toggleModalPrivacy() {
             currentModalIsPrivate = !currentModalIsPrivate;
@@ -1513,6 +1063,26 @@
                 fileInput.accept = acceptType;
                 fileInput.click();
             }, 100);
+        }
+
+        function handleMediaFilesSelect(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+            const editor = document.getElementById('note-editor');
+            editor.focus();
+
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const src = e.target.result;
+                    let mediaHtml = file.type.startsWith('image/') ? 
+                        `<p><img src="${src}" style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></p><br>` :
+                        `<p><video src="${src}" controls style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></video></p><br>`;
+                    document.execCommand('insertHTML', false, mediaHtml);
+                };
+                reader.readAsDataURL(file);
+            });
+            event.target.value = '';
         }
 
         function insertMediaByUrl() {
