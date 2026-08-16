@@ -39,13 +39,34 @@ const noteSchema = new mongoose.Schema({
     likedBy: [{ type: String }],
     views: { type: Number, default: 0 },
     deletedBy: [{ type: String }]
-}, { timestamps: true }); // Automatically creates createdAt and updatedAt
+}, { timestamps: true });
 
 const Note = mongoose.model('Note', noteSchema);
 
 // Helper function to extract Current User ID
 const getUserId = (req) => {
     return req.headers['x-user-id'] || req.query.userId || req.body.userId || 'user_default';
+};
+
+// Helper function to format note object consistently for frontend
+const formatNoteResponse = (noteDoc, currentUserId) => {
+    const note = noteDoc.toObject ? noteDoc.toObject() : noteDoc;
+    const postDate = note.createdAt ? new Date(note.createdAt) : new Date();
+    
+    return {
+        ...note,
+        likes: note.likedBy ? note.likedBy.length : 0,
+        userLiked: note.likedBy ? note.likedBy.includes(currentUserId) : false,
+        views: note.views || 0,
+        formattedDate: postDate.toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        })
+    };
 };
 
 // Middleware
@@ -131,7 +152,9 @@ app.delete('/api/subjects/:id', async (req, res) => {
     }
 });
 
-// 3. Notes APIs with Date & Time Formatting
+// 3. Notes APIs
+
+// Get All Notes (Paginated & Filtered)
 app.get('/api/notes', async (req, res) => {
     try {
         const userId = getUserId(req);
@@ -173,26 +196,7 @@ app.get('/api/notes', async (req, res) => {
             Note.countDocuments(query)
         ]);
 
-        // Dynamic fields calculation + Readable Date formatting
-        const notes = rawNotes.map(note => {
-            const postDate = note.createdAt ? new Date(note.createdAt) : new Date();
-            const formattedDate = postDate.toLocaleString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-            });
-
-            return {
-                ...note,
-                likes: note.likedBy ? note.likedBy.length : 0,
-                userLiked: note.likedBy ? note.likedBy.includes(userId) : false,
-                createdAt: note.createdAt,
-                formattedDate: formattedDate // Output format: "Aug 15, 2026, 11:21 PM"
-            };
-        });
+        const notes = rawNotes.map(note => formatNoteResponse(note, userId));
 
         res.json({
             notes,
@@ -200,6 +204,23 @@ app.get('/api/notes', async (req, res) => {
             totalNotes,
             currentPage: page
         });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get Single Note + Auto Increment Views
+app.get('/api/notes/:id', async (req, res) => {
+    try {
+        const userId = getUserId(req);
+        const note = await Note.findByIdAndUpdate(
+            req.params.id,
+            { $inc: { views: 1 } },
+            { new: true }
+        );
+
+        if (!note) return res.status(404).json({ error: "Note not found" });
+        res.json(formatNoteResponse(note, userId));
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -214,15 +235,16 @@ app.post('/api/notes', async (req, res) => {
             authorId: userId
         });
         await newNote.save();
-        res.status(201).json(newNote);
+        res.status(201).json(formatNoteResponse(newNote, userId));
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// Update Note Logic (Pinned note cannot be edited)
+// Update Note (Protecting Likes and Views from getting overwritten)
 app.put('/api/notes/:id', async (req, res) => {
     try {
+        const userId = getUserId(req);
         const note = await Note.findById(req.params.id);
         if (!note) return res.status(404).json({ error: "Note not found" });
 
@@ -230,8 +252,14 @@ app.put('/api/notes/:id', async (req, res) => {
             return res.status(403).json({ error: "Pinned notes cannot be edited. Please unpin first." });
         }
 
-        const updatedNote = await Note.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        res.json(updatedNote);
+        // Prevent body update from wiping array data
+        const updateData = { ...req.body };
+        delete updateData.likedBy;
+        delete updateData.views;
+        delete updateData.deletedBy;
+
+        const updatedNote = await Note.findByIdAndUpdate(req.params.id, updateData, { new: true });
+        res.json(formatNoteResponse(updatedNote, userId));
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -260,40 +288,37 @@ app.delete('/api/notes/:id', async (req, res) => {
     }
 });
 
-// Global Like Toggle API Endpoint
+// Global Like/Unlike Toggle Endpoint
 app.post('/api/notes/:id/like', async (req, res) => {
     try {
         const userId = getUserId(req);
         const note = await Note.findById(req.params.id);
         if (!note) return res.status(404).json({ error: "Note not found" });
 
-        const likeIndex = note.likedBy.indexOf(userId);
-        if (likeIndex === -1) {
-            note.likedBy.push(userId);
-        } else {
-            note.likedBy.splice(likeIndex, 1);
-        }
+        const isLiked = note.likedBy.includes(userId);
+        const updateQuery = isLiked
+            ? { $pull: { likedBy: userId } }
+            : { $addToSet: { likedBy: userId } };
 
-        await note.save();
-        res.json({
-            likesCount: note.likedBy.length,
-            userLiked: note.likedBy.includes(userId)
-        });
+        const updatedNote = await Note.findByIdAndUpdate(req.params.id, updateQuery, { new: true });
+
+        res.json(formatNoteResponse(updatedNote, userId));
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// View Counter API Endpoint
+// Explicit View Counter Endpoint
 app.post('/api/notes/:id/view', async (req, res) => {
     try {
+        const userId = getUserId(req);
         const note = await Note.findByIdAndUpdate(
             req.params.id,
             { $inc: { views: 1 } },
             { new: true }
         );
         if (!note) return res.status(404).json({ error: "Note not found" });
-        res.json({ views: note.views });
+        res.json(formatNoteResponse(note, userId));
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
