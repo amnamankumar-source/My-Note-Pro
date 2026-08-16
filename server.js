@@ -15,7 +15,6 @@ mongoose.connect(MONGO_URI)
     .catch(err => console.error('MongoDB Connection Error:', err));
 
 // ===== MONGOOSE SCHEMAS & MODELS =====
-
 const profileSchema = new mongoose.Schema({
     name: { type: String, default: "Note Author" },
     img: { type: String, default: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80" }
@@ -46,8 +45,8 @@ const Note = mongoose.model('Note', noteSchema);
 
 // Middleware
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // Serve Uploaded Files Static Folder
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -57,7 +56,7 @@ if (!fs.existsSync(uploadsDir)) {
 app.use('/uploads', express.static(uploadsDir));
 app.use(express.static(__dirname));
 
-// Multer Configuration
+// Multer Configuration (Large file support: Images, Videos, PDFs)
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
     filename: (req, file, cb) => {
@@ -65,7 +64,10 @@ const storage = multer.diskStorage({
         cb(null, uniqueSuffix + path.extname(file.originalname));
     }
 });
-const upload = multer({ storage: storage });
+const upload = multer({ 
+    storage: storage,
+    limits: { fileSize: 100 * 1024 * 1024 } // 100MB limit for videos/PDFs
+});
 
 // ===== API ROUTES =====
 
@@ -297,11 +299,11 @@ app.delete('/api/notes/:id', async (req, res) => {
     }
 });
 
-// 4. File Upload (Supports Media & Code Files)
+// 4. File Upload (Supports Media & PDF Files)
 app.post('/api/upload', upload.single('media'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-    res.json({ url: fileUrl, fileType: req.file.mimetype, filename: req.file.filename });
+    res.json({ url: fileUrl, fileType: req.file.mimetype, filename: req.file.originalname });
 });
 
 // Catch-all route
