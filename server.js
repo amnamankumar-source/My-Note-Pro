@@ -35,7 +35,7 @@ const noteSchema = new mongoose.Schema({
     isPrivate: { type: Boolean, default: false },
     isPinned: { type: Boolean, default: false },
     likes: { type: Number, default: 0 },
-    userLiked: { type: Boolean, default: false },
+    likedBy: [{ type: String }], // Array of Client IDs who liked this note
     views: { type: Number, default: 0 }
 }, { timestamps: true });
 
@@ -122,16 +122,15 @@ app.delete('/api/subjects/:id', async (req, res) => {
     }
 });
 
-// 3. Optimized Notes APIs (Strict Limit of 10 Notes per request)
+// 3. Optimized Notes APIs
 app.get('/api/notes', async (req, res) => {
     try {
-        let { page = 1, limit = 10, search = '', subject = '' } = req.query;
+        let { page = 1, limit = 10, search = '', subject = '', userId = '' } = req.query;
         page = Math.max(1, parseInt(page));
         limit = Math.max(1, parseInt(limit));
 
         let query = {};
 
-        // MongoDB Regex Search
         if (search) {
             query.$or = [
                 { title: { $regex: search, $options: 'i' } },
@@ -145,8 +144,7 @@ app.get('/api/notes', async (req, res) => {
 
         const skip = (page - 1) * limit;
 
-        // DB level pagination: strictly fetches only requested page size
-        const [notes, totalNotes] = await Promise.all([
+        const [rawNotes, totalNotes] = await Promise.all([
             Note.find(query)
                 .sort({ isPinned: -1, createdAt: -1 })
                 .skip(skip)
@@ -155,12 +153,64 @@ app.get('/api/notes', async (req, res) => {
             Note.countDocuments(query)
         ]);
 
+        // Map notes to include userLiked dynamically based on current user's ID
+        const notes = rawNotes.map(note => {
+            const likedBy = note.likedBy || [];
+            return {
+                ...note,
+                likes: likedBy.length,
+                userLiked: userId ? likedBy.includes(userId) : false
+            };
+        });
+
         res.json({
             notes,
             hasMore: skip + notes.length < totalNotes,
             totalNotes,
             currentPage: page
         });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Toggle Like Endpoint per User
+app.put('/api/notes/:id/like', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        if (!userId) return res.status(400).json({ error: "User ID is required" });
+
+        const note = await Note.findById(req.params.id);
+        if (!note) return res.status(404).json({ error: "Note not found" });
+
+        if (!note.likedBy) note.likedBy = [];
+
+        const index = note.likedBy.indexOf(userId);
+        let userLiked = false;
+
+        if (index === -1) {
+            note.likedBy.push(userId);
+            userLiked = true;
+        } else {
+            note.likedBy.splice(index, 1);
+            userLiked = false;
+        }
+
+        note.likes = note.likedBy.length;
+        await note.save();
+
+        res.json({ likes: note.likes, userLiked, id: note._id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// View Count Increment Endpoint
+app.put('/api/notes/:id/view', async (req, res) => {
+    try {
+        const note = await Note.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } }, { new: true });
+        if (!note) return res.status(404).json({ error: "Note not found" });
+        res.json({ views: note.views });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
