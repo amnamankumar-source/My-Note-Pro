@@ -53,10 +53,15 @@ const formatNoteResponse = (noteDoc, currentUserId) => {
     const note = noteDoc.toObject ? noteDoc.toObject() : noteDoc;
     const postDate = note.createdAt ? new Date(note.createdAt) : new Date();
     
+    // Ensure array exists
+    const likedByArr = Array.isArray(note.likedBy) ? note.likedBy : [];
+    
     return {
         ...note,
-        likes: note.likedBy ? note.likedBy.length : 0,
-        userLiked: note.likedBy ? note.likedBy.includes(currentUserId) : false,
+        likedBy: likedByArr,
+        likesCount: likedByArr.length, // Direct Total Like Count
+        likes: likedByArr.length,      // Fallback Field
+        userLiked: likedByArr.includes(currentUserId), // Check if logged-in user has liked
         views: note.views || 0,
         formattedDate: postDate.toLocaleString('en-US', {
             month: 'short',
@@ -226,13 +231,14 @@ app.get('/api/notes/:id', async (req, res) => {
     }
 });
 
-// Post Naya Note
+// Post New Note
 app.post('/api/notes', async (req, res) => {
     try {
         const userId = getUserId(req);
         const newNote = new Note({
             ...req.body,
-            authorId: userId
+            authorId: userId,
+            likedBy: []
         });
         await newNote.save();
         res.status(201).json(formatNoteResponse(newNote, userId));
@@ -241,7 +247,7 @@ app.post('/api/notes', async (req, res) => {
     }
 });
 
-// Update Note (Protecting Likes and Views from getting overwritten)
+// Update Note
 app.put('/api/notes/:id', async (req, res) => {
     try {
         const userId = getUserId(req);
@@ -252,7 +258,6 @@ app.put('/api/notes/:id', async (req, res) => {
             return res.status(403).json({ error: "Pinned notes cannot be edited. Please unpin first." });
         }
 
-        // Prevent body update from wiping array data
         const updateData = { ...req.body };
         delete updateData.likedBy;
         delete updateData.views;
@@ -288,19 +293,26 @@ app.delete('/api/notes/:id', async (req, res) => {
     }
 });
 
-// Global Like/Unlike Toggle Endpoint
+// Global Like/Unlike Toggle Endpoint (Updated for Atomic Multi-User Safety)
 app.post('/api/notes/:id/like', async (req, res) => {
     try {
         const userId = getUserId(req);
+        
+        if (!userId || userId === 'user_default') {
+            return res.status(400).json({ error: "Valid User ID required for liking notes." });
+        }
+
         const note = await Note.findById(req.params.id);
         if (!note) return res.status(404).json({ error: "Note not found" });
 
         const isLiked = note.likedBy.includes(userId);
-        const updateQuery = isLiked
-            ? { $pull: { likedBy: userId } }
-            : { $addToSet: { likedBy: userId } };
 
-        const updatedNote = await Note.findByIdAndUpdate(req.params.id, updateQuery, { new: true });
+        // Atomic update prevents race conditions across different users
+        const updatedNote = await Note.findByIdAndUpdate(
+            req.params.id,
+            isLiked ? { $pull: { likedBy: userId } } : { $addToSet: { likedBy: userId } },
+            { new: true }
+        );
 
         res.json(formatNoteResponse(updatedNote, userId));
     } catch (err) {
