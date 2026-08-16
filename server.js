@@ -216,18 +216,23 @@ app.put('/api/notes/:id/like', async (req, res) => {
     }
 });
 
-// Record View Count (Works for both Normal & Pinned Notes)
+// Record View Count (Increments every time a note is opened)
 app.put('/api/notes/:id/view', async (req, res) => {
     try {
         const { deviceId } = req.body;
-        const note = await Note.findById(req.params.id);
-        if (!note) return res.status(404).json({ error: "Note not found" });
 
-        if (deviceId && !note.viewedBy.includes(deviceId)) {
-            note.viewedBy.push(deviceId);
-            note.views += 1;
-            await note.save();
+        const updateData = { $inc: { views: 1 } };
+        if (deviceId) {
+            updateData.$addToSet = { viewedBy: deviceId };
         }
+
+        const note = await Note.findByIdAndUpdate(
+            req.params.id,
+            updateData,
+            { new: true }
+        );
+
+        if (!note) return res.status(404).json({ error: "Note not found" });
 
         res.json({ views: note.views });
     } catch (err) {
