@@ -137,6 +137,7 @@
         .note-content-container { flex: 1; display: flex !important; flex-direction: column; cursor: pointer; }
         .note-body-html { font-size: 14px; line-height: 1.7; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-height: 110px; word-break: break-word; color: var(--text-muted) !important; }
         .note-body-html img, .note-body-html video { max-width: 100%; max-height: 100px; object-fit: cover; border-radius: 6px; }
+        .pdf-embed-box, .file-download-box { width: 100%; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; background: var(--editor-toolbar-bg); margin: 8px 0; display: flex; align-items: center; justify-content: space-between; }
 
         .note-footer { margin-top: auto; padding-top: 15px; border-top: 1px solid var(--border-color); display: flex !important; justify-content: space-between; align-items: center; }
         .note-date { font-size: 12px; color: var(--text-muted) !important; display: flex !important; align-items: center; gap: 6px; font-weight: 500; }
@@ -187,7 +188,7 @@
         .color-red { background: #ef4444 !important; }
         .color-blue { background: #3b82f6 !important; }
 
-        .toolbar-popup { position: fixed !important; margin-top: 5px; background: var(--surface-color) !important; border: 1px solid var(--border-color); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 10px; z-index: 10000 !important; display: none; flex-direction: column; gap: 6px; min-width: 180px; max-height: 280px; overflow-y: auto; }
+        .toolbar-popup { position: fixed !important; margin-top: 5px; background: var(--surface-color) !important; border: 1px solid var(--border-color); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 10px; z-index: 10000 !important; display: none; flex-direction: column; gap: 6px; min-width: 200px; max-height: 280px; overflow-y: auto; }
         .toolbar-popup.active { display: flex !important; }
         .popup-option { padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--text-main) !important; transition: background 0.2s; white-space: nowrap; }
         .popup-option:hover { background: var(--editor-toolbar-bg) !important; }
@@ -195,6 +196,7 @@
         .editor-container { width: 100%; flex: 1; display: flex !important; flex-direction: column; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-color) !important; overflow: hidden; min-height: 250px; }
         .rich-editor-area { width: 100%; height: 100%; flex: 1; font-size: 15px; line-height: 1.8; color: var(--text-main) !important; outline: none; padding: 15px; overflow-y: auto; box-sizing: border-box !important; }
         .rich-editor-area img, .rich-editor-area video { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; display: block; }
+        .rich-editor-area iframe { width: 100%; height: 400px; border: 1px solid var(--border-color); border-radius: 8px; margin: 10px 0; }
 
         .media-slider-container { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 15px; overflow-x: auto !important; overflow-y: hidden !important; padding: 10px 5px !important; margin: 10px 0 !important; width: 100% !important; scrollbar-width: thin; -webkit-overflow-scrolling: touch; border-radius: 12px; background: rgba(0,0,0,0.02); }
         .media-slider-card { flex: 0 0 auto !important; border-radius: 14px !important; overflow: hidden; border: 1px solid var(--border-color); background: #000; position: relative; box-shadow: var(--shadow-md); }
@@ -208,6 +210,7 @@
         .view-note-title { font-size: 22px; font-weight: 700; color: var(--text-main) !important; margin-bottom: 12px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; word-break: break-word; }
         .view-note-body { font-size: 15px; line-height: 1.8; color: var(--text-main) !important; word-break: break-word; }
         .view-note-body img, .view-note-body video { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; }
+        .view-note-body iframe { width: 100%; height: 450px; border-radius: 8px; border: 1px solid var(--border-color); }
 
         .fab-add-btn { position: fixed; bottom: 30px; right: 30px; width: 55px; height: 55px; border-radius: 50% !important; background: linear-gradient(135deg, #4f46e5, #d53f8c) !important; color: white !important; font-size: 22px !important; border: none !important; box-shadow: 0 10px 25px rgba(79, 70, 229, 0.5) !important; z-index: 900; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; }
 
@@ -435,14 +438,14 @@
                         </div>
                     </div>
 
-                    <!-- FIXED MEDIA BUTTON SECTION WITH CODE FRAME OPTION -->
+                    <!-- UPDATED MEDIA & FILE UPLOAD BUTTON SECTION -->
                     <div style="position:relative; flex-shrink:0;">
-                        <button onclick="togglePopup('media-popup', this)" title="Insert Media" style="color: #4f46e5 !important; font-weight: 600;">
-                            <i class="fas fa-paperclip"></i> Media
+                        <button onclick="togglePopup('media-popup', this)" title="Insert Media & Documents" style="color: #4f46e5 !important; font-weight: 600;">
+                            <i class="fas fa-paperclip"></i> Media & Files
                         </button>
                         <div class="toolbar-popup" id="media-popup">
-                            <div class="popup-option" onclick="triggerMediaUpload('image/*,video/*')">
-                                <i class="fas fa-upload"></i> Upload Files (Multiple)
+                            <div class="popup-option" onclick="triggerMediaUpload('image/*,video/*,application/pdf,*/*')">
+                                <i class="fas fa-folder-open"></i> Upload Any File(s)
                             </div>
                             <div class="popup-option" onclick="triggerMediaUpload('image/*')">
                                 <i class="fas fa-image"></i> Insert Image(s)
@@ -450,17 +453,19 @@
                             <div class="popup-option" onclick="triggerMediaUpload('video/*')">
                                 <i class="fas fa-video"></i> Insert Video(s)
                             </div>
+                            <div class="popup-option" onclick="triggerMediaUpload('application/pdf')">
+                                <i class="fas fa-file-pdf"></i> Insert PDF Document(s)
+                            </div>
                             <div class="popup-option" onclick="insertMediaByUrl()">
                                 <i class="fas fa-link"></i> Insert via Web URL
                             </div>
-                            <!-- NEW UPDATED COMPLETE CODE BUTTON -->
                             <div class="popup-option" onclick="openCodeEditorModal()" style="color:#10b981; font-weight:600;">
                                 <i class="fas fa-code"></i> Insert Complete Code Frame
                             </div>
                         </div>
                     </div>
-                    <!-- Single File Input -->
-                    <input type="file" id="media-file-input" multiple accept="image/*,video/*" style="display:none;" onchange="handleMediaFilesSelect(event)">
+                    <!-- Unified File Input -->
+                    <input type="file" id="media-file-input" multiple style="display:none;" onchange="handleMediaFilesSelect(event)">
 
                     <button onclick="insertUrlPinLink()" title="Attach URL link" style="color:#0284c7 !important; font-weight:600;">
                         <i class="fas fa-link"></i> URL Pin
@@ -490,11 +495,10 @@
         </div>
     </div>
 
-    <!-- NEW COMPLETE CODE EDITOR MODAL -->
+    <!-- CODE EDITOR MODAL -->
     <div class="modal-overlay" id="code-editor-modal" style="z-index: 3000;">
         <div class="code-modal-card">
             <div class="code-modal-header">
-                <!-- Left Action Button: Save & Insert Preview -->
                 <button class="header-save-btn" onclick="saveCodeAndInsertPreview()">
                     <i class="fas fa-play"></i> Save & Insert Preview Frame
                 </button>
@@ -503,7 +507,6 @@
                     <i class="fas fa-code" style="color:#10b981;"></i> Complete HTML / CSS / JS Code Frame
                 </h3>
 
-                <!-- Right Action Buttons: Upload Code File & Close -->
                 <div style="display:flex; align-items:center; gap:8px;">
                     <button class="privacy-toggle-btn" onclick="document.getElementById('code-file-input').click()" style="color:#4f46e5; border-color:#4f46e5;">
                         <i class="fas fa-upload"></i> Upload Code File
@@ -522,10 +525,8 @@
 
     <!-- JavaScript Logic -->
     <script>
-        // API Endpoint
-        const API_BASE_URL = 'https://my-note-pro-1.onrender.com/api';
+        const API_BASE_URL = window.location.origin.includes('localhost') ? 'http://localhost:5000/api' : 'https://my-note-pro-1.onrender.com/api';
 
-        // Unique User Device Identification Setup
         function getOrCreateDeviceId() {
             let deviceId = localStorage.getItem('user_device_id');
             if (!deviceId) {
@@ -544,7 +545,6 @@
         let currentSearchQuery = '';
         let currentDateFilter = '';
 
-        // Pagination State
         let currentPage = 1;
         let hasMoreNotes = true;
         let isLoadingNotes = false;
@@ -559,12 +559,10 @@
             updateClock();
             setInterval(updateClock, 1000);
             
-            // Backend Data Loading
             fetchProfileFromBackend();
             fetchSubjectsFromBackend();
             fetchNotesFromBackend(true);
 
-            // Infinite Scroll Listener
             window.addEventListener('scroll', handleInfiniteScroll);
 
             document.addEventListener('click', (e) => {
@@ -585,7 +583,6 @@
             }
         }
 
-        // Fetch Notes
         async function fetchNotesFromBackend(reset = false) {
             if (isLoadingNotes) return;
             isLoadingNotes = true;
@@ -680,7 +677,6 @@
             });
         }
 
-        // Profile APIs
         async function fetchProfileFromBackend() {
             try {
                 const res = await fetch(`${API_BASE_URL}/profile`);
@@ -712,26 +708,29 @@
             const file = event.target.files[0];
             if (!file) return;
 
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                const imgData = e.target.result;
-                document.getElementById('profile-img').src = imgData;
-                
-                try {
+            const formData = new FormData();
+            formData.append('media', file);
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('profile-img').src = data.url;
                     await fetch(`${API_BASE_URL}/profile`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ img: imgData })
+                        body: JSON.stringify({ img: data.url })
                     });
                     showToast('Profile image updated!', 'success');
-                } catch (err) {
-                    showToast('Failed to save profile image', 'error');
                 }
-            };
-            reader.readAsDataURL(file);
+            } catch (err) {
+                showToast('Failed to upload profile image', 'error');
+            }
         }
 
-        // Subjects APIs
         async function fetchSubjectsFromBackend() {
             try {
                 const res = await fetch(`${API_BASE_URL}/subjects`);
@@ -792,7 +791,6 @@
             }
         }
 
-        // Save / Update Note
         async function saveNoteAndClose() {
             if (isSavingNote) return;
 
@@ -852,7 +850,6 @@
             }
         }
 
-        // Delete Note
         async function deleteNote(id) {
             if(confirm('Delete this note for your device?')) {
                 try {
@@ -867,7 +864,6 @@
             }
         }
 
-        // LIKE TOGGLE
         async function toggleLike(event, noteId) {
             event.stopPropagation();
             const note = notes.find(n => n._id === noteId);
@@ -896,7 +892,6 @@
             }
         }
 
-        // VIEW NOTE
         async function viewNote(noteId) {
             const note = notes.find(n => n._id === noteId);
             if(!note) return;
@@ -925,7 +920,6 @@
             }
         }
 
-        // Search & Filter Operations
         let searchTimeout;
         function handleSearch() {
             clearTimeout(searchTimeout);
@@ -969,7 +963,6 @@
             clearDateFilter();
         }
 
-        // Helper UI Functions
         function openModal(noteId = null) {
             currentEditId = noteId;
             const modal = document.getElementById('editor-modal');
@@ -1018,15 +1011,26 @@
             document.getElementById('add-subject-modal').classList.remove('active');
         }
 
-        function previewSubjectImage(event) {
+        async function previewSubjectImage(event) {
             const file = event.target.files[0];
             if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                tempNewSubjectImgData = e.target.result;
-                document.getElementById('subject-img-preview-box').innerHTML = `<img src="${e.target.result}" alt="Preview" />`;
-            };
-            reader.readAsDataURL(file);
+
+            const formData = new FormData();
+            formData.append('media', file);
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    tempNewSubjectImgData = data.url;
+                    document.getElementById('subject-img-preview-box').innerHTML = `<img src="${data.url}" alt="Preview" />`;
+                }
+            } catch (err) {
+                showToast('Image upload failed', 'error');
+            }
         }
 
         function updateClock() {
@@ -1124,6 +1128,7 @@
         }
         function closeAllPopups() { document.querySelectorAll('.toolbar-popup').forEach(p => p.classList.remove('active')); }
 
+        /* MULTIPLE FILE UPLOAD HANDLER FOR IMAGES, VIDEOS, PDFs & DOCUMENTS */
         function triggerMediaUpload(acceptType) {
             closeAllPopups();
             setTimeout(() => {
@@ -1133,37 +1138,86 @@
             }, 100);
         }
 
-        function handleMediaFilesSelect(event) {
+        async function handleMediaFilesSelect(event) {
             const files = event.target.files;
             if (!files || files.length === 0) return;
+
+            showToast('Uploading file(s)... Please wait', 'info');
             const editor = document.getElementById('note-editor');
             editor.focus();
 
-            Array.from(files).forEach(file => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const src = e.target.result;
-                    let mediaHtml = file.type.startsWith('image/') ? 
-                        `<p><img src="${src}" style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></p><br>` :
-                        `<p><video src="${src}" controls style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></video></p><br>`;
-                    document.execCommand('insertHTML', false, mediaHtml);
-                };
-                reader.readAsDataURL(file);
-            });
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const formData = new FormData();
+                formData.append('media', file);
+
+                try {
+                    const res = await fetch(`${API_BASE_URL}/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (res.ok) {
+                        const fileData = await res.json();
+                        const fileUrl = fileData.url;
+                        const mimeType = fileData.fileType || file.type;
+                        let elementHtml = '';
+
+                        if (mimeType.startsWith('image/')) {
+                            elementHtml = `<p><img src="${fileUrl}" alt="${file.name}" style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></p><br>`;
+                        } else if (mimeType.startsWith('video/')) {
+                            elementHtml = `<p><video src="${fileUrl}" controls style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></video></p><br>`;
+                        } else if (mimeType === 'application/pdf' || file.name.endsWith('.pdf')) {
+                            elementHtml = `
+                                <div class="pdf-embed-box" contenteditable="false">
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <i class="fas fa-file-pdf" style="color:#e53e3e; font-size:24px;"></i>
+                                        <span style="font-weight:600; font-size:13px;">${escapeHtml(file.name)}</span>
+                                    </div>
+                                    <a href="${fileUrl}" target="_blank" style="padding:4px 12px; background:#4f46e5; color:white; border-radius:6px; text-decoration:none; font-size:12px;">Open PDF</a>
+                                </div>
+                                <iframe src="${fileUrl}" class="pdf-preview-frame"></iframe>
+                                <p><br></p>`;
+                        } else {
+                            elementHtml = `
+                                <div class="file-download-box" contenteditable="false">
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <i class="fas fa-file-alt" style="color:#4f46e5; font-size:24px;"></i>
+                                        <span style="font-weight:600; font-size:13px;">${escapeHtml(file.name)}</span>
+                                    </div>
+                                    <a href="${fileUrl}" download target="_blank" style="padding:4px 12px; background:#4f46e5; color:white; border-radius:6px; text-decoration:none; font-size:12px;">Download File</a>
+                                </div>
+                                <p><br></p>`;
+                        }
+
+                        document.execCommand('insertHTML', false, elementHtml);
+                        showToast(`Uploaded: ${file.name}`, 'success');
+                    } else {
+                        showToast(`Failed to upload ${file.name}`, 'error');
+                    }
+                } catch (err) {
+                    showToast(`Error uploading ${file.name}`, 'error');
+                }
+            }
             event.target.value = '';
         }
 
         function insertMediaByUrl() {
             closeAllPopups();
-            const url = prompt('Enter Image or Video Direct URL:');
+            const url = prompt('Enter Image, Video or PDF Direct URL:');
             if (!url) return;
-            let mediaHtml = url.match(/\.(mp4|webm|ogg|mov)$/i) ? 
-                `<p><video src="${url}" controls style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></video></p><br>` :
-                `<p><img src="${url}" style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></p><br>`;
+            let mediaHtml = '';
+            if (url.match(/\.(mp4|webm|ogg|mov)$/i)) {
+                mediaHtml = `<p><video src="${url}" controls style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></video></p><br>`;
+            } else if (url.match(/\.pdf$/i)) {
+                mediaHtml = `<iframe src="${url}"></iframe><p><br></p>`;
+            } else {
+                mediaHtml = `<p><img src="${url}" style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></p><br>`;
+            }
             document.execCommand('insertHTML', false, mediaHtml);
         }
 
-        /* ===== COMPLETE CODE EDITOR FUNCTIONS ===== */
+        /* CODE EDITOR FUNCTIONS */
         function openCodeEditorModal() {
             closeAllPopups();
             document.getElementById('raw-code-input').value = '';
@@ -1194,7 +1248,6 @@
                 return;
             }
 
-            // Create srcdoc compatible html frame
             const escapedCode = rawCode.replace(/"/g, '&quot;');
             const iframeHtml = `<div class="code-frame-wrapper" contenteditable="false" style="margin: 15px 0;"><iframe class="code-embed-frame" srcdoc="${escapedCode}" sandbox="allow-scripts allow-modals allow-forms"></iframe></div><p><br></p>`;
 
