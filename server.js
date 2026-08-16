@@ -52,16 +52,13 @@ const getUserId = (req) => {
 const formatNoteResponse = (noteDoc, currentUserId) => {
     const note = noteDoc.toObject ? noteDoc.toObject() : noteDoc;
     const postDate = note.createdAt ? new Date(note.createdAt) : new Date();
-    
-    // Ensure array exists
-    const likedByArr = Array.isArray(note.likedBy) ? note.likedBy : [];
+    const likedByArray = note.likedBy || [];
     
     return {
         ...note,
-        likedBy: likedByArr,
-        likesCount: likedByArr.length, // Direct Total Like Count
-        likes: likedByArr.length,      // Fallback Field
-        userLiked: likedByArr.includes(currentUserId), // Check if logged-in user has liked
+        likes: likedByArray.length,
+        likedBy: likedByArray,
+        userLiked: likedByArray.includes(currentUserId),
         views: note.views || 0,
         formattedDate: postDate.toLocaleString('en-US', {
             month: 'short',
@@ -214,15 +211,11 @@ app.get('/api/notes', async (req, res) => {
     }
 });
 
-// Get Single Note + Auto Increment Views
+// Get Single Note
 app.get('/api/notes/:id', async (req, res) => {
     try {
         const userId = getUserId(req);
-        const note = await Note.findByIdAndUpdate(
-            req.params.id,
-            { $inc: { views: 1 } },
-            { new: true }
-        );
+        const note = await Note.findById(req.params.id);
 
         if (!note) return res.status(404).json({ error: "Note not found" });
         res.json(formatNoteResponse(note, userId));
@@ -231,14 +224,15 @@ app.get('/api/notes/:id', async (req, res) => {
     }
 });
 
-// Post New Note
+// Create New Note
 app.post('/api/notes', async (req, res) => {
     try {
         const userId = getUserId(req);
         const newNote = new Note({
             ...req.body,
             authorId: userId,
-            likedBy: []
+            likedBy: [],
+            views: 0
         });
         await newNote.save();
         res.status(201).json(formatNoteResponse(newNote, userId));
@@ -247,7 +241,7 @@ app.post('/api/notes', async (req, res) => {
     }
 });
 
-// Update Note
+// Update Note (Protecting Likes, Views, and deletedBy from getting overwritten)
 app.put('/api/notes/:id', async (req, res) => {
     try {
         const userId = getUserId(req);
@@ -293,26 +287,25 @@ app.delete('/api/notes/:id', async (req, res) => {
     }
 });
 
-// Global Like/Unlike Toggle Endpoint (Updated for Atomic Multi-User Safety)
+// Global Atomic Like/Unlike Toggle Endpoint
 app.post('/api/notes/:id/like', async (req, res) => {
     try {
         const userId = getUserId(req);
         
-        if (!userId || userId === 'user_default') {
-            return res.status(400).json({ error: "Valid User ID required for liking notes." });
-        }
+        // Atomic Check & Update using Mongo Operator
+        const existingNote = await Note.findOne({ _id: req.params.id, likedBy: userId });
+        
+        const updateQuery = existingNote
+            ? { $pull: { likedBy: userId } }
+            : { $addToSet: { likedBy: userId } };
 
-        const note = await Note.findById(req.params.id);
-        if (!note) return res.status(404).json({ error: "Note not found" });
-
-        const isLiked = note.likedBy.includes(userId);
-
-        // Atomic update prevents race conditions across different users
         const updatedNote = await Note.findByIdAndUpdate(
-            req.params.id,
-            isLiked ? { $pull: { likedBy: userId } } : { $addToSet: { likedBy: userId } },
+            req.params.id, 
+            updateQuery, 
             { new: true }
         );
+
+        if (!updatedNote) return res.status(404).json({ error: "Note not found" });
 
         res.json(formatNoteResponse(updatedNote, userId));
     } catch (err) {
@@ -320,7 +313,7 @@ app.post('/api/notes/:id/like', async (req, res) => {
     }
 });
 
-// Explicit View Counter Endpoint
+// Explicit View Counter Increment Endpoint
 app.post('/api/notes/:id/view', async (req, res) => {
     try {
         const userId = getUserId(req);
