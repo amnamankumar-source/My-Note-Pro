@@ -13,7 +13,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <style>
-        /* ===== Reset & Base Layout ===== */
+        /* Reset & Base Layout */
         header, .header, #header, .Header, .header-widget,
         .navbar, nav, #navbar-iframe,
         #sidebar-wrapper, .sidebar, .sidebar-container,
@@ -31,7 +31,7 @@
           opacity: 0 !important;
         }
 
-        /* --- Pro Design Variables --- */
+        /* Variables */
         :root {
             --bg-color: #f4f7f6 !important; 
             --surface-color: #ffffff !important;
@@ -40,18 +40,10 @@
             --primary-color: #4f46e5 !important; 
             --primary-hover: #4338ca !important;
             --danger-color: #e53e3e !important;
-            --danger-hover: #c53030 !important;
-            --success-color: #38a169 !important;
-            --voice-color: #d53f8c !important; 
             --border-color: #e2e8f0 !important;
             --shadow-sm: 0 2px 4px rgba(0,0,0,0.04) !important;
             --shadow-md: 0 4px 12px rgba(0,0,0,0.08) !important;
             --shadow-lg: 0 15px 30px rgba(0,0,0,0.12) !important;
-            --radius-sm: 8px !important;
-            --radius-md: 12px !important;
-            --radius-lg: 20px !important;
-            --radius-pill: 9999px !important;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
             --editor-toolbar-bg: #f8fafc !important;
         }
 
@@ -152,8 +144,8 @@
         
         .action-btn { width: 36px !important; height: 36px !important; border-radius: 10px !important; border: 1px solid var(--border-color) !important; background: var(--editor-toolbar-bg) !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; }
         .btn-edit { color: #4f46e5 !important; } 
+        .btn-edit.disabled { opacity: 0.5; cursor: not-allowed !important; color: var(--text-muted) !important; }
         .btn-delete { color: #e53e3e !important; } 
-        .action-btn.disabled { opacity: 0.4; cursor: not-allowed !important; }
 
         .loading-spinner { text-align: center; padding: 20px; font-weight: 600; color: #4f46e5; grid-column: 1/-1; }
 
@@ -172,6 +164,7 @@
         
         .close-modal-btn { background: rgba(229, 62, 62, 0.12) !important; color: #e53e3e !important; border: 1px solid rgba(229, 62, 62, 0.3) !important; padding: 6px 12px !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; white-space: nowrap !important; }
         .header-save-btn { padding: 6px 14px !important; border: none !important; background: linear-gradient(135deg, #4f46e5, #4338ca) !important; color: white !important; border-radius: 8px !important; font-weight: 600 !important; font-size: 12px !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; white-space: nowrap !important; }
+        .header-save-btn:disabled { opacity: 0.6; cursor: not-allowed !important; }
 
         .modal-body { flex: 1; overflow-y: auto; padding: 15px; display: flex !important; flex-direction: column; gap: 15px; width: 100%; max-width: 1000px; margin: 0 auto; box-sizing: border-box !important; }
         
@@ -201,17 +194,13 @@
 
         .editor-container { width: 100%; flex: 1; display: flex !important; flex-direction: column; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-color) !important; overflow: hidden; min-height: 250px; }
         .rich-editor-area { width: 100%; height: 100%; flex: 1; font-size: 15px; line-height: 1.8; color: var(--text-main) !important; outline: none; padding: 15px; overflow-y: auto; box-sizing: border-box !important; }
-        .rich-editor-area img { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; display: block; }
-        .rich-editor-area video { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; display: block; }
-        .rich-editor-area a { color: #4f46e5 !important; text-decoration: underline !important; font-weight: 500; }
+        .rich-editor-area img, .rich-editor-area video { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; display: block; }
 
         .media-slider-container { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 15px; overflow-x: auto !important; overflow-y: hidden !important; padding: 10px 5px !important; margin: 10px 0 !important; width: 100% !important; scrollbar-width: thin; -webkit-overflow-scrolling: touch; border-radius: 12px; background: rgba(0,0,0,0.02); }
         .media-slider-card { flex: 0 0 auto !important; border-radius: 14px !important; overflow: hidden; border: 1px solid var(--border-color); background: #000; position: relative; box-shadow: var(--shadow-md); }
         .media-slider-card.yt-card { width: 280px !important; height: 480px !important; max-height: 65vh !important; border-radius: 16px !important; }
         .media-slider-card.drive-card { width: 320px !important; height: 420px !important; background: var(--surface-color) !important; display: flex !important; flex-direction: column !important; }
         .media-slider-card iframe { width: 100%; height: 100%; border: none; }
-        .drive-card-frame { flex: 1; width: 100%; position: relative; }
-        .drive-card-footer { height: 35px; background: var(--editor-toolbar-bg); border-top: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font-size: 11px; font-weight: 600; color: var(--text-muted); }
 
         .view-note-title { font-size: 22px; font-weight: 700; color: var(--text-main) !important; margin-bottom: 12px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; word-break: break-word; }
         .view-note-body { font-size: 15px; line-height: 1.8; color: var(--text-main) !important; word-break: break-word; }
@@ -493,7 +482,7 @@
 
     <!-- JavaScript Logic -->
     <script>
-        // API Endpoint (Change to localhost when testing locally: 'http://localhost:5000/api')
+        // API Endpoint
         const API_BASE_URL = 'https://my-note-pro-1.onrender.com/api';
 
         // Unique User Device Identification Setup
@@ -519,7 +508,7 @@
         let currentPage = 1;
         let hasMoreNotes = true;
         let isLoadingNotes = false;
-        let isSavingNote = false;
+        let isSavingNote = false; // Flag to prevent multi-post on fast clicks
 
         let currentModalIsPrivate = true;
         let currentModalIsPinned = false;
@@ -533,7 +522,7 @@
             // Backend Data Loading
             fetchProfileFromBackend();
             fetchSubjectsFromBackend();
-            fetchNotesFromBackend(true); // Reset & load page 1
+            fetchNotesFromBackend(true);
 
             // Infinite Scroll Listener
             window.addEventListener('scroll', handleInfiniteScroll);
@@ -556,7 +545,7 @@
             }
         }
 
-        // Fetch Notes passing user DEVICE_ID
+        // Fetch Notes
         async function fetchNotesFromBackend(reset = false) {
             if (isLoadingNotes) return;
             isLoadingNotes = true;
@@ -636,10 +625,14 @@
                         <div class="note-body-html">${note.content}</div>
                     </div>
                     <div class="note-footer">
-                        <div class="note-date"><i class="far fa-clock"></i> ${note.createdAt}</div>
+                        <div class="note-date"><i class="far fa-clock"></i> ${note.createdAtFormatted || note.createdAt}</div>
                         <div class="note-actions">
-                            <button class="action-btn btn-edit ${note.isPinned ? 'disabled' : ''}" onclick="openModal('${noteId}')" title="${note.isPinned ? 'Pinned notes cannot be edited' : 'Edit'}"><i class="fas fa-pen"></i></button>
-                            <button class="action-btn btn-delete" onclick="deleteNote('${noteId}')" title="Delete"><i class="fas fa-trash"></i></button>
+                            <button class="action-btn btn-edit ${note.isPinned ? 'disabled' : ''}" 
+                                onclick="${note.isPinned ? "showToast('Pinned notes are locked and cannot be edited!', 'error')" : `openModal('${noteId}')`}" 
+                                title="${note.isPinned ? 'Pinned Note (Locked)' : 'Edit Note'}">
+                                <i class="fas ${note.isPinned ? 'fa-lock' : 'fa-pen'}"></i>
+                            </button>
+                            <button class="action-btn btn-delete" onclick="deleteNote('${noteId}')" title="Delete Note"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                 `;
@@ -647,7 +640,7 @@
             });
         }
 
-        // Profile API Operations
+        // Profile APIs
         async function fetchProfileFromBackend() {
             try {
                 const res = await fetch(`${API_BASE_URL}/profile`);
@@ -698,7 +691,7 @@
             reader.readAsDataURL(file);
         }
 
-        // Subjects API Operations
+        // Subjects APIs
         async function fetchSubjectsFromBackend() {
             try {
                 const res = await fetch(`${API_BASE_URL}/subjects`);
@@ -759,7 +752,7 @@
             }
         }
 
-        // Save / Update Note to Backend (Includes logic for preventing double posts and edit locks)
+        // Save / Update Note (Prevents Multi-submit Duplicate Bug)
         async function saveNoteAndClose() {
             if (isSavingNote) return;
 
@@ -773,8 +766,7 @@
 
             isSavingNote = true;
             const saveBtn = document.getElementById('save-note-btn');
-            saveBtn.style.opacity = '0.5';
-            saveBtn.style.pointerEvents = 'none';
+            saveBtn.disabled = true;
 
             const now = new Date();
             const timeStamp = now.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -805,10 +797,6 @@
                 }
 
                 if (res.ok) {
-                    const savedNote = await res.json();
-                    // Lock the note ID immediately if it was a new creation to prevent multiple post duplicates
-                    currentEditId = savedNote._id;
-
                     showToast('Note Saved Successfully!', 'success');
                     closeModal();
                     fetchNotesFromBackend(true);
@@ -820,22 +808,17 @@
                 showToast('Failed to save note to server', 'error');
             } finally {
                 isSavingNote = false;
-                saveBtn.style.opacity = '1';
-                saveBtn.style.pointerEvents = 'auto';
+                saveBtn.disabled = false;
             }
         }
 
-        // Per-User Delete Note API Call
+        // Delete Note (User-Specific Hide)
         async function deleteNote(id) {
-            if(confirm('Delete this note permanently for you?')) {
+            if(confirm('Delete this note for your device?')) {
                 try {
-                    const res = await fetch(`${API_BASE_URL}/notes/${id}`, { 
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ deviceId: USER_DEVICE_ID })
-                    });
+                    const res = await fetch(`${API_BASE_URL}/notes/${id}?deviceId=${USER_DEVICE_ID}`, { method: 'DELETE' });
                     if (res.ok) {
-                        showToast('Note removed from your view!', 'error');
+                        showToast('Note deleted for you!', 'success');
                         fetchNotesFromBackend(true);
                     }
                 } catch (err) {
@@ -844,13 +827,12 @@
             }
         }
 
-        // USER-SPECIFIC PER-DEVICE LIKE TOGGLE CALL
+        // LIKE TOGGLE (Works for pinned notes as well)
         async function toggleLike(event, noteId) {
             event.stopPropagation();
             const note = notes.find(n => n._id === noteId);
             if (!note) return;
 
-            // Optimistic UI Toggle
             note.userLiked = !note.userLiked;
             note.likes = note.userLiked ? (note.likes || 0) + 1 : Math.max(0, (note.likes || 0) - 1);
 
@@ -874,7 +856,7 @@
             }
         }
 
-        // View Note Call with Device ID Record
+        // VIEW NOTE (Works for pinned notes as well)
         async function viewNote(noteId) {
             const note = notes.find(n => n._id === noteId);
             if(!note) return;
@@ -882,7 +864,7 @@
             document.getElementById('view-modal-title-header').innerText = note.title || 'Untitled Note';
             document.getElementById('view-note-title').innerText = note.title;
             document.getElementById('view-note-content').innerHTML = note.content;
-            document.getElementById('view-date-stamp').innerHTML = `<i class="fas fa-clock"></i> ${note.createdAt} | Author: ${note.subject || 'Custom Author'} | Views: ${note.views || 0} | Likes: ${note.likes || 0}`;
+            document.getElementById('view-date-stamp').innerHTML = `<i class="fas fa-clock"></i> ${note.createdAtFormatted || note.createdAt} | Author: ${note.subject || 'Custom Author'} | Views: ${note.views || 0} | Likes: ${note.likes || 0}`;
 
             document.getElementById('view-modal').classList.add('active');
 
@@ -895,7 +877,7 @@
                 if(res.ok) {
                     const data = await res.json();
                     note.views = data.views;
-                    document.getElementById('view-date-stamp').innerHTML = `<i class="fas fa-clock"></i> ${note.createdAt} | Author: ${note.subject || 'Custom Author'} | Views: ${note.views} | Likes: ${note.likes || 0}`;
+                    document.getElementById('view-date-stamp').innerHTML = `<i class="fas fa-clock"></i> ${note.createdAtFormatted || note.createdAt} | Author: ${note.subject || 'Custom Author'} | Views: ${note.views} | Likes: ${note.likes || 0}`;
                     renderNotesGrid();
                 }
             } catch(err) {
@@ -949,14 +931,6 @@
 
         // Helper UI Functions
         function openModal(noteId = null) {
-            if(noteId) {
-                const note = notes.find(n => n._id === noteId);
-                if(note && note.isPinned) {
-                    showToast('This note is pinned/locked and cannot be edited!', 'error');
-                    return;
-                }
-            }
-
             currentEditId = noteId;
             const modal = document.getElementById('editor-modal');
             const titleInput = document.getElementById('note-title');
@@ -965,6 +939,10 @@
 
             if(noteId) {
                 const note = notes.find(n => n._id === noteId);
+                if(note && note.isPinned) {
+                    showToast('Pinned notes are locked and cannot be edited!', 'error');
+                    return;
+                }
                 if(note) {
                     titleInput.value = note.title;
                     editor.innerHTML = note.content;
