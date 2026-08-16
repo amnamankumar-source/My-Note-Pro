@@ -37,7 +37,9 @@ const noteSchema = new mongoose.Schema({
     likes: { type: Number, default: 0 },
     likedBy: [{ type: String }], // Unique User Device IDs arrays for individual liking
     views: { type: Number, default: 0 },
-    viewedBy: [{ type: String }] // Unique User Device IDs arrays for unique views
+    viewedBy: [{ type: String }], // Unique User Device IDs arrays for unique views
+    deletedBy: [{ type: String }], // Unique User Device IDs arrays who soft-deleted the note
+    createdAtFormatted: { type: String }
 }, { timestamps: true });
 
 const Note = mongoose.model('Note', noteSchema);
@@ -123,7 +125,7 @@ app.delete('/api/subjects/:id', async (req, res) => {
     }
 });
 
-// 3. Notes APIs (With User Device Tracking for Like/Views)
+// 3. Notes APIs (With User Device Tracking for Soft Delete, Likes & Views)
 app.get('/api/notes', async (req, res) => {
     try {
         let { page = 1, limit = 10, search = '', subject = '', deviceId = '' } = req.query;
@@ -131,6 +133,11 @@ app.get('/api/notes', async (req, res) => {
         limit = Math.max(1, parseInt(limit));
 
         let query = {};
+
+        // Exclude notes deleted by the requesting user/device
+        if (deviceId) {
+            query.deletedBy = { $ne: deviceId };
+        }
 
         if (search) {
             query.$or = [
@@ -159,6 +166,7 @@ app.get('/api/notes', async (req, res) => {
             const isLiked = deviceId && Array.isArray(note.likedBy) ? note.likedBy.includes(deviceId) : false;
             return {
                 ...note,
+                createdAt: note.createdAtFormatted || new Date(note.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 userLiked: isLiked
             };
         });
@@ -227,9 +235,18 @@ app.put('/api/notes/:id/view', async (req, res) => {
     }
 });
 
+// Create Note
 app.post('/api/notes', async (req, res) => {
     try {
-        const newNote = new Note(req.body);
+        const { title, content, subject, isPrivate, isPinned, createdAt } = req.body;
+        const newNote = new Note({
+            title: title || 'Untitled Note',
+            content: content || '',
+            subject: subject || 'General',
+            isPrivate: !!isPrivate,
+            isPinned: !!isPinned,
+            createdAtFormatted: createdAt
+        });
         await newNote.save();
         res.status(201).json(newNote);
     } catch (err) {
@@ -237,20 +254,48 @@ app.post('/api/notes', async (req, res) => {
     }
 });
 
+// Edit/Update Note with Pinned Guard Check
 app.put('/api/notes/:id', async (req, res) => {
     try {
-        const updatedNote = await Note.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (!updatedNote) return res.status(404).json({ error: "Note not found" });
-        res.json(updatedNote);
+        const note = await Note.findById(req.params.id);
+        if (!note) return res.status(404).json({ error: "Note not found" });
+
+        // Guard Check: Restrict edit if note is pinned
+        if (note.isPinned) {
+            return res.status(403).json({ error: "Pinned notes are locked and cannot be edited!" });
+        }
+
+        const { title, content, subject, isPrivate, isPinned } = req.body;
+        if (title !== undefined) note.title = title;
+        if (content !== undefined) note.content = content;
+        if (subject !== undefined) note.subject = subject;
+        if (isPrivate !== undefined) note.isPrivate = isPrivate;
+        if (isPinned !== undefined) note.isPinned = isPinned;
+
+        await note.save();
+        res.json(note);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
+// Delete Note (Per-User Soft Delete)
 app.delete('/api/notes/:id', async (req, res) => {
     try {
-        await Note.findByIdAndDelete(req.params.id);
-        res.json({ message: "Note deleted successfully from DB", id: req.params.id });
+        const { deviceId } = req.body;
+        if (!deviceId) {
+            return res.status(400).json({ error: 'Device ID required for per-user delete' });
+        }
+
+        const note = await Note.findById(req.params.id);
+        if (!note) return res.status(404).json({ error: "Note not found" });
+
+        if (!note.deletedBy.includes(deviceId)) {
+            note.deletedBy.push(deviceId);
+            await note.save();
+        }
+
+        res.json({ message: "Note hidden/deleted for this user", id: req.params.id });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
