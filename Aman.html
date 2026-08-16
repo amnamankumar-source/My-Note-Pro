@@ -153,6 +153,7 @@
         .action-btn { width: 36px !important; height: 36px !important; border-radius: 10px !important; border: 1px solid var(--border-color) !important; background: var(--editor-toolbar-bg) !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; }
         .btn-edit { color: #4f46e5 !important; } 
         .btn-delete { color: #e53e3e !important; } 
+        .action-btn.disabled { opacity: 0.4; cursor: not-allowed !important; }
 
         .loading-spinner { text-align: center; padding: 20px; font-weight: 600; color: #4f46e5; grid-column: 1/-1; }
 
@@ -171,7 +172,6 @@
         
         .close-modal-btn { background: rgba(229, 62, 62, 0.12) !important; color: #e53e3e !important; border: 1px solid rgba(229, 62, 62, 0.3) !important; padding: 6px 12px !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; white-space: nowrap !important; }
         .header-save-btn { padding: 6px 14px !important; border: none !important; background: linear-gradient(135deg, #4f46e5, #4338ca) !important; color: white !important; border-radius: 8px !important; font-weight: 600 !important; font-size: 12px !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; white-space: nowrap !important; }
-        .header-save-btn:disabled { opacity: 0.6; cursor: not-allowed !important; }
 
         .modal-body { flex: 1; overflow-y: auto; padding: 15px; display: flex !important; flex-direction: column; gap: 15px; width: 100%; max-width: 1000px; margin: 0 auto; box-sizing: border-box !important; }
         
@@ -493,10 +493,8 @@
 
     <!-- JavaScript Logic -->
     <script>
-        // API Endpoint (Using local API fallback if host changes)
-        const API_BASE_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
-            ? '/api' 
-            : 'https://my-note-pro-1.onrender.com/api';
+        // API Endpoint (Change to localhost when testing locally: 'http://localhost:5000/api')
+        const API_BASE_URL = 'https://my-note-pro-1.onrender.com/api';
 
         // Unique User Device Identification Setup
         function getOrCreateDeviceId() {
@@ -558,7 +556,7 @@
             }
         }
 
-        // Fetch Notes passing user DEVICE_ID for User-Specific Delete & Like Logic
+        // Fetch Notes passing user DEVICE_ID
         async function fetchNotesFromBackend(reset = false) {
             if (isLoadingNotes) return;
             isLoadingNotes = true;
@@ -640,7 +638,7 @@
                     <div class="note-footer">
                         <div class="note-date"><i class="far fa-clock"></i> ${note.createdAt}</div>
                         <div class="note-actions">
-                            <button class="action-btn btn-edit" onclick="openModal('${noteId}')" title="Edit"><i class="fas fa-pen"></i></button>
+                            <button class="action-btn btn-edit ${note.isPinned ? 'disabled' : ''}" onclick="openModal('${noteId}')" title="${note.isPinned ? 'Pinned notes cannot be edited' : 'Edit'}"><i class="fas fa-pen"></i></button>
                             <button class="action-btn btn-delete" onclick="deleteNote('${noteId}')" title="Delete"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
@@ -761,7 +759,7 @@
             }
         }
 
-        // Save / Update Note to Backend (Fix duplicate saves)
+        // Save / Update Note to Backend (Includes logic for preventing double posts and edit locks)
         async function saveNoteAndClose() {
             if (isSavingNote) return;
 
@@ -773,9 +771,10 @@
                 return;
             }
 
-            const saveBtn = document.getElementById('save-note-btn');
             isSavingNote = true;
-            if(saveBtn) saveBtn.disabled = true;
+            const saveBtn = document.getElementById('save-note-btn');
+            saveBtn.style.opacity = '0.5';
+            saveBtn.style.pointerEvents = 'none';
 
             const now = new Date();
             const timeStamp = now.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -806,7 +805,11 @@
                 }
 
                 if (res.ok) {
-                    showToast('Note Saved to Server!', 'success');
+                    const savedNote = await res.json();
+                    // Lock the note ID immediately if it was a new creation to prevent multiple post duplicates
+                    currentEditId = savedNote._id;
+
+                    showToast('Note Saved Successfully!', 'success');
                     closeModal();
                     fetchNotesFromBackend(true);
                 } else {
@@ -817,13 +820,14 @@
                 showToast('Failed to save note to server', 'error');
             } finally {
                 isSavingNote = false;
-                if(saveBtn) saveBtn.disabled = false;
+                saveBtn.style.opacity = '1';
+                saveBtn.style.pointerEvents = 'auto';
             }
         }
 
-        // Per-User Soft Delete API Call
+        // Per-User Delete Note API Call
         async function deleteNote(id) {
-            if(confirm('Delete this note permanently for your device?')) {
+            if(confirm('Delete this note permanently for you?')) {
                 try {
                     const res = await fetch(`${API_BASE_URL}/notes/${id}`, { 
                         method: 'DELETE',
@@ -831,7 +835,7 @@
                         body: JSON.stringify({ deviceId: USER_DEVICE_ID })
                     });
                     if (res.ok) {
-                        showToast('Note deleted for you!', 'success');
+                        showToast('Note removed from your view!', 'error');
                         fetchNotesFromBackend(true);
                     }
                 } catch (err) {
@@ -947,7 +951,6 @@
         function openModal(noteId = null) {
             if(noteId) {
                 const note = notes.find(n => n._id === noteId);
-                // Strict check: Prevent editing pinned/locked notes
                 if(note && note.isPinned) {
                     showToast('This note is pinned/locked and cannot be edited!', 'error');
                     return;
