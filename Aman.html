@@ -171,6 +171,7 @@
         
         .close-modal-btn { background: rgba(229, 62, 62, 0.12) !important; color: #e53e3e !important; border: 1px solid rgba(229, 62, 62, 0.3) !important; padding: 6px 12px !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; white-space: nowrap !important; }
         .header-save-btn { padding: 6px 14px !important; border: none !important; background: linear-gradient(135deg, #4f46e5, #4338ca) !important; color: white !important; border-radius: 8px !important; font-weight: 600 !important; font-size: 12px !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; white-space: nowrap !important; }
+        .header-save-btn:disabled { opacity: 0.6; cursor: not-allowed !important; }
 
         .modal-body { flex: 1; overflow-y: auto; padding: 15px; display: flex !important; flex-direction: column; gap: 15px; width: 100%; max-width: 1000px; margin: 0 auto; box-sizing: border-box !important; }
         
@@ -380,7 +381,7 @@
                     <button class="privacy-toggle-btn is-private" id="modal-privacy-btn" onclick="toggleModalPrivacy()">
                         <i class="fas fa-lock" id="modal-privacy-icon"></i> <span id="modal-privacy-text">Private</span>
                     </button>
-                    <button class="header-save-btn" onclick="saveNoteAndClose()"><i class="fas fa-check-circle"></i> <span>Save Note</span></button>
+                    <button class="header-save-btn" id="save-note-btn" onclick="saveNoteAndClose()"><i class="fas fa-check-circle"></i> <span>Save Note</span></button>
                     <button class="close-modal-btn" onclick="closeModal()"><i class="fas fa-times"></i> <span>Close</span></button>
                 </div>
             </div>
@@ -492,8 +493,10 @@
 
     <!-- JavaScript Logic -->
     <script>
-        // API Endpoint
-        const API_BASE_URL = 'https://my-note-pro-1.onrender.com/api';
+        // API Endpoint (Using local API fallback if host changes)
+        const API_BASE_URL = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
+            ? '/api' 
+            : 'https://my-note-pro-1.onrender.com/api';
 
         // Unique User Device Identification Setup
         function getOrCreateDeviceId() {
@@ -518,6 +521,7 @@
         let currentPage = 1;
         let hasMoreNotes = true;
         let isLoadingNotes = false;
+        let isSavingNote = false;
 
         let currentModalIsPrivate = true;
         let currentModalIsPinned = false;
@@ -554,7 +558,7 @@
             }
         }
 
-        // Fetch Notes passing user DEVICE_ID for User-Specific Like Logic
+        // Fetch Notes passing user DEVICE_ID for User-Specific Delete & Like Logic
         async function fetchNotesFromBackend(reset = false) {
             if (isLoadingNotes) return;
             isLoadingNotes = true;
@@ -757,8 +761,10 @@
             }
         }
 
-        // Save / Update Note to Backend
+        // Save / Update Note to Backend (Fix duplicate saves)
         async function saveNoteAndClose() {
+            if (isSavingNote) return;
+
             const title = document.getElementById('note-title').value.trim();
             const content = document.getElementById('note-editor').innerHTML.trim();
 
@@ -766,6 +772,10 @@
                 showToast('Cannot save an empty note!', 'error');
                 return;
             }
+
+            const saveBtn = document.getElementById('save-note-btn');
+            isSavingNote = true;
+            if(saveBtn) saveBtn.disabled = true;
 
             const now = new Date();
             const timeStamp = now.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -799,19 +809,29 @@
                     showToast('Note Saved to Server!', 'success');
                     closeModal();
                     fetchNotesFromBackend(true);
+                } else {
+                    const errData = await res.json();
+                    showToast(errData.error || 'Failed to save note', 'error');
                 }
             } catch (err) {
                 showToast('Failed to save note to server', 'error');
+            } finally {
+                isSavingNote = false;
+                if(saveBtn) saveBtn.disabled = false;
             }
         }
 
-        // Delete Note API Call
+        // Per-User Soft Delete API Call
         async function deleteNote(id) {
-            if(confirm('Delete this note permanently?')) {
+            if(confirm('Delete this note permanently for your device?')) {
                 try {
-                    const res = await fetch(`${API_BASE_URL}/notes/${id}`, { method: 'DELETE' });
+                    const res = await fetch(`${API_BASE_URL}/notes/${id}`, { 
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ deviceId: USER_DEVICE_ID })
+                    });
                     if (res.ok) {
-                        showToast('Note deleted from backend!', 'error');
+                        showToast('Note deleted for you!', 'success');
                         fetchNotesFromBackend(true);
                     }
                 } catch (err) {
@@ -925,6 +945,15 @@
 
         // Helper UI Functions
         function openModal(noteId = null) {
+            if(noteId) {
+                const note = notes.find(n => n._id === noteId);
+                // Strict check: Prevent editing pinned/locked notes
+                if(note && note.isPinned) {
+                    showToast('This note is pinned/locked and cannot be edited!', 'error');
+                    return;
+                }
+            }
+
             currentEditId = noteId;
             const modal = document.getElementById('editor-modal');
             const titleInput = document.getElementById('note-title');
@@ -933,10 +962,6 @@
 
             if(noteId) {
                 const note = notes.find(n => n._id === noteId);
-                if(note && note.isPinned) {
-                    showToast('This note is locked/pinned and cannot be edited!', 'error');
-                    return;
-                }
                 if(note) {
                     titleInput.value = note.title;
                     editor.innerHTML = note.content;
