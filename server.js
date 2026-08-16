@@ -35,10 +35,10 @@ const noteSchema = new mongoose.Schema({
     isPrivate: { type: Boolean, default: false },
     isPinned: { type: Boolean, default: false },
     likes: { type: Number, default: 0 },
-    likedBy: [{ type: String }], // Array of Device IDs who liked
+    likedBy: [{ type: String }],
     views: { type: Number, default: 0 },
-    viewedBy: [{ type: String }], // Array of Device IDs who viewed
-    deletedFor: [{ type: String }], // Soft-delete per user device ID
+    viewedBy: [{ type: String }],
+    deletedFor: [{ type: String }],
     createdAtFormatted: { type: String }
 }, { timestamps: true });
 
@@ -134,7 +134,6 @@ app.get('/api/notes', async (req, res) => {
 
         let query = {};
 
-        // Hide soft-deleted notes for this specific deviceId
         if (deviceId) {
             query.deletedFor = { $ne: deviceId };
         }
@@ -184,7 +183,7 @@ app.get('/api/notes', async (req, res) => {
     }
 });
 
-// Toggle Like Route (Works for both Normal & Pinned Notes)
+// Toggle Like Route
 app.put('/api/notes/:id/like', async (req, res) => {
     try {
         const { deviceId } = req.body;
@@ -216,7 +215,7 @@ app.put('/api/notes/:id/like', async (req, res) => {
     }
 });
 
-// Record View Count (Increments every time a note is opened)
+// Record View Count
 app.put('/api/notes/:id/view', async (req, res) => {
     try {
         const { deviceId } = req.body;
@@ -259,7 +258,7 @@ app.post('/api/notes', async (req, res) => {
     }
 });
 
-// Update Note (Prevent Editing Pinned Notes)
+// Update Note
 app.put('/api/notes/:id', async (req, res) => {
     try {
         const note = await Note.findById(req.params.id);
@@ -276,7 +275,7 @@ app.put('/api/notes/:id', async (req, res) => {
     }
 });
 
-// Delete Note (User-Specific Soft Delete)
+// Delete Note
 app.delete('/api/notes/:id', async (req, res) => {
     try {
         const { deviceId } = req.query;
@@ -298,11 +297,11 @@ app.delete('/api/notes/:id', async (req, res) => {
     }
 });
 
-// 4. File Upload
+// 4. File Upload (Supports Media & Code Files)
 app.post('/api/upload', upload.single('media'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-    res.json({ url: fileUrl, fileType: req.file.mimetype });
+    res.json({ url: fileUrl, fileType: req.file.mimetype, filename: req.file.filename });
 });
 
 // Catch-all route
