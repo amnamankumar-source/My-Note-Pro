@@ -3,60 +3,57 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const mongoose = require('mongoose');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/notes_db';
 
-// MongoDB Connection
-mongoose.connect(MONGO_URI)
-    .then(() => console.log('MongoDB Connected Successfully'))
-    .catch(err => console.error('MongoDB Connection Error:', err));
+// Path to local storage database file and uploads folder
+const DB_FILE = path.join(__dirname, 'db.json');
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
 
-// ===== MONGOOSE SCHEMAS & MODELS =====
+// Ensure uploads folder exists
+if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
 
-const profileSchema = new mongoose.Schema({
-    name: { type: String, default: "Note Author" },
-    img: { type: String, default: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80" }
-});
-const Profile = mongoose.model('Profile', profileSchema);
+// Helper: Read Data from Local JSON File
+function readDB() {
+    if (!fs.existsSync(DB_FILE)) {
+        const initialData = {
+            profile: {
+                name: "Note Author",
+                img: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80"
+            },
+            subjects: [],
+            notes: []
+        };
+        fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), 'utf8');
+        return initialData;
+    }
+    try {
+        const raw = fs.readFileSync(DB_FILE, 'utf8');
+        return JSON.parse(raw);
+    } catch (err) {
+        console.error("Error reading db.json, resetting storage:", err);
+        return { profile: { name: "Note Author", img: "" }, subjects: [], notes: [] };
+    }
+}
 
-const subjectSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    img: { type: String, required: true }
-});
-const Subject = mongoose.model('Subject', subjectSchema);
+// Helper: Write Data to Local JSON File
+function writeDB(data) {
+    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+}
 
-const noteSchema = new mongoose.Schema({
-    title: { type: String, default: 'Untitled Note' },
-    content: { type: String, default: '' },
-    subject: { type: String, default: 'General' },
-    isPrivate: { type: Boolean, default: false },
-    isPinned: { type: Boolean, default: false },
-    likes: { type: Number, default: 0 },
-    likedBy: [{ type: String }], // Array of Client IDs who liked this note
-    views: { type: Number, default: 0 }
-}, { timestamps: true });
-
-const Note = mongoose.model('Note', noteSchema);
-
-// Middleware
+// Middlewares
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// Serve Uploaded Files Static Folder
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir);
-}
-app.use('/uploads', express.static(uploadsDir));
+app.use('/uploads', express.static(UPLOADS_DIR));
 app.use(express.static(__dirname));
 
-// Multer Configuration
+// Multer Storage Configuration
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadsDir),
+    destination: (req, file, cb) => cb(null, UPLOADS_DIR),
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         cb(null, uniqueSuffix + path.extname(file.originalname));
@@ -64,195 +61,188 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// ===== API ROUTES =====
-
-// 1. Profile APIs
-app.get('/api/profile', async (req, res) => {
-    try {
-        let profile = await Profile.findOne();
-        if (!profile) {
-            profile = await Profile.create({ name: "Note Author" });
-        }
-        res.json(profile);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+// ===== 1. PROFILE APIs =====
+app.get('/api/profile', (req, res) => {
+    const db = readDB();
+    res.json(db.profile);
 });
 
-app.put('/api/profile', async (req, res) => {
-    try {
-        const { name, img } = req.body;
-        let profile = await Profile.findOneAndUpdate({}, { name, img }, { new: true, upsert: true });
-        res.json({ message: "Profile updated successfully", profile });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+app.put('/api/profile', (req, res) => {
+    const db = readDB();
+    const { name, img } = req.body;
+    if (name !== undefined) db.profile.name = name;
+    if (img !== undefined) db.profile.img = img;
+    writeDB(db);
+    res.json({ message: "Profile updated successfully", profile: db.profile });
 });
 
-// 2. Subjects APIs
-app.get('/api/subjects', async (req, res) => {
-    try {
-        const subjects = await Subject.find().sort({ _id: -1 });
-        res.json(subjects);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+// ===== 2. SUBJECTS APIs =====
+app.get('/api/subjects', (req, res) => {
+    const db = readDB();
+    res.json(db.subjects);
 });
 
-app.post('/api/subjects', async (req, res) => {
-    try {
-        const { name, img } = req.body;
-        const newSubject = new Subject({
-            name: name || "Custom Subject",
-            img: img || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=120&120&q=80"
-        });
-        await newSubject.save();
-        res.status(201).json(newSubject);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+app.post('/api/subjects', (req, res) => {
+    const db = readDB();
+    const { name, img } = req.body;
+    const newSubject = {
+        _id: 'sub_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        name: name || "Custom Subject",
+        img: img || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=120&120&q=80"
+    };
+    db.subjects.unshift(newSubject);
+    writeDB(db);
+    res.status(201).json(newSubject);
 });
 
-app.delete('/api/subjects/:id', async (req, res) => {
-    try {
-        await Subject.findByIdAndDelete(req.params.id);
-        res.json({ message: "Subject deleted successfully", id: req.params.id });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+app.delete('/api/subjects/:id', (req, res) => {
+    const db = readDB();
+    db.subjects = db.subjects.filter(s => s._id !== req.params.id);
+    writeDB(db);
+    res.json({ message: "Subject deleted successfully", id: req.params.id });
 });
 
-// 3. Optimized Notes APIs
-app.get('/api/notes', async (req, res) => {
-    try {
-        let { page = 1, limit = 10, search = '', subject = '', userId = '' } = req.query;
-        page = Math.max(1, parseInt(page));
-        limit = Math.max(1, parseInt(limit));
+// ===== 3. NOTES APIs =====
+app.get('/api/notes', (req, res) => {
+    const db = readDB();
+    let { page = 1, limit = 10, search = '', subject = '', userId = '' } = req.query;
+    page = Math.max(1, parseInt(page));
+    limit = Math.max(1, parseInt(limit));
 
-        let query = {};
+    let filteredNotes = db.notes.filter(note => {
+        let matchesSearch = true;
+        let matchesSubject = true;
 
         if (search) {
-            query.$or = [
-                { title: { $regex: search, $options: 'i' } },
-                { content: { $regex: search, $options: 'i' } }
-            ];
+            const searchLower = search.toLowerCase();
+            const titleMatch = (note.title || '').toLowerCase().includes(searchLower);
+            const contentMatch = (note.content || '').toLowerCase().includes(searchLower);
+            matchesSearch = titleMatch || contentMatch;
         }
 
         if (subject) {
-            query.subject = { $regex: `^${subject}$`, $options: 'i' };
+            matchesSubject = (note.subject || '').toLowerCase() === subject.toLowerCase();
         }
 
-        const skip = (page - 1) * limit;
+        return matchesSearch && matchesSubject;
+    });
 
-        const [rawNotes, totalNotes] = await Promise.all([
-            Note.find(query)
-                .sort({ isPinned: -1, createdAt: -1 })
-                .skip(skip)
-                .limit(limit)
-                .lean(),
-            Note.countDocuments(query)
-        ]);
+    // Pinned notes ko pehle aur latest notes ko priority par rakhein
+    filteredNotes.sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return (b._id || '').localeCompare(a._id || '');
+    });
 
-        // Map notes to include userLiked dynamically based on current user's ID
-        const notes = rawNotes.map(note => {
-            const likedBy = note.likedBy || [];
-            return {
-                ...note,
-                likes: likedBy.length,
-                userLiked: userId ? likedBy.includes(userId) : false
-            };
-        });
+    const totalNotes = filteredNotes.length;
+    const skip = (page - 1) * limit;
+    const paginatedNotes = filteredNotes.slice(skip, skip + limit);
 
-        res.json({
-            notes,
-            hasMore: skip + notes.length < totalNotes,
-            totalNotes,
-            currentPage: page
-        });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    // Current user ke ID ke basis par userLiked check karna
+    const notes = paginatedNotes.map(note => {
+        const likedBy = note.likedBy || [];
+        return {
+            ...note,
+            likes: likedBy.length,
+            userLiked: userId ? likedBy.includes(userId) : false
+        };
+    });
+
+    res.json({
+        notes,
+        hasMore: skip + notes.length < totalNotes,
+        totalNotes,
+        currentPage: page
+    });
 });
 
-// Toggle Like Endpoint per User
-app.put('/api/notes/:id/like', async (req, res) => {
-    try {
-        const { userId } = req.body;
-        if (!userId) return res.status(400).json({ error: "User ID is required" });
-
-        const note = await Note.findById(req.params.id);
-        if (!note) return res.status(404).json({ error: "Note not found" });
-
-        if (!note.likedBy) note.likedBy = [];
-
-        const index = note.likedBy.indexOf(userId);
-        let userLiked = false;
-
-        if (index === -1) {
-            note.likedBy.push(userId);
-            userLiked = true;
-        } else {
-            note.likedBy.splice(index, 1);
-            userLiked = false;
-        }
-
-        note.likes = note.likedBy.length;
-        await note.save();
-
-        res.json({ likes: note.likes, userLiked, id: note._id });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+app.post('/api/notes', (req, res) => {
+    const db = readDB();
+    const newNote = {
+        _id: 'note_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        title: req.body.title || 'Untitled Note',
+        content: req.body.content || '',
+        subject: req.body.subject || 'General',
+        isPrivate: Boolean(req.body.isPrivate),
+        isPinned: Boolean(req.body.isPinned),
+        likes: 0,
+        likedBy: [],
+        views: 0,
+        createdAt: req.body.createdAt || new Date().toLocaleString()
+    };
+    db.notes.unshift(newNote);
+    writeDB(db);
+    res.status(201).json(newNote);
 });
 
-// View Count Increment Endpoint
-app.put('/api/notes/:id/view', async (req, res) => {
-    try {
-        const note = await Note.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } }, { new: true });
-        if (!note) return res.status(404).json({ error: "Note not found" });
-        res.json({ views: note.views });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+app.put('/api/notes/:id', (req, res) => {
+    const db = readDB();
+    const index = db.notes.findIndex(n => n._id === req.params.id);
+    if (index === -1) return res.status(404).json({ error: "Note not found" });
+
+    db.notes[index] = {
+        ...db.notes[index],
+        ...req.body,
+        _id: req.params.id
+    };
+    writeDB(db);
+    res.json(db.notes[index]);
 });
 
-app.post('/api/notes', async (req, res) => {
-    try {
-        const newNote = new Note(req.body);
-        await newNote.save();
-        res.status(201).json(newNote);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+app.delete('/api/notes/:id', (req, res) => {
+    const db = readDB();
+    db.notes = db.notes.filter(n => n._id !== req.params.id);
+    writeDB(db);
+    res.json({ message: "Note deleted successfully", id: req.params.id });
 });
 
-app.put('/api/notes/:id', async (req, res) => {
-    try {
-        const updatedNote = await Note.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        if (!updatedNote) return res.status(404).json({ error: "Note not found" });
-        res.json(updatedNote);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+// Dynamic User Like Toggle Endpoint
+app.put('/api/notes/:id/like', (req, res) => {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: "User ID is required" });
+
+    const db = readDB();
+    const note = db.notes.find(n => n._id === req.params.id);
+    if (!note) return res.status(404).json({ error: "Note not found" });
+
+    if (!note.likedBy) note.likedBy = [];
+
+    const userIndex = note.likedBy.indexOf(userId);
+    let userLiked = false;
+
+    if (userIndex === -1) {
+        note.likedBy.push(userId);
+        userLiked = true;
+    } else {
+        note.likedBy.splice(userIndex, 1);
+        userLiked = false;
     }
+
+    note.likes = note.likedBy.length;
+    writeDB(db);
+
+    res.json({ likes: note.likes, userLiked, id: note._id });
 });
 
-app.delete('/api/notes/:id', async (req, res) => {
-    try {
-        await Note.findByIdAndDelete(req.params.id);
-        res.json({ message: "Note deleted successfully from DB", id: req.params.id });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+// Increment View Endpoint
+app.put('/api/notes/:id/view', (req, res) => {
+    const db = readDB();
+    const note = db.notes.find(n => n._id === req.params.id);
+    if (!note) return res.status(404).json({ error: "Note not found" });
+
+    note.views = (note.views || 0) + 1;
+    writeDB(db);
+    res.json({ views: note.views });
 });
 
-// 4. File Upload
+// File Upload Endpoint
 app.post('/api/upload', upload.single('media'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
     res.json({ url: fileUrl, fileType: req.file.mimetype });
 });
 
-// Catch-all route
+// Catch-all SPA Route
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
