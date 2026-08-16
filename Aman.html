@@ -196,6 +196,11 @@
         .rich-editor-area { width: 100%; height: 100%; flex: 1; font-size: 15px; line-height: 1.8; color: var(--text-main) !important; outline: none; padding: 15px; overflow-y: auto; box-sizing: border-box !important; }
         .rich-editor-area img, .rich-editor-area video { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; display: block; }
 
+        /* Code Runner Container Frame */
+        .code-preview-frame { width: 100%; border: 1px solid var(--border-color); border-radius: 12px; margin: 12px 0; overflow: hidden; background: #fff; box-shadow: var(--shadow-md); }
+        .code-preview-header { background: #1e293b; color: #fff; padding: 6px 12px; font-size: 12px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+        .code-preview-iframe { width: 100%; height: 280px; border: none; background: #ffffff; }
+
         .media-slider-container { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 15px; overflow-x: auto !important; overflow-y: hidden !important; padding: 10px 5px !important; margin: 10px 0 !important; width: 100% !important; scrollbar-width: thin; -webkit-overflow-scrolling: touch; border-radius: 12px; background: rgba(0,0,0,0.02); }
         .media-slider-card { flex: 0 0 auto !important; border-radius: 14px !important; overflow: hidden; border: 1px solid var(--border-color); background: #000; position: relative; box-shadow: var(--shadow-md); }
         .media-slider-card.yt-card { width: 280px !important; height: 480px !important; max-height: 65vh !important; border-radius: 16px !important; }
@@ -219,6 +224,16 @@
         .input-group input { padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border-color); outline: none; background: var(--editor-toolbar-bg); color: var(--text-main) !important; font-size: 13px; }
         .preview-img-box { width: 60px; height: 60px; border-radius: 50%; border: 2px dashed var(--border-color); display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 5px auto; }
         .preview-img-box img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* CODE EDITOR MODAL STYLING */
+        .code-modal-card { background: var(--surface-color) !important; width: 92%; max-width: 800px; height: 85vh; border-radius: 16px; padding: 18px; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 12px; z-index: 10001; }
+        .code-tabs { display: flex; gap: 8px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; }
+        .code-tab-btn { padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--editor-toolbar-bg); font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text-main); }
+        .code-tab-btn.active { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+        .code-editor-area { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+        .code-input-textarea { width: 100%; height: 180px; font-family: 'Roboto Mono', monospace; font-size: 13px; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); outline: none; background: #0f172a; color: #38bdf8; resize: none; }
+        .code-preview-container { flex: 1; border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; background: #ffffff; display: flex; flex-direction: column; }
+        .code-preview-container iframe { width: 100%; height: 100%; border: none; }
 
         @media (max-width: 768px) {
             .btn-add { display: none !important; } 
@@ -338,6 +353,43 @@
         </div>
     </div>
 
+    <!-- HTML/CSS/JS CODE EDITOR MODAL FRAME -->
+    <div class="modal-overlay" id="code-editor-modal">
+        <div class="code-modal-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-size: 16px; font-weight: 600;"><i class="fas fa-code" style="color:#4f46e5;"></i> HTML/CSS/JS Code Frame</h3>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <label class="header-save-btn" style="background:#0284c7 !important; cursor: pointer;">
+                        <i class="fas fa-upload"></i> Upload File
+                        <input type="file" id="code-file-input" accept=".html,.css,.js,.txt" style="display:none;" onchange="handleCodeFileUpload(event)">
+                    </label>
+                    <button class="header-save-btn" onclick="insertCodeFrameToNote()"><i class="fas fa-check"></i> Insert in Note</button>
+                    <button class="close-modal-btn" onclick="closeCodeModal()"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+
+            <div class="code-tabs">
+                <button class="code-tab-btn active" id="tab-html" onclick="switchCodeTab('html')">HTML</button>
+                <button class="code-tab-btn" id="tab-css" onclick="switchCodeTab('css')">CSS</button>
+                <button class="code-tab-btn" id="tab-js" onclick="switchCodeTab('js')">JavaScript</button>
+            </div>
+
+            <div class="code-editor-area">
+                <textarea class="code-input-textarea" id="code-html-input" placeholder="Enter HTML Code here..." oninput="updateLiveCodePreview()"></textarea>
+                <textarea class="code-input-textarea" id="code-css-input" placeholder="Enter CSS Code here..." style="display:none;" oninput="updateLiveCodePreview()"></textarea>
+                <textarea class="code-input-textarea" id="code-js-input" placeholder="Enter JS Code here..." style="display:none;" oninput="updateLiveCodePreview()"></textarea>
+
+                <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between;">
+                    <span>Live Interactive Preview Frame:</span>
+                    <button onclick="updateLiveCodePreview()" style="background: none; border: none; color: #4f46e5; cursor: pointer; font-weight: 600;"><i class="fas fa-sync"></i> Refresh Preview</button>
+                </div>
+                <div class="code-preview-container">
+                    <iframe id="code-live-preview-iframe"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- READ-ONLY VIEW MODAL -->
     <div class="modal-overlay" id="view-modal">
         <div class="modal-content full-screen">
@@ -441,6 +493,10 @@
                             <div class="popup-option" onclick="triggerMediaUpload('video/*')">
                                 <i class="fas fa-video"></i> Insert Video(s)
                             </div>
+                            <!-- NEW HTML/CSS/JS CODE BUTTON ADDED -->
+                            <div class="popup-option" onclick="openCodeEditorModal()" style="color: #4f46e5; font-weight: 600;">
+                                <i class="fas fa-code"></i> Insert Code (HTML/CSS/JS)
+                            </div>
                             <div class="popup-option" onclick="insertMediaByUrl()">
                                 <i class="fas fa-link"></i> Insert via Web URL
                             </div>
@@ -508,12 +564,15 @@
         let currentPage = 1;
         let hasMoreNotes = true;
         let isLoadingNotes = false;
-        let isSavingNote = false; // Flag to prevent multi-post on fast clicks
+        let isSavingNote = false;
 
         let currentModalIsPrivate = true;
         let currentModalIsPinned = false;
         let currentAuthorTag = 'Custom Author';
         let tempNewSubjectImgData = '';
+
+        // Active Code Editor Tab
+        let activeCodeTab = 'html';
 
         document.addEventListener('DOMContentLoaded', () => {
             updateClock();
@@ -640,6 +699,117 @@
             });
         }
 
+        // CODE EDITOR MODAL LOGIC
+        function openCodeEditorModal() {
+            closeAllPopups();
+            document.getElementById('code-html-input').value = '<h3>Hello World!</h3>\n<button onclick="alert(\'Clicked!\')">Click Me</button>';
+            document.getElementById('code-css-input').value = 'h3 { color: #4f46e5; font-family: sans-serif; }\nbutton { background: #d53f8c; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }';
+            document.getElementById('code-js-input').value = '// JavaScript code goes here';
+            switchCodeTab('html');
+            updateLiveCodePreview();
+            document.getElementById('code-editor-modal').classList.add('active');
+        }
+
+        function closeCodeModal() {
+            document.getElementById('code-editor-modal').classList.remove('active');
+        }
+
+        function switchCodeTab(tab) {
+            activeCodeTab = tab;
+            document.querySelectorAll('.code-tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+
+            document.getElementById('code-html-input').style.display = tab === 'html' ? 'block' : 'none';
+            document.getElementById('code-css-input').style.display = tab === 'css' ? 'block' : 'none';
+            document.getElementById('code-js-input').style.display = tab === 'js' ? 'block' : 'none';
+        }
+
+        function updateLiveCodePreview() {
+            const html = document.getElementById('code-html-input').value;
+            const css = document.getElementById('code-css-input').value;
+            const js = document.getElementById('code-js-input').value;
+
+            const fullContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>${css}</style>
+                </head>
+                <body style="margin: 10px; font-family: sans-serif;">
+                    ${html}
+                    <script>${js}<\/script>
+                </body>
+                </html>
+            `;
+
+            const iframe = document.getElementById('code-live-preview-iframe');
+            iframe.srcdoc = fullContent;
+        }
+
+        function handleCodeFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const ext = file.name.split('.').pop().toLowerCase();
+
+                if (ext === 'css') {
+                    document.getElementById('code-css-input').value = content;
+                    switchCodeTab('css');
+                } else if (ext === 'js') {
+                    document.getElementById('code-js-input').value = content;
+                    switchCodeTab('js');
+                } else {
+                    document.getElementById('code-html-input').value = content;
+                    switchCodeTab('html');
+                }
+                updateLiveCodePreview();
+                showToast(`Loaded ${file.name}!`, 'success');
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function insertCodeFrameToNote() {
+            const html = document.getElementById('code-html-input').value;
+            const css = document.getElementById('code-css-input').value;
+            const js = document.getElementById('code-js-input').value;
+
+            if(!html.trim() && !css.trim() && !js.trim()) {
+                showToast('Please write or upload some code first!', 'error');
+                return;
+            }
+
+            const combinedCode = `
+                <!DOCTYPE html>
+                <html>
+                <head><style>${css}</style></head>
+                <body style="margin:10px; font-family:sans-serif;">
+                    ${html}
+                    <script>${js}<\/script>
+                </body>
+                </html>
+            `.replace(/"/g, '&quot;');
+
+            const frameHtml = `
+                <div class="code-preview-frame" contenteditable="false">
+                    <div class="code-preview-header">
+                        <span><i class="fas fa-code"></i> Live Code Preview Widget</span>
+                    </div>
+                    <iframe class="code-preview-iframe" srcdoc="${combinedCode}"></iframe>
+                </div><br>
+            `;
+
+            const editor = document.getElementById('note-editor');
+            editor.focus();
+            document.execCommand('insertHTML', false, frameHtml);
+
+            closeCodeModal();
+            showToast('Code Frame Inserted!', 'success');
+        }
+
         // Profile APIs
         async function fetchProfileFromBackend() {
             try {
@@ -752,7 +922,7 @@
             }
         }
 
-        // Save / Update Note (Prevents Multi-submit Duplicate Bug)
+        // Save / Update Note
         async function saveNoteAndClose() {
             if (isSavingNote) return;
 
@@ -812,7 +982,7 @@
             }
         }
 
-        // Delete Note (User-Specific Hide)
+        // Delete Note
         async function deleteNote(id) {
             if(confirm('Delete this note for your device?')) {
                 try {
@@ -827,7 +997,7 @@
             }
         }
 
-        // LIKE TOGGLE (Works for pinned notes as well)
+        // LIKE TOGGLE
         async function toggleLike(event, noteId) {
             event.stopPropagation();
             const note = notes.find(n => n._id === noteId);
@@ -856,7 +1026,7 @@
             }
         }
 
-        // VIEW NOTE (Works for pinned notes as well)
+        // VIEW NOTE
         async function viewNote(noteId) {
             const note = notes.find(n => n._id === noteId);
             if(!note) return;
