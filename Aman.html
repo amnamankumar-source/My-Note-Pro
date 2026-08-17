@@ -438,7 +438,7 @@
                         </div>
                     </div>
 
-                    <!-- UPDATED MEDIA & FILE UPLOAD BUTTON SECTION -->
+                    <!-- CLOUDINARY MULTIPLE MEDIA & FILE UPLOAD BUTTON SECTION -->
                     <div style="position:relative; flex-shrink:0;">
                         <button onclick="togglePopup('media-popup', this)" title="Insert Media & Documents" style="color: #4f46e5 !important; font-weight: 600;">
                             <i class="fas fa-paperclip"></i> Media & Files
@@ -464,7 +464,7 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Unified File Input -->
+                    <!-- Unified Multiple File Input -->
                     <input type="file" id="media-file-input" multiple style="display:none;" onchange="handleMediaFilesSelect(event)">
 
                     <button onclick="insertUrlPinLink()" title="Attach URL link" style="color:#0284c7 !important; font-weight:600;">
@@ -525,7 +525,7 @@
 
     <!-- JavaScript Logic -->
     <script>
-        const API_BASE_URL = window.location.origin.includes('localhost') ? 'http://localhost:5000/api' : 'https://my-note-pro-1.onrender.com/api';
+        const API_BASE_URL = window.location.origin.includes('localhost') ? 'http://localhost:5000/api' : `${window.location.origin}/api`;
 
         function getOrCreateDeviceId() {
             let deviceId = localStorage.getItem('user_device_id');
@@ -571,6 +571,60 @@
                 }
             });
         });
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('live-time').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('live-date').innerText = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const icon = document.getElementById('theme-icon');
+            if (document.body.classList.contains('dark-mode')) {
+                icon.className = 'fas fa-sun';
+            } else {
+                icon.className = 'fas fa-moon';
+            }
+        }
+
+        function goHome() {
+            selectedSubjectFilter = '';
+            currentSearchQuery = '';
+            currentDateFilter = '';
+            document.getElementById('search-input').value = '';
+            document.getElementById('date-search-input').value = '';
+            document.getElementById('clear-date-btn').style.display = 'none';
+            fetchNotesFromBackend(true);
+        }
+
+        function handleSearch() {
+            currentSearchQuery = document.getElementById('search-input').value.trim();
+            fetchNotesFromBackend(true);
+        }
+
+        function filterByDate() {
+            const val = document.getElementById('date-search-input').value;
+            if (val) {
+                currentDateFilter = val;
+                document.getElementById('clear-date-btn').style.display = 'inline-flex';
+                fetchNotesFromBackend(true);
+            }
+        }
+
+        function clearDateFilter() {
+            document.getElementById('date-search-input').value = '';
+            currentDateFilter = '';
+            document.getElementById('clear-date-btn').style.display = 'none';
+            fetchNotesFromBackend(true);
+        }
+
+        function filterBySubject(subject, elem) {
+            selectedSubjectFilter = subject;
+            document.querySelectorAll('.subject-circle-item').forEach(el => el.classList.remove('active'));
+            if(elem) elem.classList.add('active');
+            fetchNotesFromBackend(true);
+        }
 
         function handleInfiniteScroll() {
             if (isLoadingNotes || !hasMoreNotes) return;
@@ -677,6 +731,397 @@
             });
         }
 
+        async function viewNote(noteId) {
+            const note = notes.find(n => n._id === noteId);
+            if (!note) return;
+
+            document.getElementById('view-modal-title-header').innerText = note.title;
+            document.getElementById('view-note-title').innerText = note.title;
+            document.getElementById('view-note-content').innerHTML = note.content;
+            document.getElementById('view-date-stamp').innerText = `Created: ${note.createdAtFormatted || note.createdAt} | Subject: ${note.subject}`;
+            
+            document.getElementById('view-modal').classList.add('active');
+
+            // Increment view count
+            try {
+                const res = await fetch(`${API_BASE_URL}/notes/${noteId}/view`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ deviceId: USER_DEVICE_ID })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    note.views = data.views;
+                }
+            } catch (err) {
+                console.warn('View update error:', err);
+            }
+        }
+
+        function closeViewModal() {
+            document.getElementById('view-modal').classList.remove('active');
+        }
+
+        async function toggleLike(e, noteId) {
+            e.stopPropagation();
+            try {
+                const res = await fetch(`${API_BASE_URL}/notes/${noteId}/like`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ deviceId: USER_DEVICE_ID })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const note = notes.find(n => n._id === noteId);
+                    if (note) {
+                        note.likes = data.likes;
+                        note.userLiked = data.userLiked;
+                        renderNotesGrid();
+                    }
+                }
+            } catch (err) {
+                showToast('Failed to update like status', 'error');
+            }
+        }
+
+        async function deleteNote(noteId) {
+            if (!confirm("Are you sure you want to delete this note?")) return;
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/notes/${noteId}?deviceId=${USER_DEVICE_ID}`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    showToast('Note deleted!', 'success');
+                    fetchNotesFromBackend(true);
+                }
+            } catch (err) {
+                showToast('Failed to delete note', 'error');
+            }
+        }
+
+        // ===== CLOUDINARY MULTIPLE MEDIA UPLOADER =====
+        function triggerMediaUpload(acceptTypes) {
+            closeAllPopups();
+            const input = document.getElementById('media-file-input');
+            input.accept = acceptTypes || '*/*';
+            input.click();
+        }
+
+        async function handleMediaFilesSelect(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('media', files[i]);
+            }
+
+            showToast(`Uploading ${files.length} file(s) to Cloudinary...`, 'info');
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    const uploadedFiles = data.files || [{ url: data.url, fileType: data.fileType, filename: data.filename }];
+                    
+                    uploadedFiles.forEach(file => {
+                        insertCloudinaryMediaIntoEditor(file.url, file.fileType, file.filename);
+                    });
+
+                    showToast(`${uploadedFiles.length} File(s) stored in Cloudinary!`, 'success');
+                } else {
+                    showToast('Cloudinary upload failed', 'error');
+                }
+            } catch (err) {
+                showToast('Cloudinary connection error', 'error');
+            } finally {
+                event.target.value = '';
+            }
+        }
+
+        function insertCloudinaryMediaIntoEditor(url, fileType, filename) {
+            const editor = document.getElementById('note-editor');
+            editor.focus();
+
+            let mediaHtml = '';
+
+            if (fileType.startsWith('image/')) {
+                mediaHtml = `<div style="margin: 10px 0;"><img src="${url}" alt="${filename}" style="max-width: 100%; border-radius: 8px; box-shadow: var(--shadow-sm);" /></div><p><br></p>`;
+            } else if (fileType.startsWith('video/')) {
+                mediaHtml = `
+                    <div style="margin: 10px 0;">
+                        <video controls style="max-width: 100%; border-radius: 8px;">
+                            <source src="${url}" type="${fileType}">
+                            Your browser does not support video playback.
+                        </video>
+                    </div><p><br></p>`;
+            } else if (fileType === 'application/pdf') {
+                mediaHtml = `
+                    <div class="pdf-embed-box" style="margin: 10px 0;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <i class="fas fa-file-pdf" style="color:#e53e3e; font-size: 24px;"></i>
+                            <div>
+                                <strong style="font-size: 13px;">${escapeHtml(filename || 'PDF Document')}</strong>
+                                <div style="font-size: 11px; color: var(--text-muted);">Cloudinary PDF Document</div>
+                            </div>
+                        </div>
+                        <a href="${url}" target="_blank" style="padding: 6px 12px; background: #4f46e5; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600;">
+                            <i class="fas fa-external-link-alt"></i> View PDF
+                        </a>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <iframe src="${url}" style="width: 100%; height: 400px; border: 1px solid var(--border-color); border-radius: 8px;"></iframe>
+                    </div><p><br></p>`;
+            } else {
+                mediaHtml = `
+                    <div class="file-download-box" style="margin: 10px 0;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <i class="fas fa-file-alt" style="color:#4f46e5; font-size: 24px;"></i>
+                            <div>
+                                <strong style="font-size: 13px;">${escapeHtml(filename || 'Attachment File')}</strong>
+                            </div>
+                        </div>
+                        <a href="${url}" target="_blank" download style="padding: 6px 12px; background: #4f46e5; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600;">
+                            <i class="fas fa-download"></i> Download
+                        </a>
+                    </div><p><br></p>`;
+            }
+
+            document.execCommand('insertHTML', false, mediaHtml);
+        }
+
+        function insertMediaByUrl() {
+            closeAllPopups();
+            const url = prompt("Enter media or document URL:");
+            if (!url) return;
+
+            if (url.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
+                insertCloudinaryMediaIntoEditor(url, 'image/jpeg', 'Image');
+            } else if (url.match(/\.(mp4|webm|ogg)$/i)) {
+                insertCloudinaryMediaIntoEditor(url, 'video/mp4', 'Video');
+            } else if (url.match(/\.pdf$/i)) {
+                insertCloudinaryMediaIntoEditor(url, 'application/pdf', 'PDF Document');
+            } else {
+                insertCloudinaryMediaIntoEditor(url, 'application/octet-stream', 'Attachment');
+            }
+        }
+
+        // EDITOR CONTROL FUNCTIONS
+        function openModal(editId = null) {
+            currentEditId = editId;
+            const modal = document.getElementById('editor-modal');
+            
+            if (editId) {
+                const note = notes.find(n => n._id === editId);
+                if (note) {
+                    document.getElementById('note-title').value = note.title;
+                    document.getElementById('note-editor').innerHTML = note.content;
+                    currentAuthorTag = note.subject || 'Custom Author';
+                    currentModalIsPrivate = note.isPrivate;
+                    currentModalIsPinned = note.isPinned;
+                    document.getElementById('modal-heading-text').innerText = 'Edit Note';
+                }
+            } else {
+                document.getElementById('note-title').value = '';
+                document.getElementById('note-editor').innerHTML = '';
+                currentAuthorTag = 'Custom Author';
+                currentModalIsPrivate = false;
+                currentModalIsPinned = false;
+                document.getElementById('modal-heading-text').innerText = 'Create Note';
+            }
+
+            updateModalButtonsUI();
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('editor-modal').classList.remove('active');
+        }
+
+        function updateModalButtonsUI() {
+            const privBtn = document.getElementById('modal-privacy-btn');
+            const privIcon = document.getElementById('modal-privacy-icon');
+            const privText = document.getElementById('modal-privacy-text');
+
+            if (currentModalIsPrivate) {
+                privBtn.className = 'privacy-toggle-btn is-private';
+                privIcon.className = 'fas fa-lock';
+                privText.innerText = 'Private';
+            } else {
+                privBtn.className = 'privacy-toggle-btn is-public';
+                privIcon.className = 'fas fa-globe';
+                privText.innerText = 'Public';
+            }
+
+            const pinBtn = document.getElementById('modal-pin-btn');
+            const pinIcon = document.getElementById('modal-pin-icon');
+            const pinText = document.getElementById('modal-pin-text');
+
+            if (currentModalIsPinned) {
+                pinBtn.className = 'pin-toggle-btn is-pinned';
+                pinIcon.className = 'fas fa-thumbtack';
+                pinText.innerText = 'Pinned';
+            } else {
+                pinBtn.className = 'pin-toggle-btn';
+                pinIcon.className = 'fas fa-thumbtack';
+                pinText.innerText = 'Pin Note';
+            }
+        }
+
+        function toggleModalPrivacy() {
+            currentModalIsPrivate = !currentModalIsPrivate;
+            updateModalButtonsUI();
+        }
+
+        function toggleModalPin() {
+            currentModalIsPinned = !currentModalIsPinned;
+            updateModalButtonsUI();
+        }
+
+        function execCmd(command, value = null) {
+            document.execCommand(command, false, value);
+        }
+
+        function applyHighlight(color) {
+            document.execCommand('backColor', false, color);
+        }
+
+        function applyBlockStyle(tag) {
+            document.execCommand('formatBlock', false, `<${tag}>`);
+        }
+
+        function changeFontSize(size) {
+            document.execCommand('fontSize', false, '7');
+            const fontElements = document.getElementById('note-editor').getElementsByTagName('font');
+            for (let el of fontElements) {
+                if (el.getAttribute('size') === '7') {
+                    el.removeAttribute('size');
+                    el.style.fontSize = size;
+                }
+            }
+            closeAllPopups();
+        }
+
+        function changeFontFamily(font) {
+            document.execCommand('fontName', false, font);
+            closeAllPopups();
+        }
+
+        function togglePopup(popupId, btn) {
+            const popup = document.getElementById(popupId);
+            const isActive = popup.classList.contains('active');
+            closeAllPopups();
+            if (!isActive) {
+                popup.classList.add('active');
+                if (btn) {
+                    const rect = btn.getBoundingClientRect();
+                    popup.style.top = `${rect.bottom + 5}px`;
+                    popup.style.left = `${rect.left}px`;
+                }
+            }
+        }
+
+        function closeAllPopups() {
+            document.querySelectorAll('.toolbar-popup').forEach(p => p.classList.remove('active'));
+        }
+
+        function saveAuthorTag() {
+            const val = document.getElementById('editor-author-input').value.trim();
+            if (val) {
+                currentAuthorTag = val;
+                showToast(`Author tag set to '${val}'`, 'success');
+            }
+            closeAllPopups();
+        }
+
+        function insertUrlPinLink() {
+            const url = prompt("Enter website URL to attach:");
+            if (!url) return;
+            const text = prompt("Enter display title:", "Link");
+            const linkHtml = `<a href="${url}" target="_blank" style="color: #0284c7; text-decoration: underline; font-weight: 600;"><i class="fas fa-link"></i> ${escapeHtml(text || 'Link')}</a>&nbsp;`;
+            document.execCommand('insertHTML', false, linkHtml);
+        }
+
+        function insertYouTubeEmbed() {
+            const url = prompt("Enter YouTube video URL:");
+            if (!url) return;
+            let videoId = '';
+            if (url.includes('v=')) {
+                videoId = url.split('v=')[1].split('&')[0];
+            } else if (url.includes('youtu.be/')) {
+                videoId = url.split('youtu.be/')[1].split('?')[0];
+            }
+
+            if (videoId) {
+                const embedHtml = `
+                    <div class="media-slider-card yt-card" style="margin: 10px 0;">
+                        <iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>
+                    </div><p><br></p>`;
+                document.execCommand('insertHTML', false, embedHtml);
+            } else {
+                showToast('Invalid YouTube URL', 'error');
+            }
+        }
+
+        function insertDriveEmbed() {
+            const url = prompt("Enter Google Drive public preview URL:");
+            if (!url) return;
+            const embedHtml = `
+                <div class="media-slider-card drive-card" style="margin: 10px 0;">
+                    <iframe src="${url}"></iframe>
+                </div><p><br></p>`;
+            document.execCommand('insertHTML', false, embedHtml);
+        }
+
+        // CODE EDITOR MODAL FUNCTIONS
+        function openCodeEditorModal() {
+            closeAllPopups();
+            document.getElementById('code-editor-modal').classList.add('active');
+        }
+
+        function closeCodeEditorModal() {
+            document.getElementById('code-editor-modal').classList.remove('active');
+        }
+
+        function handleCodeFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                document.getElementById('raw-code-input').value = event.target.result;
+            };
+            reader.readAsText(file);
+        }
+
+        function saveCodeAndInsertPreview() {
+            const rawCode = document.getElementById('raw-code-input').value.trim();
+            if (!rawCode) {
+                showToast('Code area is empty!', 'error');
+                return;
+            }
+
+            const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0; padding:10px;">${rawCode}</body></html>`;
+            const blob = new Blob([doc], { type: 'text/html' });
+            const blobUrl = URL.createObjectURL(blob);
+
+            const iframeHtml = `
+                <div style="margin: 10px 0;">
+                    <iframe class="code-embed-frame" src="${blobUrl}"></iframe>
+                </div><p><br></p>`;
+
+            closeCodeEditorModal();
+            document.getElementById('note-editor').focus();
+            document.execCommand('insertHTML', false, iframeHtml);
+            showToast('Code preview frame inserted!', 'success');
+        }
+
+        // PROFILE & SUBJECT BACKEND APIS
         async function fetchProfileFromBackend() {
             try {
                 const res = await fetch(`${API_BASE_URL}/profile`);
@@ -718,13 +1163,14 @@
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    document.getElementById('profile-img').src = data.url;
+                    const imgUrl = data.url;
+                    document.getElementById('profile-img').src = imgUrl;
                     await fetch(`${API_BASE_URL}/profile`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ img: data.url })
+                        body: JSON.stringify({ img: imgUrl })
                     });
-                    showToast('Profile image updated!', 'success');
+                    showToast('Profile image updated via Cloudinary!', 'success');
                 }
             } catch (err) {
                 showToast('Failed to upload profile image', 'error');
@@ -760,6 +1206,39 @@
                 `;
                 container.appendChild(item);
             });
+        }
+
+        function openAddSubjectModal() {
+            document.getElementById('add-subject-modal').classList.add('active');
+        }
+
+        function closeAddSubjectModal() {
+            document.getElementById('add-subject-modal').classList.remove('active');
+            document.getElementById('new-subject-name').value = '';
+            document.getElementById('subject-img-preview-box').innerHTML = '<i class="fas fa-image" style="color:var(--text-muted); font-size: 24px;"></i>';
+            tempNewSubjectImgData = '';
+        }
+
+        async function previewSubjectImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('media', file);
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    tempNewSubjectImgData = data.url;
+                    document.getElementById('subject-img-preview-box').innerHTML = `<img src="${data.url}">`;
+                }
+            } catch (err) {
+                showToast('Failed to upload subject image', 'error');
+            }
         }
 
         async function saveNewSubjectCircle() {
@@ -850,467 +1329,32 @@
             }
         }
 
-        async function deleteNote(id) {
-            if(confirm('Delete this note for your device?')) {
-                try {
-                    const res = await fetch(`${API_BASE_URL}/notes/${id}?deviceId=${USER_DEVICE_ID}`, { method: 'DELETE' });
-                    if (res.ok) {
-                        showToast('Note deleted for you!', 'success');
-                        fetchNotesFromBackend(true);
-                    }
-                } catch (err) {
-                    showToast('Failed to delete note', 'error');
-                }
-            }
-        }
-
-        async function toggleLike(event, noteId) {
-            event.stopPropagation();
-            const note = notes.find(n => n._id === noteId);
-            if (!note) return;
-
-            note.userLiked = !note.userLiked;
-            note.likes = note.userLiked ? (note.likes || 0) + 1 : Math.max(0, (note.likes || 0) - 1);
-
-            renderNotesGrid();
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/notes/${noteId}/like`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ deviceId: USER_DEVICE_ID })
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    note.likes = data.likes;
-                    note.userLiked = data.userLiked;
-                    renderNotesGrid();
-                }
-            } catch (err) {
-                console.warn('Like update failed:', err);
-            }
-        }
-
-        async function viewNote(noteId) {
-            const note = notes.find(n => n._id === noteId);
-            if(!note) return;
-
-            document.getElementById('view-modal-title-header').innerText = note.title || 'Untitled Note';
-            document.getElementById('view-note-title').innerText = note.title;
-            document.getElementById('view-note-content').innerHTML = note.content;
-            document.getElementById('view-date-stamp').innerHTML = `<i class="fas fa-clock"></i> ${note.createdAtFormatted || note.createdAt} | Author: ${note.subject || 'Custom Author'} | Views: ${note.views || 0} | Likes: ${note.likes || 0}`;
-
-            document.getElementById('view-modal').classList.add('active');
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/notes/${noteId}/view`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ deviceId: USER_DEVICE_ID })
-                });
-                if(res.ok) {
-                    const data = await res.json();
-                    note.views = data.views;
-                    document.getElementById('view-date-stamp').innerHTML = `<i class="fas fa-clock"></i> ${note.createdAtFormatted || note.createdAt} | Author: ${note.subject || 'Custom Author'} | Views: ${note.views} | Likes: ${note.likes || 0}`;
-                    renderNotesGrid();
-                }
-            } catch(err) {
-                console.warn('Views update failed:', err);
-            }
-        }
-
-        let searchTimeout;
-        function handleSearch() {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                currentSearchQuery = document.getElementById('search-input').value.trim();
-                fetchNotesFromBackend(true);
-            }, 400);
-        }
-
-        function filterBySubject(subject, element) {
-            selectedSubjectFilter = subject;
-            document.querySelectorAll('.subject-circle-item').forEach(el => el.classList.remove('active'));
-            if (element) element.classList.add('active');
-            fetchNotesFromBackend(true);
-        }
-
-        function filterByDate() {
-            const dateVal = document.getElementById('date-search-input').value;
-            if(!dateVal) return;
-            document.getElementById('clear-date-btn').style.display = 'inline-flex';
-            currentDateFilter = new Date(dateVal).toLocaleDateString([], { month: 'short', day: 'numeric' });
-            fetchNotesFromBackend(true);
-        }
-
-        function clearDateFilter() {
-            document.getElementById('date-search-input').value = '';
-            document.getElementById('clear-date-btn').style.display = 'none';
-            currentDateFilter = '';
-            fetchNotesFromBackend(true);
-        }
-
-        function goHome() {
-            selectedSubjectFilter = '';
-            currentSearchQuery = '';
-            currentDateFilter = '';
-            document.getElementById('search-input').value = '';
-            document.querySelectorAll('.subject-circle-item').forEach(el => el.classList.remove('active'));
-            if (document.querySelectorAll('.subject-circle-item')[0]) {
-                document.querySelectorAll('.subject-circle-item')[0].classList.add('active');
-            }
-            clearDateFilter();
-        }
-
-        function openModal(noteId = null) {
-            currentEditId = noteId;
-            const modal = document.getElementById('editor-modal');
-            const titleInput = document.getElementById('note-title');
-            const editor = document.getElementById('note-editor');
-            const headingText = document.getElementById('modal-heading-text');
-
-            if(noteId) {
-                const note = notes.find(n => n._id === noteId);
-                if(note && note.isPinned) {
-                    showToast('Pinned notes are locked and cannot be edited!', 'error');
-                    return;
-                }
-                if(note) {
-                    titleInput.value = note.title;
-                    editor.innerHTML = note.content;
-                    currentModalIsPrivate = note.isPrivate;
-                    currentModalIsPinned = note.isPinned;
-                    currentAuthorTag = note.subject || 'Custom Author';
-                    headingText.innerText = 'Edit Note';
-                }
-            } else {
-                titleInput.value = '';
-                editor.innerHTML = '';
-                currentModalIsPrivate = true;
-                currentModalIsPinned = false;
-                currentAuthorTag = selectedSubjectFilter || document.getElementById('profile-name').innerText || 'Custom Author';
-                headingText.innerText = 'Create New Note';
-            }
-
-            document.getElementById('editor-author-input').value = currentAuthorTag;
-            updateModalPrivacyUI();
-            updateModalPinUI();
-            modal.classList.add('active');
-        }
-
-        function openAddSubjectModal() {
-            document.getElementById('new-subject-name').value = '';
-            document.getElementById('new-subject-file').value = '';
-            tempNewSubjectImgData = '';
-            document.getElementById('subject-img-preview-box').innerHTML = '<i class="fas fa-image" style="color:var(--text-muted); font-size: 24px;"></i>';
-            document.getElementById('add-subject-modal').classList.add('active');
-        }
-
-        function closeAddSubjectModal() {
-            document.getElementById('add-subject-modal').classList.remove('active');
-        }
-
-        async function previewSubjectImage(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const formData = new FormData();
-            formData.append('media', file);
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/upload`, {
-                    method: 'POST',
-                    body: formData
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    tempNewSubjectImgData = data.url;
-                    document.getElementById('subject-img-preview-box').innerHTML = `<img src="${data.url}" alt="Preview" />`;
-                }
-            } catch (err) {
-                showToast('Image upload failed', 'error');
-            }
-        }
-
-        function updateClock() {
-            const now = new Date();
-            document.getElementById('live-time').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            document.getElementById('live-date').innerText = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-        }
-
-        function toggleTheme() {
-            document.body.classList.toggle('dark-mode');
-            const isDark = document.body.classList.contains('dark-mode');
-            document.getElementById('theme-icon').className = isDark ? 'fas fa-sun' : 'fas fa-moon';
-        }
-
-        function closeModal() {
-            document.getElementById('editor-modal').classList.remove('active');
-            currentEditId = null;
-            closeAllPopups();
-        }
-
-        function closeViewModal() {
-            document.getElementById('view-modal').classList.remove('active');
-        }
-
-        function toggleModalPrivacy() {
-            currentModalIsPrivate = !currentModalIsPrivate;
-            updateModalPrivacyUI();
-        }
-
-        function updateModalPrivacyUI() {
-            const btn = document.getElementById('modal-privacy-btn');
-            const icon = document.getElementById('modal-privacy-icon');
-            const text = document.getElementById('modal-privacy-text');
-            if (currentModalIsPrivate) {
-                btn.className = 'privacy-toggle-btn is-private';
-                icon.className = 'fas fa-lock';
-                text.innerText = 'Private';
-            } else {
-                btn.className = 'privacy-toggle-btn is-public';
-                icon.className = 'fas fa-globe';
-                text.innerText = 'Published';
-            }
-        }
-
-        function toggleModalPin() {
-            currentModalIsPinned = !currentModalIsPinned;
-            updateModalPinUI();
-        }
-
-        function updateModalPinUI() {
-            const btn = document.getElementById('modal-pin-btn');
-            const text = document.getElementById('modal-pin-text');
-            if (currentModalIsPinned) {
-                btn.className = 'pin-toggle-btn is-pinned';
-                text.innerText = 'Pinned (Locked)';
-            } else {
-                btn.className = 'pin-toggle-btn';
-                text.innerText = 'Pin Note';
-            }
-        }
-
-        function execCmd(command, value = null) { document.execCommand(command, false, value); }
-        function applyHighlight(color) { document.execCommand('hiliteColor', false, color); }
-        function changeFontSize(size) {
-            const sel = window.getSelection();
-            if (sel.rangeCount) {
-                const span = document.createElement('span');
-                span.style.fontSize = size;
-                const range = sel.getRangeAt(0);
-                span.appendChild(range.extractContents());
-                range.insertNode(span);
-            }
-            closeAllPopups();
-        }
-        function changeFontFamily(font) { document.execCommand('fontName', false, font); closeAllPopups(); }
-        function applyBlockStyle(tag) { document.execCommand('formatBlock', false, `<${tag}>`); }
-        function saveAuthorTag() {
-            const val = document.getElementById('editor-author-input').value.trim();
-            if(val) { currentAuthorTag = val; showToast(`Author tag updated`, 'success'); }
-            closeAllPopups();
-        }
-
-        function togglePopup(id, btnElement) {
-            const popup = document.getElementById(id);
-            const isAlreadyActive = popup.classList.contains('active');
-            closeAllPopups();
-            if (!isAlreadyActive && btnElement) {
-                const rect = btnElement.getBoundingClientRect();
-                popup.style.top = (rect.bottom + 5) + 'px';
-                let leftPos = rect.left;
-                if (leftPos + 200 > window.innerWidth) leftPos = window.innerWidth - 210;
-                popup.style.left = Math.max(10, leftPos) + 'px';
-                popup.classList.add('active');
-            }
-        }
-        function closeAllPopups() { document.querySelectorAll('.toolbar-popup').forEach(p => p.classList.remove('active')); }
-
-        /* MULTIPLE FILE UPLOAD HANDLER FOR IMAGES, VIDEOS, PDFs & DOCUMENTS */
-        function triggerMediaUpload(acceptType) {
-            closeAllPopups();
-            setTimeout(() => {
-                const fileInput = document.getElementById('media-file-input');
-                fileInput.accept = acceptType;
-                fileInput.click();
-            }, 100);
-        }
-
-        async function handleMediaFilesSelect(event) {
-            const files = event.target.files;
-            if (!files || files.length === 0) return;
-
-            showToast('Uploading file(s)... Please wait', 'info');
-            const editor = document.getElementById('note-editor');
-            editor.focus();
-
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const formData = new FormData();
-                formData.append('media', file);
-
-                try {
-                    const res = await fetch(`${API_BASE_URL}/upload`, {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    if (res.ok) {
-                        const fileData = await res.json();
-                        const fileUrl = fileData.url;
-                        const mimeType = fileData.fileType || file.type;
-                        let elementHtml = '';
-
-                        if (mimeType.startsWith('image/')) {
-                            elementHtml = `<p><img src="${fileUrl}" alt="${file.name}" style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></p><br>`;
-                        } else if (mimeType.startsWith('video/')) {
-                            elementHtml = `<p><video src="${fileUrl}" controls style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></video></p><br>`;
-                        } else if (mimeType === 'application/pdf' || file.name.endsWith('.pdf')) {
-                            elementHtml = `
-                                <div class="pdf-embed-box" contenteditable="false">
-                                    <div style="display:flex; align-items:center; gap:8px;">
-                                        <i class="fas fa-file-pdf" style="color:#e53e3e; font-size:24px;"></i>
-                                        <span style="font-weight:600; font-size:13px;">${escapeHtml(file.name)}</span>
-                                    </div>
-                                    <a href="${fileUrl}" target="_blank" style="padding:4px 12px; background:#4f46e5; color:white; border-radius:6px; text-decoration:none; font-size:12px;">Open PDF</a>
-                                </div>
-                                <iframe src="${fileUrl}" class="pdf-preview-frame"></iframe>
-                                <p><br></p>`;
-                        } else {
-                            elementHtml = `
-                                <div class="file-download-box" contenteditable="false">
-                                    <div style="display:flex; align-items:center; gap:8px;">
-                                        <i class="fas fa-file-alt" style="color:#4f46e5; font-size:24px;"></i>
-                                        <span style="font-weight:600; font-size:13px;">${escapeHtml(file.name)}</span>
-                                    </div>
-                                    <a href="${fileUrl}" download target="_blank" style="padding:4px 12px; background:#4f46e5; color:white; border-radius:6px; text-decoration:none; font-size:12px;">Download File</a>
-                                </div>
-                                <p><br></p>`;
-                        }
-
-                        document.execCommand('insertHTML', false, elementHtml);
-                        showToast(`Uploaded: ${file.name}`, 'success');
-                    } else {
-                        showToast(`Failed to upload ${file.name}`, 'error');
-                    }
-                } catch (err) {
-                    showToast(`Error uploading ${file.name}`, 'error');
-                }
-            }
-            event.target.value = '';
-        }
-
-        function insertMediaByUrl() {
-            closeAllPopups();
-            const url = prompt('Enter Image, Video or PDF Direct URL:');
-            if (!url) return;
-            let mediaHtml = '';
-            if (url.match(/\.(mp4|webm|ogg|mov)$/i)) {
-                mediaHtml = `<p><video src="${url}" controls style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></video></p><br>`;
-            } else if (url.match(/\.pdf$/i)) {
-                mediaHtml = `<iframe src="${url}"></iframe><p><br></p>`;
-            } else {
-                mediaHtml = `<p><img src="${url}" style="max-width:100%; height:auto; border-radius:8px; margin:10px 0;"></p><br>`;
-            }
-            document.execCommand('insertHTML', false, mediaHtml);
-        }
-
-        /* CODE EDITOR FUNCTIONS */
-        function openCodeEditorModal() {
-            closeAllPopups();
-            document.getElementById('raw-code-input').value = '';
-            document.getElementById('code-editor-modal').classList.add('active');
-        }
-
-        function closeCodeEditorModal() {
-            document.getElementById('code-editor-modal').classList.remove('active');
-        }
-
-        function handleCodeFileUpload(event) {
-            const file = event.target.files[0];
-            if(!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('raw-code-input').value = e.target.result;
-                showToast('Code loaded from file!', 'success');
-            };
-            reader.readAsText(file);
-            event.target.value = '';
-        }
-
-        function saveCodeAndInsertPreview() {
-            const rawCode = document.getElementById('raw-code-input').value.trim();
-            if (!rawCode) {
-                showToast('Code area is empty!', 'error');
-                return;
-            }
-
-            const escapedCode = rawCode.replace(/"/g, '&quot;');
-            const iframeHtml = `<div class="code-frame-wrapper" contenteditable="false" style="margin: 15px 0;"><iframe class="code-embed-frame" srcdoc="${escapedCode}" sandbox="allow-scripts allow-modals allow-forms"></iframe></div><p><br></p>`;
-
-            const editor = document.getElementById('note-editor');
-            editor.focus();
-            document.execCommand('insertHTML', false, iframeHtml);
-
-            closeCodeEditorModal();
-            showToast('Code Frame preview inserted!', 'success');
-        }
-
-        function insertUrlPinLink() {
-            const url = prompt('Enter URL:');
-            if (!url) return;
-            let formattedUrl = /^https?:\/\//i.test(url.trim()) ? url.trim() : 'https://' + url.trim();
-            document.execCommand('insertHTML', false, `<a href="${formattedUrl}" target="_blank" style="text-decoration: underline; color: #4f46e5;"><u>${formattedUrl}</u></a>&nbsp;`);
-        }
-
-        function parseYouTubeUrl(url) {
-            let videoId = '';
-            if (url.includes('shorts/')) videoId = url.split('shorts/')[1].split('?')[0];
-            else if (url.includes('youtu.be/')) videoId = url.split('youtu.be/')[1].split('?')[0];
-            else if (url.includes('watch?v=')) videoId = url.split('watch?v=')[1].split('&')[0];
-            return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=0` : null;
-        }
-
-        function insertYouTubeEmbed() {
-            const url = prompt('Paste YouTube Link:');
-            const embedUrl = parseYouTubeUrl(url || '');
-            if (embedUrl) {
-                const editor = document.getElementById('note-editor');
-                let sliderContainer = editor.querySelector('.editor-yt-slider-container') || document.createElement('div');
-                sliderContainer.className = 'media-slider-container editor-yt-slider-container';
-                sliderContainer.contentEditable = 'false';
-                sliderContainer.innerHTML += `<div class="media-slider-card yt-card"><iframe src="${embedUrl}" allowfullscreen></iframe></div>`;
-                if (!editor.querySelector('.editor-yt-slider-container')) editor.appendChild(sliderContainer);
-            }
-        }
-
-        function insertDriveEmbed() {
-            const url = prompt('Paste Google Drive Link:');
-            if (!url) return;
-            let embedUrl = url.replace(/\/view.*/, '/preview').replace(/\/edit.*/, '/preview');
-            const editor = document.getElementById('note-editor');
-            let sliderContainer = editor.querySelector('.editor-drive-slider-container') || document.createElement('div');
-            sliderContainer.className = 'media-slider-container editor-drive-slider-container';
-            sliderContainer.contentEditable = 'false';
-            sliderContainer.innerHTML += `<div class="media-slider-card drive-card"><iframe src="${embedUrl}"></iframe></div>`;
-            if (!editor.querySelector('.editor-drive-slider-container')) editor.appendChild(sliderContainer);
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, "&amp;")
+                       .replace(/</g, "&lt;")
+                       .replace(/>/g, "&gt;")
+                       .replace(/"/g, "&quot;")
+                       .replace(/'/g, "&#039;");
         }
 
         function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.innerHTML = `<i class="fas fa-info-circle"></i> <span>${message}</span>`;
-            container.appendChild(toast);
-            setTimeout(() => toast.classList.add('show'), 100);
-            setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 3000);
-        }
+            toast.className = 'toast';
+            
+            let iconClass = 'fas fa-info-circle';
+            if (type === 'success') iconClass = 'fas fa-check-circle';
+            if (type === 'error') iconClass = 'fas fa-exclamation-circle';
 
-        function escapeHtml(text) {
-            return (text || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            toast.innerHTML = `<i class="${iconClass}"></i> ${escapeHtml(message)}`;
+            container.appendChild(toast);
+
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400);
+            }, 3000);
         }
     </script>
 </body>
