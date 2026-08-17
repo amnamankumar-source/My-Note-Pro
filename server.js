@@ -1,9 +1,11 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const mongoose = require('mongoose');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -13,6 +15,39 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/notes_db';
 mongoose.connect(MONGO_URI)
     .then(() => console.log('MongoDB Connected Successfully'))
     .catch(err => console.error('MongoDB Connection Error:', err));
+
+// ===== CLOUDINARY CONFIGURATION =====
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+    secure: true
+});
+
+// Configure Multer Storage for Cloudinary (Images, Videos, PDFs/Docs)
+const cloudinaryStorage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: async (req, file) => {
+        let folder = 'my_note_pro_uploads';
+        let resource_type = 'auto'; // Automatically handles image, video, raw (PDF)
+
+        // PDFs and documents are uploaded as 'raw' in Cloudinary to preserve full functionality
+        if (file.mimetype === 'application/pdf' || file.mimetype.includes('document')) {
+            resource_type = 'raw';
+        }
+
+        return {
+            folder: folder,
+            resource_type: resource_type,
+            public_id: `${Date.now()}-${Math.round(Math.random() * 1E9)}-${path.parse(file.originalname).name}`
+        };
+    }
+});
+
+const upload = multer({ 
+    storage: cloudinaryStorage,
+    limits: { fileSize: 100 * 1024 * 1024 } // 100MB max limit
+});
 
 // ===== MONGOOSE SCHEMAS & MODELS =====
 const profileSchema = new mongoose.Schema({
@@ -47,27 +82,7 @@ const Note = mongoose.model('Note', noteSchema);
 app.use(cors());
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
-
-// Serve Uploaded Files Static Folder
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir);
-}
-app.use('/uploads', express.static(uploadsDir));
 app.use(express.static(__dirname));
-
-// Multer Configuration (Large file support: Images, Videos, PDFs)
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadsDir),
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
-    }
-});
-const upload = multer({ 
-    storage: storage,
-    limits: { fileSize: 100 * 1024 * 1024 } // 100MB limit for videos/PDFs
-});
 
 // ===== API ROUTES =====
 
@@ -299,11 +314,31 @@ app.delete('/api/notes/:id', async (req, res) => {
     }
 });
 
-// 4. File Upload (Supports Media & PDF Files)
-app.post('/api/upload', upload.single('media'), (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-    res.json({ url: fileUrl, fileType: req.file.mimetype, filename: req.file.originalname });
+// 4. File Upload (Multiple Files to Cloudinary: Images, Videos, PDFs)
+app.post('/api/upload', upload.array('media', 10), (req, res) => {
+    try {
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ error: 'No files uploaded' });
+        }
+
+        const uploadedFiles = req.files.map(file => ({
+            url: file.path, // Cloudinary secure URL
+            fileType: file.mimetype,
+            filename: file.originalname,
+            publicId: file.filename
+        }));
+
+        res.json({ 
+            message: 'Files uploaded to Cloudinary successfully',
+            files: uploadedFiles,
+            // Single file backwards compatibility
+            url: uploadedFiles[0].url,
+            fileType: uploadedFiles[0].fileType,
+            filename: uploadedFiles[0].filename
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // Catch-all route
