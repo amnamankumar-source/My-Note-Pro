@@ -24,29 +24,35 @@ cloudinary.config({
     secure: true
 });
 
-// Configure Multer Storage for Cloudinary (Images, Videos, PDFs/Docs)
+// Configure Multer Storage for Cloudinary
 const cloudinaryStorage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: async (req, file) => {
-        let folder = 'my_note_pro_uploads';
-        let resource_type = 'auto'; // Automatically handles image, video, raw (PDF)
+        let resource_type = 'auto'; // Auto-detects image, video
 
-        // PDFs and documents are uploaded as 'raw' in Cloudinary to preserve full functionality
-        if (file.mimetype === 'application/pdf' || file.mimetype.includes('document')) {
+        // Cloudinary processes PDFs and office documents as 'raw'
+        if (
+            file.mimetype === 'application/pdf' || 
+            file.mimetype.includes('document') || 
+            file.mimetype.includes('msword') || 
+            file.mimetype.includes('zip')
+        ) {
             resource_type = 'raw';
         }
 
+        const cleanFileName = path.parse(file.originalname).name.replace(/[^a-zA-Z0-9]/g, "_");
+
         return {
-            folder: folder,
+            folder: 'my_note_pro_uploads',
             resource_type: resource_type,
-            public_id: `${Date.now()}-${Math.round(Math.random() * 1E9)}-${path.parse(file.originalname).name}`
+            public_id: `${Date.now()}_${cleanFileName}`
         };
     }
 });
 
 const upload = multer({ 
     storage: cloudinaryStorage,
-    limits: { fileSize: 100 * 1024 * 1024 } // 100MB max limit
+    limits: { fileSize: 100 * 1024 * 1024 } // 100MB Max
 });
 
 // ===== MONGOOSE SCHEMAS & MODELS =====
@@ -315,14 +321,19 @@ app.delete('/api/notes/:id', async (req, res) => {
 });
 
 // 4. File Upload (Multiple Files to Cloudinary: Images, Videos, PDFs)
-app.post('/api/upload', upload.array('media', 10), (req, res) => {
-    try {
+app.post('/api/upload', (req, res) => {
+    upload.array('media', 10)(req, res, (err) => {
+        if (err) {
+            console.error("Cloudinary Upload Error:", err);
+            return res.status(500).json({ error: err.message || 'Upload failed' });
+        }
+
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ error: 'No files uploaded' });
         }
 
         const uploadedFiles = req.files.map(file => ({
-            url: file.path, // Cloudinary secure URL
+            url: file.path, // Cloudinary Secure URL
             fileType: file.mimetype,
             filename: file.originalname,
             publicId: file.filename
@@ -331,14 +342,11 @@ app.post('/api/upload', upload.array('media', 10), (req, res) => {
         res.json({ 
             message: 'Files uploaded to Cloudinary successfully',
             files: uploadedFiles,
-            // Single file backwards compatibility
             url: uploadedFiles[0].url,
             fileType: uploadedFiles[0].fileType,
             filename: uploadedFiles[0].filename
         });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    });
 });
 
 // Catch-all route to serve Frontend index.html
