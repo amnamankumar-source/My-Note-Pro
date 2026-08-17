@@ -525,7 +525,7 @@
 
     <!-- JavaScript Logic -->
     <script>
-        const API_BASE_URL = window.location.origin.includes('localhost') ? 'http://localhost:5000/api' : `${window.location.origin}/api`;
+        const API_BASE_URL = 'https://my-note-pro-10.onrender.com/api';
 
         function getOrCreateDeviceId() {
             let deviceId = localStorage.getItem('user_device_id');
@@ -830,7 +830,7 @@
                     const uploadedFiles = data.files || [{ url: data.url, fileType: data.fileType, filename: data.filename }];
                     
                     uploadedFiles.forEach(file => {
-                        insertCloudinaryMediaIntoEditor(file.url, file.fileType, file.filename);
+                        insertCloudinaryMediaIntoEditor(file.url, file.fileType || '', file.filename);
                     });
 
                     showToast(`${uploadedFiles.length} File(s) stored in Cloudinary!`, 'success');
@@ -851,7 +851,7 @@
             let mediaHtml = '';
 
             if (fileType.startsWith('image/')) {
-                mediaHtml = `<div style="margin: 10px 0;"><img src="${url}" alt="${filename}" style="max-width: 100%; border-radius: 8px; box-shadow: var(--shadow-sm);" /></div><p><br></p>`;
+                mediaHtml = `<div style="margin: 10px 0;"><img src="${url}" alt="${escapeHtml(filename)}" style="max-width: 100%; border-radius: 8px; box-shadow: var(--shadow-sm);" /></div><p><br></p>`;
             } else if (fileType.startsWith('video/')) {
                 mediaHtml = `
                     <div style="margin: 10px 0;">
@@ -860,7 +860,7 @@
                             Your browser does not support video playback.
                         </video>
                     </div><p><br></p>`;
-            } else if (fileType === 'application/pdf') {
+            } else if (fileType === 'application/pdf' || url.toLowerCase().endsWith('.pdf')) {
                 mediaHtml = `
                     <div class="pdf-embed-box" style="margin: 10px 0;">
                         <div style="display:flex; align-items:center; gap:10px;">
