@@ -8,12 +8,17 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Supabase Bucket Name Variable
+// Bucket Name Updated to 'my_note_pro'
 const BUCKET_NAME = 'my_note_pro';
 
 // Initialize Supabase Client
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+    console.error("CRITICAL ERROR: Supabase URL or Key missing in .env file!");
+}
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Configure Multer (Memory Storage for buffer upload to Supabase)
@@ -395,7 +400,7 @@ app.delete('/api/notes/:id', async (req, res) => {
     }
 });
 
-// 4. File Upload (Multiple Files to Supabase Storage: Images, Videos, PDFs)
+// 4. File Upload (FIXED: Uses 'my_note_pro' bucket & Proper Public URL Logic)
 app.post('/api/upload', (req, res) => {
     upload.array('media', 10)(req, res, async (err) => {
         if (err) {
@@ -411,36 +416,35 @@ app.post('/api/upload', (req, res) => {
             const uploadedFiles = [];
 
             for (const file of req.files) {
-                // File Extension and Sanitized Filename
+                const cleanFileName = path.parse(file.originalname).name.replace(/[^a-zA-Z0-9]/g, "_");
                 const ext = path.extname(file.originalname);
-                const safeName = path.parse(file.originalname).name.replace(/[^a-zA-Z0-9]/g, "_");
-                const filePath = `${Date.now()}_${safeName}${ext}`;
+                const fileName = `${Date.now()}_${cleanFileName}${ext}`;
 
-                // Supabase Upload Execution
+                // Direct File Upload into Supabase Bucket
                 const { data, error: uploadErr } = await supabase
                     .storage
                     .from(BUCKET_NAME)
-                    .upload(filePath, file.buffer, {
-                        contentType: file.mimetype || 'application/octet-stream',
+                    .upload(fileName, file.buffer, {
+                        contentType: file.mimetype,
                         upsert: true
                     });
 
                 if (uploadErr) {
-                    console.error("Supabase Storage Single File Error:", uploadErr);
+                    console.error("Supabase Storage Error Details:", uploadErr);
                     throw uploadErr;
                 }
 
-                // Get Public URL
+                // Public URL Generate Karna
                 const { data: urlData } = supabase
                     .storage
                     .from(BUCKET_NAME)
-                    .getPublicUrl(filePath);
+                    .getPublicUrl(fileName);
 
                 uploadedFiles.push({
                     url: urlData.publicUrl,
                     fileType: file.mimetype,
                     filename: file.originalname,
-                    path: filePath
+                    path: fileName
                 });
             }
 
@@ -452,7 +456,7 @@ app.post('/api/upload', (req, res) => {
                 filename: uploadedFiles[0].filename
             });
         } catch (error) {
-            console.error("Supabase Storage Upload Error Details:", error);
+            console.error("Supabase Storage Upload Error:", error);
             res.status(500).json({ error: error.message || 'Supabase upload failed' });
         }
     });
