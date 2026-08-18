@@ -438,7 +438,7 @@
                         </div>
                     </div>
 
-                    <!-- CLOUDINARY MULTIPLE MEDIA & FILE UPLOAD BUTTON SECTION -->
+                    <!-- SUPABASE MULTIPLE MEDIA & FILE UPLOAD BUTTON SECTION -->
                     <div style="position:relative; flex-shrink:0;">
                         <button onclick="togglePopup('media-popup', this)" title="Insert Media & Documents" style="color: #4f46e5 !important; font-weight: 600;">
                             <i class="fas fa-paperclip"></i> Media & Files
@@ -525,7 +525,7 @@
 
     <!-- JavaScript Logic -->
     <script>
-        const API_BASE_URL = 'https://my-note-pro-10.onrender.com/api';
+        const API_BASE_URL = window.location.origin + '/api';
 
         function getOrCreateDeviceId() {
             let deviceId = localStorage.getItem('user_device_id');
@@ -800,7 +800,7 @@
             }
         }
 
-        // ===== CLOUDINARY MULTIPLE MEDIA UPLOADER =====
+        // ===== SUPABASE MULTIPLE MEDIA UPLOADER =====
         function triggerMediaUpload(acceptTypes) {
             closeAllPopups();
             const input = document.getElementById('media-file-input');
@@ -817,7 +817,7 @@
                 formData.append('media', files[i]);
             }
 
-            showToast(`Uploading ${files.length} file(s) to Cloudinary...`, 'info');
+            showToast(`Uploading ${files.length} file(s) to Supabase...`, 'info');
 
             try {
                 const res = await fetch(`${API_BASE_URL}/upload`, {
@@ -830,21 +830,21 @@
                     const uploadedFiles = data.files || [{ url: data.url, fileType: data.fileType, filename: data.filename }];
                     
                     uploadedFiles.forEach(file => {
-                        insertCloudinaryMediaIntoEditor(file.url, file.fileType || '', file.filename);
+                        insertSupabaseMediaIntoEditor(file.url, file.fileType || '', file.filename);
                     });
 
-                    showToast(`${uploadedFiles.length} File(s) stored in Cloudinary!`, 'success');
+                    showToast(`${uploadedFiles.length} File(s) stored in Supabase!`, 'success');
                 } else {
-                    showToast('Cloudinary upload failed', 'error');
+                    showToast('Supabase upload failed', 'error');
                 }
             } catch (err) {
-                showToast('Cloudinary connection error', 'error');
+                showToast('Supabase connection error', 'error');
             } finally {
                 event.target.value = '';
             }
         }
 
-        function insertCloudinaryMediaIntoEditor(url, fileType, filename) {
+        function insertSupabaseMediaIntoEditor(url, fileType, filename) {
             const editor = document.getElementById('note-editor');
             editor.focus();
 
@@ -867,7 +867,7 @@
                             <i class="fas fa-file-pdf" style="color:#e53e3e; font-size: 24px;"></i>
                             <div>
                                 <strong style="font-size: 13px;">${escapeHtml(filename || 'PDF Document')}</strong>
-                                <div style="font-size: 11px; color: var(--text-muted);">Cloudinary PDF Document</div>
+                                <div style="font-size: 11px; color: var(--text-muted);">Supabase PDF Document</div>
                             </div>
                         </div>
                         <a href="${url}" target="_blank" style="padding: 6px 12px; background: #4f46e5; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600;">
@@ -901,13 +901,13 @@
             if (!url) return;
 
             if (url.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
-                insertCloudinaryMediaIntoEditor(url, 'image/jpeg', 'Image');
+                insertSupabaseMediaIntoEditor(url, 'image/jpeg', 'Image');
             } else if (url.match(/\.(mp4|webm|ogg)$/i)) {
-                insertCloudinaryMediaIntoEditor(url, 'video/mp4', 'Video');
+                insertSupabaseMediaIntoEditor(url, 'video/mp4', 'Video');
             } else if (url.match(/\.pdf$/i)) {
-                insertCloudinaryMediaIntoEditor(url, 'application/pdf', 'PDF Document');
+                insertSupabaseMediaIntoEditor(url, 'application/pdf', 'PDF Document');
             } else {
-                insertCloudinaryMediaIntoEditor(url, 'application/octet-stream', 'Attachment');
+                insertSupabaseMediaIntoEditor(url, 'application/octet-stream', 'Attachment');
             }
         }
 
@@ -1127,8 +1127,8 @@
                 const res = await fetch(`${API_BASE_URL}/profile`);
                 if (res.ok) {
                     const profile = await res.json();
-                    document.getElementById('profile-name').innerText = profile.name;
-                    document.getElementById('profile-img').src = profile.img;
+                    if(profile.name) document.getElementById('profile-name').innerText = profile.name;
+                    if(profile.img) document.getElementById('profile-img').src = profile.img;
                 }
             } catch (err) {
                 console.warn('Profile fetch error:', err);
@@ -1170,7 +1170,7 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ img: imgUrl })
                     });
-                    showToast('Profile image updated via Cloudinary!', 'success');
+                    showToast('Profile image updated via Supabase!', 'success');
                 }
             } catch (err) {
                 showToast('Failed to upload profile image', 'error');
