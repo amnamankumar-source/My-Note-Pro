@@ -3,86 +3,22 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
-const mongoose = require('mongoose');
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/notes_db';
 
-// MongoDB Connection
-mongoose.connect(MONGO_URI)
-    .then(() => console.log('MongoDB Connected Successfully'))
-    .catch(err => console.error('MongoDB Connection Error:', err));
+// Initialize Supabase Client
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ===== CLOUDINARY CONFIGURATION =====
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-    secure: true
+// Configure Multer (Memory Storage for buffer upload to Supabase)
+const storage = multer.memoryStorage();
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 100 * 1024 * 1024 } // 100MB Limit
 });
-
-// Configure Multer Storage for Cloudinary
-const cloudinaryStorage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: async (req, file) => {
-        let resource_type = 'auto'; // Auto-detects image, video
-
-        // Cloudinary processes PDFs and office documents as 'raw'
-        if (
-            file.mimetype === 'application/pdf' || 
-            file.mimetype.includes('document') || 
-            file.mimetype.includes('msword') || 
-            file.mimetype.includes('zip')
-        ) {
-            resource_type = 'raw';
-        }
-
-        const cleanFileName = path.parse(file.originalname).name.replace(/[^a-zA-Z0-9]/g, "_");
-
-        return {
-            folder: 'my_note_pro_uploads',
-            resource_type: resource_type,
-            public_id: `${Date.now()}_${cleanFileName}`
-        };
-    }
-});
-
-const upload = multer({ 
-    storage: cloudinaryStorage,
-    limits: { fileSize: 100 * 1024 * 1024 } // 100MB Max
-});
-
-// ===== MONGOOSE SCHEMAS & MODELS =====
-const profileSchema = new mongoose.Schema({
-    name: { type: String, default: "Note Author" },
-    img: { type: String, default: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80" }
-});
-const Profile = mongoose.model('Profile', profileSchema);
-
-const subjectSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    img: { type: String, required: true }
-});
-const Subject = mongoose.model('Subject', subjectSchema);
-
-const noteSchema = new mongoose.Schema({
-    title: { type: String, default: 'Untitled Note' },
-    content: { type: String, default: '' },
-    subject: { type: String, default: 'General' },
-    isPrivate: { type: Boolean, default: false },
-    isPinned: { type: Boolean, default: false },
-    likes: { type: Number, default: 0 },
-    likedBy: [{ type: String }],
-    views: { type: Number, default: 0 },
-    viewedBy: [{ type: String }],
-    deletedFor: [{ type: String }],
-    createdAtFormatted: { type: String }
-}, { timestamps: true });
-
-const Note = mongoose.model('Note', noteSchema);
 
 // Middleware
 app.use(cors());
@@ -95,11 +31,24 @@ app.use(express.static(__dirname));
 // 1. Profile APIs
 app.get('/api/profile', async (req, res) => {
     try {
-        let profile = await Profile.findOne();
-        if (!profile) {
-            profile = await Profile.create({ name: "Note Author" });
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .limit(1)
+            .maybeSingle();
+
+        if (error) throw error;
+        
+        if (!data) {
+            const { data: newProfile, error: createError } = await supabase
+                .from('profiles')
+                .insert([{ name: "Note Author" }])
+                .select()
+                .single();
+            if (createError) throw createError;
+            return res.json(newProfile);
         }
-        res.json(profile);
+        res.json(data);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -108,8 +57,33 @@ app.get('/api/profile', async (req, res) => {
 app.put('/api/profile', async (req, res) => {
     try {
         const { name, img } = req.body;
-        let profile = await Profile.findOneAndUpdate({}, { name, img }, { new: true, upsert: true });
-        res.json({ message: "Profile updated successfully", profile });
+        const { data: existing } = await supabase.from('profiles').select('id').limit(1).maybeSingle();
+
+        let result;
+        if (existing) {
+            const updatePayload = {};
+            if (name !== undefined) updatePayload.name = name;
+            if (img !== undefined) updatePayload.img = img;
+
+            const { data, error } = await supabase
+                .from('profiles')
+                .update(updatePayload)
+                .eq('id', existing.id)
+                .select()
+                .single();
+            if (error) throw error;
+            result = data;
+        } else {
+            const { data, error } = await supabase
+                .from('profiles')
+                .insert([{ name: name || "Note Author", img }])
+                .select()
+                .single();
+            if (error) throw error;
+            result = data;
+        }
+
+        res.json({ message: "Profile updated successfully", profile: result });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -118,8 +92,13 @@ app.put('/api/profile', async (req, res) => {
 // 2. Subjects APIs
 app.get('/api/subjects', async (req, res) => {
     try {
-        const subjects = await Subject.find().sort({ _id: -1 });
-        res.json(subjects);
+        const { data, error } = await supabase
+            .from('subjects')
+            .select('*')
+            .order('id', { ascending: false });
+
+        if (error) throw error;
+        res.json(data || []);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -128,12 +107,17 @@ app.get('/api/subjects', async (req, res) => {
 app.post('/api/subjects', async (req, res) => {
     try {
         const { name, img } = req.body;
-        const newSubject = new Subject({
-            name: name || "Custom Subject",
-            img: img || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=120&120&q=80"
-        });
-        await newSubject.save();
-        res.status(201).json(newSubject);
+        const { data, error } = await supabase
+            .from('subjects')
+            .insert([{
+                name: name || "Custom Subject",
+                img: img || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=120&120&q=80"
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.status(201).json(data);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -141,7 +125,12 @@ app.post('/api/subjects', async (req, res) => {
 
 app.delete('/api/subjects/:id', async (req, res) => {
     try {
-        await Subject.findByIdAndDelete(req.params.id);
+        const { error } = await supabase
+            .from('subjects')
+            .delete()
+            .eq('id', req.params.id);
+
+        if (error) throw error;
         res.json({ message: "Subject deleted successfully", id: req.params.id });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -154,51 +143,57 @@ app.get('/api/notes', async (req, res) => {
         let { page = 1, limit = 10, search = '', subject = '', date = '', deviceId = '' } = req.query;
         page = Math.max(1, parseInt(page));
         limit = Math.max(1, parseInt(limit));
+        const skip = (page - 1) * limit;
 
-        let query = {};
+        let query = supabase.from('notes').select('*', { count: 'exact' });
 
         if (deviceId) {
-            query.deletedFor = { $ne: deviceId };
+            query = query.not('deleted_for', 'cs', `{${deviceId}}`);
         }
 
         if (search) {
-            query.$or = [
-                { title: { $regex: search, $options: 'i' } },
-                { content: { $regex: search, $options: 'i' } }
-            ];
+            query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`);
         }
 
         if (subject) {
-            query.subject = { $regex: `^${subject}$`, $options: 'i' };
+            query = query.ilike('subject', subject);
         }
 
         if (date) {
-            query.createdAtFormatted = { $regex: date, $options: 'i' };
+            query = query.ilike('created_at_formatted', `%${date}%`);
         }
 
-        const skip = (page - 1) * limit;
+        query = query.order('is_pinned', { ascending: false })
+                     .order('created_at', { ascending: false })
+                     .range(skip, skip + limit - 1);
 
-        const [notes, totalNotes] = await Promise.all([
-            Note.find(query)
-                .sort({ isPinned: -1, createdAt: -1 })
-                .skip(skip)
-                .limit(limit)
-                .lean(),
-            Note.countDocuments(query)
-        ]);
+        const { data: notes, count: totalNotes, error } = await query;
+        if (error) throw error;
 
-        const formattedNotes = notes.map(note => {
-            const isLiked = deviceId && Array.isArray(note.likedBy) ? note.likedBy.includes(deviceId) : false;
+        const formattedNotes = (notes || []).map(note => {
+            const likedByArray = note.liked_by || [];
+            const isLiked = deviceId ? likedByArray.includes(deviceId) : false;
             return {
-                ...note,
+                _id: note.id,
+                title: note.title,
+                content: note.content,
+                subject: note.subject,
+                isPrivate: note.is_private,
+                isPinned: note.is_pinned,
+                likes: note.likes || 0,
+                likedBy: likedByArray,
+                views: note.views || 0,
+                viewedBy: note.viewed_by || [],
+                createdAtFormatted: note.created_at_formatted,
+                createdAt: note.created_at,
                 userLiked: isLiked
             };
         });
 
         res.json({
             notes: formattedNotes,
-            hasMore: skip + formattedNotes.length < totalNotes,
-            totalNotes,
+            hasMore: skip + formattedNotes.length < (totalNotes || 0),
+            totalNotes: totalNotes || 0,
             currentPage: page
         });
     } catch (err) {
@@ -206,31 +201,68 @@ app.get('/api/notes', async (req, res) => {
     }
 });
 
-// Toggle Like Route
+// Feed Endpoint (Files and recent notes)
+app.get('/api/feed', async (req, res) => {
+    try {
+        const { data: files, error: filesError } = await supabase
+            .storage
+            .from('my-media')
+            .list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+
+        if (filesError) throw filesError;
+
+        const mediaList = (files || []).map(file => {
+            const { data } = supabase.storage.from('my-media').getPublicUrl(file.name);
+            return {
+                name: file.name,
+                url: data.publicUrl,
+                createdAt: file.created_at
+            };
+        });
+
+        res.json({ files: mediaList });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Toggle Like
 app.put('/api/notes/:id/like', async (req, res) => {
     try {
         const { deviceId } = req.body;
-        if (!deviceId) {
-            return res.status(400).json({ error: 'Device ID required' });
-        }
+        if (!deviceId) return res.status(400).json({ error: 'Device ID required' });
 
-        const note = await Note.findById(req.params.id);
-        if (!note) return res.status(404).json({ error: "Note not found" });
+        const { data: note, error: fetchErr } = await supabase
+            .from('notes')
+            .select('*')
+            .eq('id', req.params.id)
+            .single();
 
-        const alreadyLiked = note.likedBy.includes(deviceId);
+        if (fetchErr || !note) return res.status(404).json({ error: "Note not found" });
+
+        let likedBy = note.liked_by || [];
+        let likes = note.likes || 0;
+        const alreadyLiked = likedBy.includes(deviceId);
 
         if (alreadyLiked) {
-            note.likedBy = note.likedBy.filter(id => id !== deviceId);
-            note.likes = Math.max(0, note.likes - 1);
+            likedBy = likedBy.filter(id => id !== deviceId);
+            likes = Math.max(0, likes - 1);
         } else {
-            note.likedBy.push(deviceId);
-            note.likes += 1;
+            likedBy.push(deviceId);
+            likes += 1;
         }
 
-        await note.save();
+        const { data: updated, error: updateErr } = await supabase
+            .from('notes')
+            .update({ liked_by: likedBy, likes: likes })
+            .eq('id', req.params.id)
+            .select()
+            .single();
+
+        if (updateErr) throw updateErr;
 
         res.json({
-            likes: note.likes,
+            likes: updated.likes,
             userLiked: !alreadyLiked
         });
     } catch (err) {
@@ -243,20 +275,29 @@ app.put('/api/notes/:id/view', async (req, res) => {
     try {
         const { deviceId } = req.body;
 
-        const updateData = { $inc: { views: 1 } };
-        if (deviceId) {
-            updateData.$addToSet = { viewedBy: deviceId };
+        const { data: note, error: fetchErr } = await supabase
+            .from('notes')
+            .select('*')
+            .eq('id', req.params.id)
+            .single();
+
+        if (fetchErr || !note) return res.status(404).json({ error: "Note not found" });
+
+        let viewedBy = note.viewed_by || [];
+        if (deviceId && !viewedBy.includes(deviceId)) {
+            viewedBy.push(deviceId);
         }
 
-        const note = await Note.findByIdAndUpdate(
-            req.params.id,
-            updateData,
-            { new: true }
-        );
+        const { data: updated, error: updateErr } = await supabase
+            .from('notes')
+            .update({ views: (note.views || 0) + 1, viewed_by: viewedBy })
+            .eq('id', req.params.id)
+            .select()
+            .single();
 
-        if (!note) return res.status(404).json({ error: "Note not found" });
+        if (updateErr) throw updateErr;
 
-        res.json({ views: note.views });
+        res.json({ views: updated.views });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -266,16 +307,21 @@ app.put('/api/notes/:id/view', async (req, res) => {
 app.post('/api/notes', async (req, res) => {
     try {
         const { title, content, subject, isPrivate, isPinned, createdAt } = req.body;
-        const newNote = new Note({
-            title: title || 'Untitled Note',
-            content: content || '',
-            subject: subject || 'General',
-            isPrivate: isPrivate || false,
-            isPinned: isPinned || false,
-            createdAtFormatted: createdAt || new Date().toLocaleString()
-        });
-        await newNote.save();
-        res.status(201).json(newNote);
+        const { data, error } = await supabase
+            .from('notes')
+            .insert([{
+                title: title || 'Untitled Note',
+                content: content || '',
+                subject: subject || 'General',
+                is_private: isPrivate || false,
+                is_pinned: isPinned || false,
+                created_at_formatted: createdAt || new Date().toLocaleString()
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.status(201).json({ ...data, _id: data.id });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -284,15 +330,34 @@ app.post('/api/notes', async (req, res) => {
 // Update Note
 app.put('/api/notes/:id', async (req, res) => {
     try {
-        const note = await Note.findById(req.params.id);
-        if (!note) return res.status(404).json({ error: "Note not found" });
+        const { data: note, error: fetchErr } = await supabase
+            .from('notes')
+            .select('*')
+            .eq('id', req.params.id)
+            .single();
 
-        if (note.isPinned) {
+        if (fetchErr || !note) return res.status(404).json({ error: "Note not found" });
+
+        if (note.is_pinned) {
             return res.status(403).json({ error: "Pinned notes are locked and cannot be edited." });
         }
 
-        const updatedNote = await Note.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        res.json(updatedNote);
+        const updateData = {};
+        if (req.body.title !== undefined) updateData.title = req.body.title;
+        if (req.body.content !== undefined) updateData.content = req.body.content;
+        if (req.body.subject !== undefined) updateData.subject = req.body.subject;
+        if (req.body.isPrivate !== undefined) updateData.is_private = req.body.isPrivate;
+        if (req.body.isPinned !== undefined) updateData.is_pinned = req.body.isPinned;
+
+        const { data: updated, error: updateErr } = await supabase
+            .from('notes')
+            .update(updateData)
+            .eq('id', req.params.id)
+            .select()
+            .single();
+
+        if (updateErr) throw updateErr;
+        res.json({ ...updated, _id: updated.id });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -302,16 +367,23 @@ app.put('/api/notes/:id', async (req, res) => {
 app.delete('/api/notes/:id', async (req, res) => {
     try {
         const { deviceId } = req.query;
-        if (!deviceId) {
-            return res.status(400).json({ error: "Device ID required for deletion" });
-        }
+        if (!deviceId) return res.status(400).json({ error: "Device ID required for deletion" });
 
-        const note = await Note.findById(req.params.id);
-        if (!note) return res.status(404).json({ error: "Note not found" });
+        const { data: note, error: fetchErr } = await supabase
+            .from('notes')
+            .select('*')
+            .eq('id', req.params.id)
+            .single();
 
-        if (!note.deletedFor.includes(deviceId)) {
-            note.deletedFor.push(deviceId);
-            await note.save();
+        if (fetchErr || !note) return res.status(404).json({ error: "Note not found" });
+
+        let deletedFor = note.deleted_for || [];
+        if (!deletedFor.includes(deviceId)) {
+            deletedFor.push(deviceId);
+            await supabase
+                .from('notes')
+                .update({ deleted_for: deletedFor })
+                .eq('id', req.params.id);
         }
 
         res.json({ message: "Note deleted for current user", id: req.params.id });
@@ -320,11 +392,11 @@ app.delete('/api/notes/:id', async (req, res) => {
     }
 });
 
-// 4. File Upload (Multiple Files to Cloudinary: Images, Videos, PDFs)
+// 4. File Upload (Multiple Files to Supabase Storage: Images, Videos, PDFs)
 app.post('/api/upload', (req, res) => {
-    upload.array('media', 10)(req, res, (err) => {
+    upload.array('media', 10)(req, res, async (err) => {
         if (err) {
-            console.error("Cloudinary Upload Error:", err);
+            console.error("Multer Upload Error:", err);
             return res.status(500).json({ error: err.message || 'Upload failed' });
         }
 
@@ -332,20 +404,48 @@ app.post('/api/upload', (req, res) => {
             return res.status(400).json({ error: 'No files uploaded' });
         }
 
-        const uploadedFiles = req.files.map(file => ({
-            url: file.path, // Cloudinary Secure URL
-            fileType: file.mimetype,
-            filename: file.originalname,
-            publicId: file.filename
-        }));
+        try {
+            const uploadedFiles = [];
 
-        res.json({ 
-            message: 'Files uploaded to Cloudinary successfully',
-            files: uploadedFiles,
-            url: uploadedFiles[0].url,
-            fileType: uploadedFiles[0].fileType,
-            filename: uploadedFiles[0].filename
-        });
+            for (const file of req.files) {
+                const cleanFileName = path.parse(file.originalname).name.replace(/[^a-zA-Z0-9]/g, "_");
+                const ext = path.extname(file.originalname);
+                const filePath = `my_note_pro_uploads/${Date.now()}_${cleanFileName}${ext}`;
+
+                const { data, error: uploadErr } = await supabase
+                    .storage
+                    .from('my-media')
+                    .upload(filePath, file.buffer, {
+                        contentType: file.mimetype,
+                        upsert: true
+                    });
+
+                if (uploadErr) throw uploadErr;
+
+                const { data: urlData } = supabase
+                    .storage
+                    .from('my-media')
+                    .getPublicUrl(filePath);
+
+                uploadedFiles.push({
+                    url: urlData.publicUrl,
+                    fileType: file.mimetype,
+                    filename: file.originalname,
+                    path: filePath
+                });
+            }
+
+            res.json({
+                message: 'Files uploaded to Supabase Storage successfully',
+                files: uploadedFiles,
+                url: uploadedFiles[0].url,
+                fileType: uploadedFiles[0].fileType,
+                filename: uploadedFiles[0].filename
+            });
+        } catch (error) {
+            console.error("Supabase Storage Upload Error:", error);
+            res.status(500).json({ error: error.message || 'Supabase upload failed' });
+        }
     });
 });
 
