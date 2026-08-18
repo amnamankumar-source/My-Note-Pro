@@ -8,7 +8,7 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Bucket Name Updated to 'my_note_pro'
+// Bucket Name defined as per your requirement
 const BUCKET_NAME = 'my_note_pro';
 
 // Initialize Supabase Client
@@ -16,7 +16,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
-    console.error("CRITICAL ERROR: Supabase URL or Key missing in .env file!");
+    console.error("Missing SUPABASE_URL or SUPABASE_KEY in environment variables!");
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -400,7 +400,7 @@ app.delete('/api/notes/:id', async (req, res) => {
     }
 });
 
-// 4. File Upload (FIXED: Uses 'my_note_pro' bucket & Proper Public URL Logic)
+// 4. File Upload (Multiple Files to Supabase Storage Bucket: my_note_pro)
 app.post('/api/upload', (req, res) => {
     upload.array('media', 10)(req, res, async (err) => {
         if (err) {
@@ -418,13 +418,13 @@ app.post('/api/upload', (req, res) => {
             for (const file of req.files) {
                 const cleanFileName = path.parse(file.originalname).name.replace(/[^a-zA-Z0-9]/g, "_");
                 const ext = path.extname(file.originalname);
-                const fileName = `${Date.now()}_${cleanFileName}${ext}`;
+                const filePath = `uploads/${Date.now()}_${cleanFileName}${ext}`;
 
-                // Direct File Upload into Supabase Bucket
+                // Uploading to bucket 'my_note_pro'
                 const { data, error: uploadErr } = await supabase
                     .storage
                     .from(BUCKET_NAME)
-                    .upload(fileName, file.buffer, {
+                    .upload(filePath, file.buffer, {
                         contentType: file.mimetype,
                         upsert: true
                     });
@@ -434,17 +434,16 @@ app.post('/api/upload', (req, res) => {
                     throw uploadErr;
                 }
 
-                // Public URL Generate Karna
                 const { data: urlData } = supabase
                     .storage
                     .from(BUCKET_NAME)
-                    .getPublicUrl(fileName);
+                    .getPublicUrl(filePath);
 
                 uploadedFiles.push({
                     url: urlData.publicUrl,
                     fileType: file.mimetype,
                     filename: file.originalname,
-                    path: fileName
+                    path: filePath
                 });
             }
 
