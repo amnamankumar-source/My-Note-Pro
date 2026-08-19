@@ -8,10 +8,8 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Bucket Name defined as per your requirement
 const BUCKET_NAME = 'my_note_pro';
 
-// Initialize Supabase Client
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
@@ -21,28 +19,22 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Configure Multer (Memory Storage for buffer upload to Supabase)
 const storage = multer.memoryStorage();
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 100 * 1024 * 1024 } // 100MB Limit
+    limits: { fileSize: 100 * 1024 * 1024 }
 });
 
-// Middleware
 app.use(cors());
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(express.static(__dirname));
 
-// ===== API ROUTES =====
-
-// 1. Profile APIs (Device ID Specific for Multi-user Support)
+// 1. Profile APIs
 app.get('/api/profile', async (req, res) => {
     try {
         const { deviceId } = req.query;
-        if (!deviceId) {
-            return res.status(400).json({ error: "Device ID required" });
-        }
+        if (!deviceId) return res.status(400).json({ error: "Device ID required" });
 
         const { data, error } = await supabase
             .from('profiles')
@@ -136,7 +128,6 @@ app.post('/api/subjects', async (req, res) => {
         const { name, img } = req.body;
         if (!name) return res.status(400).json({ error: "Subject name is required" });
 
-        // Check if already exists to prevent duplicate save
         const { data: existing } = await supabase
             .from('subjects')
             .select('id')
@@ -243,7 +234,7 @@ app.get('/api/notes', async (req, res) => {
     }
 });
 
-// Feed Endpoint (Files and recent notes)
+// Feed Endpoint
 app.get('/api/feed', async (req, res) => {
     try {
         const { data: files, error: filesError } = await supabase
@@ -437,7 +428,7 @@ app.delete('/api/notes/:id', async (req, res) => {
     }
 });
 
-// 4. File Upload (Multiple Files to Supabase Storage Bucket: my_note_pro)
+// 4. File Upload
 app.post('/api/upload', (req, res) => {
     upload.array('media', 10)(req, res, async (err) => {
         if (err) {
@@ -457,7 +448,6 @@ app.post('/api/upload', (req, res) => {
                 const ext = path.extname(file.originalname);
                 const filePath = `uploads/${Date.now()}_${cleanFileName}${ext}`;
 
-                // Uploading to bucket 'my_note_pro'
                 const { data, error: uploadErr } = await supabase
                     .storage
                     .from(BUCKET_NAME)
@@ -498,7 +488,6 @@ app.post('/api/upload', (req, res) => {
     });
 });
 
-// Catch-all route to serve Frontend index.html
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
