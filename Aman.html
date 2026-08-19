@@ -9,239 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght=300;400;500;600;700&family=Playfair+Display:ital,wght@1,500&family=Roboto+Mono&family=Caveat:wght@600&family=Lobster&family=Pacifico&display=swap" rel="stylesheet">
     <!-- FontAwesome for Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <!-- html2pdf Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    
-    <style>
-        /* Reset & Base Layout */
-        header, .header, #header, .Header, .header-widget,
-        .navbar, nav, #navbar-iframe,
-        #sidebar-wrapper, .sidebar, .sidebar-container,
-        .blog-header, .header-inner, .header-section,
-        .widget.Header, .site-title, .blog-title, .titlewrapper,
-        h1.title, h1.header-title, h1:not(.app-title), h2.header-title,
-        .blog-pager, .blog-pager-newer-link, .blog-pager-older-link, 
-        #blog-pager-newer-link, #blog-pager-older-link, .post-nav, 
-        .post-pagination, .pagenavi, .post-navigation, .nextprev, 
-        .newer-posts, .older-posts, .nav-links, .single-navigation,
-        .prev-post, .next-post, #blog-pager {
-          display: none !important;
-          visibility: hidden !important;
-          height: 0 !important;
-          opacity: 0 !important;
-        }
-
-        /* Variables */
-        :root {
-            --bg-color: #f4f7f6 !important; 
-            --surface-color: #ffffff !important;
-            --text-main: #2d3748 !important;
-            --text-muted: #718096 !important;
-            --primary-color: #4f46e5 !important; 
-            --primary-hover: #4338ca !important;
-            --danger-color: #e53e3e !important;
-            --border-color: #e2e8f0 !important;
-            --shadow-sm: 0 2px 4px rgba(0,0,0,0.04) !important;
-            --shadow-md: 0 4px 12px rgba(0,0,0,0.08) !important;
-            --shadow-lg: 0 15px 30px rgba(0,0,0,0.12) !important;
-            --editor-toolbar-bg: #f8fafc !important;
-        }
-
-        body.dark-mode {
-            --bg-color: #0f172a !important;
-            --surface-color: #1e293b !important;
-            --text-main: #f8fafc !important;
-            --text-muted: #94a3b8 !important;
-            --border-color: #334155 !important;
-            --editor-toolbar-bg: #0f172a !important;
-            --shadow-sm: 0 2px 4px rgba(0,0,0,0.4) !important;
-            --shadow-md: 0 4px 12px rgba(0,0,0,0.5) !important;
-            --shadow-lg: 0 15px 30px rgba(0,0,0,0.6) !important;
-        }
-
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 9999px; }
-
-        * { box-sizing: border-box !important; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
-
-        body {
-            background-color: var(--bg-color) !important; 
-            color: var(--text-main) !important;
-            line-height: 1.6; min-height: 100vh; padding: 0px;
-            overflow-x: hidden; display: flex; justify-content: center;
-            transition: background-color 0.3s, color 0.3s;
-        }
-        .app-container { width: 100%; max-width: 1200px; display: flex; flex-direction: column; gap: 20px; margin: 0 auto; padding: 15px 0;}
-
-        /* Header & Profile */
-        .top-header-wrapper { display: flex !important; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 0 15px; }
-        .header-left { display: flex; align-items: center; }
-        .profile-section { display: flex !important; align-items: center; gap: 12px; background: var(--surface-color) !important; padding: 8px 16px; border-radius: 9999px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); width: fit-content; }
-        .profile-img-wrapper { position: relative; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; border: 2px solid #4f46e5; cursor: pointer; flex-shrink: 0; }
-        .profile-img-wrapper img { width: 100%; height: 100%; object-fit: cover; }
-        .profile-name { font-size: 15px; font-weight: 600; color: var(--text-main) !important; outline: none; border-bottom: 1px dashed transparent; padding: 2px 5px; border-radius: 4px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-        .logo-area { display: flex !important; align-items: center; gap: 10px; cursor: pointer; padding: 6px 10px; border-radius: 12px; }
-        .logo-icon { background: linear-gradient(135deg, #4f46e5, #d53f8c); color: white; width: 40px; height: 40px; display: flex !important; align-items: center; justify-content: center; border-radius: 12px; font-size: 18px; flex-shrink: 0; }
-        .logo-area h1.app-title { display: block !important; font-size: 20px; font-weight: 700; color: var(--text-main) !important; margin: 0; white-space: nowrap; }
-        .header-actions { display: flex !important; align-items: center; gap: 12px; flex-wrap: wrap; }
-
-        .theme-toggle-btn { background: var(--surface-color) !important; border: 1.5px solid var(--border-color) !important; color: var(--text-main) !important; width: 40px !important; height: 40px !important; border-radius: 50% !important; font-size: 16px !important; cursor: pointer !important; flex-shrink: 0; }
-        .live-clock { text-align: right; background: var(--surface-color) !important; padding: 8px 16px; border-radius: 9999px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); }
-        .live-clock .time { font-size: 16px; font-weight: 600; color: #4f46e5; line-height: 1.2; }
-        .live-clock .date { font-size: 11px; color: var(--text-muted) !important; font-weight: 500; }
-
-        /* Toolbar */
-        .toolbar { display: flex !important; justify-content: space-between; align-items: center; gap: 15px; position: relative; z-index: 10; padding: 0 15px; flex-wrap: wrap; }
-        .search-wrapper { position: relative; flex: 1; min-width: 260px; max-width: 600px; display: flex !important; align-items: center; background: var(--surface-color) !important; border-radius: 9999px; box-shadow: var(--shadow-md); padding: 5px 15px; border: 1px solid var(--border-color); }
-        .search-wrapper > i.fa-search { color: var(--text-muted) !important; font-size: 16px; flex-shrink: 0; }
-        .search-wrapper input[type="text"] { flex: 1; border: none; background: transparent; padding: 10px 10px; font-size: 14px; color: var(--text-main) !important; outline: none; }
-        
-        .filter-tools { display: flex !important; align-items: center; gap: 8px; flex-shrink: 0; }
-        .clear-date-btn { background: rgba(229, 62, 62, 0.15) !important; color: #e53e3e !important; border: none !important; width: 32px !important; height: 32px !important; border-radius: 50% !important; display: none; align-items: center; justify-content: center; cursor: pointer; }
-        .calendar-btn { position: relative; width: 38px; height: 38px; border-radius: 50%; background: rgba(79, 70, 229, 0.12); color: #4f46e5; display: flex !important; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; border: 1px solid rgba(79, 70, 229, 0.2); }
-        .calendar-btn input[type="date"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; }
-        
-        .btn-add { background: linear-gradient(135deg, #4f46e5, #4338ca) !important; color: #ffffff !important; border: none !important; padding: 12px 24px !important; border-radius: 9999px !important; font-size: 15px !important; font-weight: 600 !important; gap: 8px !important; cursor: pointer !important; white-space: nowrap !important; }
-
-        /* Circle Slider */
-        .quick-subjects-wrapper { display: flex !important; gap: 22px; overflow-x: auto; padding: 10px 15px; margin: 0 !important; width: 100% !important; scrollbar-width: none; }
-        .quick-subjects-wrapper::-webkit-scrollbar { display: none; }
-        .subject-circle-item { display: flex !important; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; flex-shrink: 0; }
-        .subject-ring { width: 72px; height: 72px; border-radius: 50%; padding: 3px; display: flex !important; align-items: center; justify-content: center; background: var(--surface-color) !important; border: 2.5px solid #4f46e5; position: relative; transition: transform 0.2s; }
-        .subject-circle-item:hover .subject-ring { transform: scale(1.05); }
-        .subject-ring img { width: 100% !important; height: 100% !important; object-fit: cover; border-radius: 50%; }
-        .subject-circle-item span { font-size: 12px; font-weight: 600; color: var(--text-main) !important; text-align: center; max-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-        .add-subject-ring { border: 2.5px dashed #4f46e5 !important; background: rgba(79, 70, 229, 0.08) !important; color: #4f46e5; font-size: 26px; }
-        .subject-circle-item.active .subject-ring { border-color: #d53f8c !important; box-shadow: 0 0 10px rgba(213, 63, 140, 0.4); }
-
-        /* Notes Grid */
-        .notes-grid { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; align-items: stretch; padding: 0 15px; }
-        .note-card { background: var(--surface-color) !important; border-radius: 20px; padding: 25px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); display: flex !important; flex-direction: column; gap: 16px; position: relative; overflow: hidden; }
-        
-        .note-top-meta { position: absolute; top: 12px; right: 15px; display: flex !important; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; }
-        .view-count-tag { background: rgba(79, 70, 229, 0.1); color: #4f46e5; padding: 3px 8px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 4px; }
-        .like-count-tag { background: rgba(229, 62, 62, 0.1); color: #e53e3e; padding: 3px 8px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; transition: transform 0.2s; }
-        .like-count-tag:hover { transform: scale(1.1); }
-        .like-count-tag.liked { background: #e53e3e; color: #ffffff; }
-
-        .pinned-tag { background: rgba(245, 158, 11, 0.15); color: #d97706; padding: 3px 8px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 4px; }
-        
-        .note-card-header { display: flex !important; align-items: center; gap: 15px; width: 100%; margin-top: 15px; }
-        .note-header-text { display: flex !important; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
-        .note-circle-logo { width: 45px; height: 45px; border-radius: 50%; overflow: hidden; background: var(--editor-toolbar-bg) !important; display: flex !important; align-items: center; justify-content: center; flex-shrink: 0; }
-        .note-author-tag { font-size: 11px; font-weight: 600; color: #4f46e5; display: inline-flex !important; align-items: center; gap: 6px; background: rgba(79, 70, 229, 0.08); padding: 3px 10px; border-radius: 9999px; width: fit-content; }
-        .note-card h3.clickable-title { font-size: 17px; color: var(--text-main) !important; font-weight: 600; line-height: 1.3; cursor: pointer; margin: 0; word-break: break-word; }
-        .note-content-container { flex: 1; display: flex !important; flex-direction: column; cursor: pointer; }
-        .note-body-html { font-size: 14px; line-height: 1.7; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-height: 110px; word-break: break-word; color: var(--text-muted) !important; }
-        .note-body-html img, .note-body-html video { max-width: 100%; max-height: 100px; object-fit: cover; border-radius: 6px; }
-        .pdf-embed-box, .file-download-box { width: 100%; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; background: var(--editor-toolbar-bg); margin: 8px 0; display: flex; align-items: center; justify-content: space-between; }
-
-        .note-footer { margin-top: auto; padding-top: 15px; border-top: 1px solid var(--border-color); display: flex !important; justify-content: space-between; align-items: center; }
-        .note-date { font-size: 12px; color: var(--text-muted) !important; display: flex !important; align-items: center; gap: 6px; font-weight: 500; }
-        .note-actions { display: flex !important; gap: 8px; }
-        
-        .action-btn { width: 36px !important; height: 36px !important; border-radius: 10px !important; border: 1px solid var(--border-color) !important; background: var(--editor-toolbar-bg) !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; }
-        .btn-edit { color: #4f46e5 !important; } 
-        .btn-edit.disabled { opacity: 0.5; cursor: not-allowed !important; color: var(--text-muted) !important; }
-        .btn-delete { color: #e53e3e !important; } 
-
-        .loading-spinner { text-align: center; padding: 20px; font-weight: 600; color: #4f46e5; grid-column: 1/-1; }
-
-        /* Modals */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(5px); z-index: 1000; display: flex !important; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
-        .modal-overlay.active { opacity: 1 !important; pointer-events: auto !important; }
-        .modal-content.full-screen { width: 100%; height: 100%; max-width: 100vw; max-height: 100vh; background: var(--surface-color) !important; display: flex !important; flex-direction: column; overflow: hidden; }
-
-        .modal-header { padding: 12px 18px; border-bottom: 1px solid var(--border-color); display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: center !important; background: var(--surface-color) !important; gap: 16px; flex-shrink: 0; }
-        
-        .modal-header .header-left-group { flex: 1 1 auto !important; min-width: 0 !important; display: flex !important; flex-direction: column !important; gap: 4px; }
-        .modal-header h2 { font-size: 16px; font-weight: 600; color: var(--text-main) !important; display: flex !important; align-items: flex-start; gap: 8px; margin: 0; white-space: normal !important; word-break: break-word !important; overflow-wrap: anywhere !important; line-height: 1.4; }
-        .modal-header h2 i { margin-top: 3px; flex-shrink: 0; }
-        
-        .header-column-controls { display: flex !important; flex-direction: row !important; gap: 8px !important; align-items: center !important; justify-content: flex-end !important; flex-shrink: 0 !important; margin-left: auto !important; }
-        
-        .close-modal-btn { background: rgba(229, 62, 62, 0.12) !important; color: #e53e3e !important; border: 1px solid rgba(229, 62, 62, 0.3) !important; padding: 6px 12px !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; white-space: nowrap !important; }
-        .header-save-btn { padding: 6px 14px !important; border: none !important; background: linear-gradient(135deg, #4f46e5, #4338ca) !important; color: white !important; border-radius: 8px !important; font-weight: 600 !important; font-size: 12px !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; white-space: nowrap !important; }
-        .header-save-btn:disabled { opacity: 0.6; cursor: not-allowed !important; }
-
-        .modal-body { flex: 1; overflow-y: auto; padding: 15px; display: flex !important; flex-direction: column; gap: 15px; width: 100%; max-width: 1000px; margin: 0 auto; box-sizing: border-box !important; }
-        
-        .editor-header-with-logo { display: flex !important; align-items: center; gap: 12px; width: 100% !important; background: var(--editor-toolbar-bg) !important; border: 1px solid var(--border-color); border-radius: 12px; padding: 8px 12px; box-sizing: border-box !important; }
-        .editor-title { flex: 1 !important; border: 1px solid var(--border-color) !important; border-radius: 8px !important; font-size: 15px !important; font-weight: 600 !important; color: var(--text-main) !important; padding: 8px 12px !important; outline: none !important; background: var(--surface-color) !important; width: 100% !important; }
-
-        .pin-toggle-btn, .privacy-toggle-btn { background: var(--surface-color) !important; border: 1px solid var(--border-color) !important; color: var(--text-main) !important; padding: 6px 12px !important; border-radius: 8px !important; font-size: 12px !important; font-weight: 600 !important; gap: 5px !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; white-space: nowrap !important; }
-        .privacy-toggle-btn.is-private { background: rgba(229, 62, 62, 0.1) !important; color: #e53e3e !important; border-color: rgba(229, 62, 62, 0.3) !important; }
-        .privacy-toggle-btn.is-public { background: rgba(56, 161, 105, 0.1) !important; color: #38a169 !important; border-color: rgba(56, 161, 105, 0.3) !important; }
-        .pin-toggle-btn.is-pinned { background: rgba(245, 158, 11, 0.15) !important; color: #d97706 !important; border-color: rgba(245, 158, 11, 0.4) !important; }
-
-        .editor-toolbar { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; overflow-x: auto !important; align-items: center !important; gap: 8px !important; padding: 8px 10px !important; background: var(--editor-toolbar-bg) !important; border-radius: 12px !important; border: 1px solid var(--border-color) !important; position: relative; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
-        .editor-toolbar::-webkit-scrollbar { height: 4px; }
-        .editor-toolbar button { flex-shrink: 0 !important; white-space: nowrap !important; background: var(--surface-color) !important; border: 1px solid var(--border-color) !important; color: var(--text-main) !important; padding: 6px 10px !important; border-radius: 8px !important; font-size: 12px !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; gap: 5px !important; }
-
-        .color-circles-group { display: flex !important; align-items: center; gap: 6px; padding: 0 6px; border-right: 1px solid var(--border-color); border-left: 1px solid var(--border-color); flex-shrink: 0; }
-        .color-circle-btn { width: 22px !important; height: 22px !important; border-radius: 50% !important; border: 2px solid #ffffff !important; cursor: pointer !important; box-shadow: 0 0 4px rgba(0,0,0,0.2) !important; padding: 0 !important; flex-shrink: 0 !important; }
-        .color-yellow { background: #facc15 !important; }
-        .color-green { background: #22c55e !important; }
-        .color-red { background: #ef4444 !important; }
-        .color-blue { background: #3b82f6 !important; }
-
-        .toolbar-popup { position: fixed !important; margin-top: 5px; background: var(--surface-color) !important; border: 1px solid var(--border-color); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 10px; z-index: 10000 !important; display: none; flex-direction: column; gap: 6px; min-width: 200px; max-height: 280px; overflow-y: auto; }
-        .toolbar-popup.active { display: flex !important; }
-        .popup-option { padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--text-main) !important; transition: background 0.2s; white-space: nowrap; }
-        .popup-option:hover { background: var(--editor-toolbar-bg) !important; }
-
-        .editor-container { width: 100%; flex: 1; display: flex !important; flex-direction: column; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-color) !important; overflow: hidden; min-height: 250px; }
-        .rich-editor-area { width: 100%; height: 100%; flex: 1; font-size: 15px; line-height: 1.8; color: var(--text-main) !important; outline: none; padding: 15px; overflow-y: auto; box-sizing: border-box !important; }
-        .rich-editor-area img, .rich-editor-area video { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; display: block; }
-        .rich-editor-area iframe { width: 100%; height: 400px; border: 1px solid var(--border-color); border-radius: 8px; margin: 10px 0; }
-
-        .media-slider-container { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 15px; overflow-x: auto !important; overflow-y: hidden !important; padding: 10px 5px !important; margin: 10px 0 !important; width: 100% !important; scrollbar-width: thin; -webkit-overflow-scrolling: touch; border-radius: 12px; background: rgba(0,0,0,0.02); }
-        .media-slider-card { flex: 0 0 auto !important; border-radius: 14px !important; overflow: hidden; border: 1px solid var(--border-color); background: #000; position: relative; box-shadow: var(--shadow-md); }
-        .media-slider-card.yt-card { width: 280px !important; height: 480px !important; max-height: 65vh !important; border-radius: 16px !important; }
-        .media-slider-card.drive-card { width: 320px !important; height: 420px !important; background: var(--surface-color) !important; display: flex !important; flex-direction: column !important; }
-        .media-slider-card iframe { width: 100%; height: 100%; border: none; }
-
-        /* Code Preview Frame styling */
-        .code-embed-frame { width: 100%; height: 350px; border: 1px solid var(--border-color); border-radius: 12px; background: #ffffff; margin: 12px 0; box-shadow: var(--shadow-sm); overflow: hidden; }
-
-        .view-note-title { font-size: 22px; font-weight: 700; color: var(--text-main) !important; margin-bottom: 12px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; word-break: break-word; }
-        .view-note-body { font-size: 15px; line-height: 1.8; color: var(--text-main) !important; word-break: break-word; }
-        .view-note-body img, .view-note-body video { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; }
-        .view-note-body iframe { width: 100%; height: 450px; border-radius: 8px; border: 1px solid var(--border-color); }
-
-        .fab-add-btn { position: fixed; bottom: 30px; right: 30px; width: 55px; height: 55px; border-radius: 50% !important; background: linear-gradient(135deg, #4f46e5, #d53f8c) !important; color: white !important; font-size: 22px !important; border: none !important; box-shadow: 0 10px 25px rgba(79, 70, 229, 0.5) !important; z-index: 900; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; }
-
-        .toast-container { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 50000; display: flex !important; flex-direction: column; gap: 10px; pointer-events: none; align-items: center; }
-        .toast { background: rgba(15, 23, 42, 0.95); color: white; padding: 10px 20px; border-radius: 9999px; font-size: 13px; font-weight: 500; display: flex !important; align-items: center; gap: 8px; opacity: 0; transform: translateY(30px); transition: all 0.4s ease; }
-        .toast.show { opacity: 1 !important; transform: translateY(0) !important; }
-
-        .simple-modal-card { background: var(--surface-color) !important; width: 90%; max-width: 400px; border-radius: 20px; padding: 20px; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 15px; }
-        .simple-modal-card h3 { font-size: 16px; font-weight: 600; color: var(--text-main) !important; }
-        .input-group { display: flex; flex-direction: column; gap: 6px; }
-        .input-group label { font-size: 12px; font-weight: 600; color: var(--text-muted) !important; }
-        .input-group input { padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border-color); outline: none; background: var(--editor-toolbar-bg); color: var(--text-main) !important; font-size: 13px; }
-        .preview-img-box { width: 60px; height: 60px; border-radius: 50%; border: 2px dashed var(--border-color); display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 5px auto; }
-        .preview-img-box img { width: 100%; height: 100%; object-fit: cover; }
-
-        /* Code Editor Modal Specific Styles */
-        .code-modal-card { background: var(--surface-color) !important; width: 95%; max-width: 850px; height: 85vh; border-radius: 20px; padding: 20px; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 12px; z-index: 2000; }
-        .code-modal-header { display: flex; justify-content: space-between; align-items: center; width: 100%; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
-        .code-textarea { width: 100%; flex: 1; font-family: 'Roboto Mono', monospace; font-size: 13px; background: #0f172a; color: #38bdf8; border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; outline: none; resize: none; line-height: 1.5; }
-
-        @media (max-width: 768px) {
-            .btn-add { display: none !important; } 
-            .notes-grid { grid-template-columns: 1fr; }
-            .top-header-wrapper { justify-content: center; }
-            .header-actions { justify-content: center; width: 100%; }
-            .modal-header { padding: 10px 12px; gap: 10px; }
-            .modal-body { padding: 10px !important; }
-            .fab-add-btn { bottom: 20px; right: 20px; width: 50px; height: 50px; }
-            .code-modal-card { width: 100%; height: 95vh; border-radius: 0; }
-        }
-    </style>
 </head>
 <body>
 
@@ -249,22 +16,22 @@
         <!-- Header & Profile -->
         <div class="top-header-wrapper">
             <div class="header-left">
-                <div class="logo-area" onclick="goHome()" title="Go Home">
+                <div class="logo-area" title="Go Home">
                     <div class="logo-icon"><i class="fas fa-book-open"></i></div>
                     <h1 class="app-title">My Note Pro</h1>
                 </div>
             </div>
             
             <div class="profile-section">
-                <div class="profile-img-wrapper" onclick="document.getElementById('profile-img-upload').click()" title="Change Profile Picture">
+                <div class="profile-img-wrapper" title="Change Profile Picture">
                     <img alt="Profile" id="profile-img" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80" />
-                    <input accept="image/*" id="profile-img-upload" onchange="updateProfileImg(event)" style="display: none;" type="file" />
+                    <input accept="image/*" id="profile-img-upload" type="file" />
                 </div>
-                <div class="profile-name" contenteditable="true" id="profile-name" onblur="saveProfileName()" title="Click to edit name">Note Author</div>
+                <div class="profile-name" contenteditable="true" id="profile-name" title="Click to edit name">Note Author</div>
             </div>
 
             <div class="header-actions">
-                <button class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+                <button class="theme-toggle-btn" id="theme-toggle" title="Toggle Dark/Light Mode">
                     <i class="fas fa-moon" id="theme-icon"></i>
                 </button>
                 <div class="live-clock">
@@ -278,74 +45,107 @@
         <div class="toolbar">
             <div class="search-wrapper">
                 <i class="fas fa-search"></i>
-                <input id="search-input" oninput="handleSearch()" placeholder="Search notes..." type="text" />
+                <input id="search-input" placeholder="Search notes..." type="text" />
                 <div class="filter-tools">
-                    <button class="clear-date-btn" id="clear-date-btn" onclick="clearDateFilter()" title="Clear Date Filter">
+                    <button class="clear-date-btn" id="clear-date-btn" title="Clear Date Filter">
                         <i class="fas fa-times"></i>
                     </button>
                     <div class="calendar-btn" title="Search notes by Date">
                         <i class="fas fa-calendar-alt"></i>
-                        <input id="date-search-input" onchange="filterByDate()" type="date" />
+                        <input id="date-search-input" type="date" />
                     </div>
                 </div>
             </div>
 
-            <button class="btn-add" onclick="openModal()">
+            <button class="btn-add">
                 <i class="fas fa-pen-nib"></i> Write Note
             </button>
         </div>
 
         <!-- Quick Subject Slider -->
         <div class="quick-subjects-wrapper" id="quick-subjects-slider">
-            <div class="subject-circle-item active" onclick="filterBySubject('', this)">
+            <div class="subject-circle-item active">
                 <div class="subject-ring">
                     <img alt="All Notes" src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&w=120&120&q=80" />
                 </div>
                 <span>All Notes</span>
             </div>
 
-            <div class="subject-circle-item" onclick="openAddSubjectModal()" title="Add Custom Circle Logo">
+            <div class="subject-circle-item" title="Add Custom Circle Logo">
                 <div class="subject-ring add-subject-ring">
                     <i class="fas fa-plus"></i>
                 </div>
                 <span>Add Logo</span>
             </div>
 
-            <div id="dynamic-subjects-list" style="display: flex; gap: 22px;"></div>
+            <div id="dynamic-subjects-list"></div>
         </div>
 
         <!-- Notes Grid Area -->
         <div class="notes-grid" id="notes-container"></div>
         
         <!-- Infinite Scroll Loader -->
-        <div id="loading-spinner" class="loading-spinner" style="display: none;">
+        <div id="loading-spinner" class="loading-spinner">
             <i class="fas fa-spinner fa-spin"></i> Loading more notes...
         </div>
     </div>
 
     <!-- Floating Action Button -->
-    <button class="fab-add-btn" id="fab-add-btn" onclick="openModal()" title="Add New Note">
+    <button class="fab-add-btn" id="fab-add-btn" title="Add New Note">
         <i class="fas fa-plus"></i>
     </button>
+
+    <!-- 100% UPLOAD PROGRESS BAR MODAL -->
+    <div class="upload-progress-wrapper" id="upload-progress-modal">
+        <div class="upload-progress-box">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <div class="progress-text" id="progress-text-info">Uploading to Supabase Storage...</div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progress-bar-fill"></div>
+            </div>
+            <div id="progress-percentage">0%</div>
+        </div>
+    </div>
+
+    <!-- FULL SCREEN VERTICAL SHORTS STATUS PLAYER -->
+    <div class="status-player-overlay" id="status-player-overlay">
+        <div class="status-overlay-info">
+            <div class="status-user-box">
+                <img id="status-user-img" src="" alt="User">
+                <div class="status-user-info">
+                    <span class="status-user-name" id="status-user-name">Author</span>
+                    <span class="status-post-time" id="status-post-time">Just Now</span>
+                </div>
+            </div>
+            <button class="close-status-btn"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div class="status-shorts-container" id="status-shorts-container"></div>
+
+        <div class="status-bottom-text" id="status-bottom-text">
+            <h3 id="status-bottom-title">Title</h3>
+            <div id="status-bottom-content"></div>
+        </div>
+    </div>
 
     <!-- ADD CUSTOM CIRCLE LOGO MODAL -->
     <div class="modal-overlay" id="add-subject-modal">
         <div class="simple-modal-card">
-            <h3><i class="fas fa-plus-circle" style="color:#4f46e5;"></i> Add New Circle Logo</h3>
+            <h3><i class="fas fa-plus-circle"></i> Add New Circle Logo</h3>
             <div class="input-group">
                 <label>Circle Logo Name / Subject:</label>
                 <input type="text" id="new-subject-name" placeholder="e.g. Maths, History, English...">
             </div>
             <div class="input-group">
                 <label>Upload Circle Image:</label>
-                <input type="file" id="new-subject-file" accept="image/*" onchange="previewSubjectImage(event)">
+                <input type="file" id="new-subject-file" accept="image/*">
             </div>
             <div class="preview-img-box" id="subject-img-preview-box">
-                <i class="fas fa-image" style="color:var(--text-muted); font-size: 24px;"></i>
+                <i class="fas fa-image"></i>
             </div>
-            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px;">
-                <button class="close-modal-btn" onclick="closeAddSubjectModal()">Cancel</button>
-                <button class="header-save-btn" onclick="saveNewSubjectCircle()"><i class="fas fa-check"></i> Save Logo</button>
+            <div>
+                <button class="close-modal-btn">Cancel</button>
+                <button class="header-save-btn" id="save-subject-btn"><i class="fas fa-check"></i> Save Logo</button>
             </div>
         </div>
     </div>
@@ -355,11 +155,11 @@
         <div class="modal-content full-screen">
             <div class="modal-header">
                 <div class="header-left-group">
-                    <h2><i class="fas fa-book-open" style="color:#4f46e5;"></i> <span id="view-modal-title-header">Note Title</span></h2>
-                    <div class="date-stamp" id="view-date-stamp" style="color: var(--text-muted); font-size: 11px;"></div>
+                    <h2><i class="fas fa-book-open"></i> <span id="view-modal-title-header">Note Title</span></h2>
+                    <div class="date-stamp" id="view-date-stamp"></div>
                 </div>
                 <div class="header-column-controls">
-                    <button class="close-modal-btn" onclick="closeViewModal()"><i class="fas fa-times"></i> Close</button>
+                    <button class="close-modal-btn"><i class="fas fa-times"></i> Close</button>
                 </div>
             </div>
             
@@ -375,117 +175,120 @@
         <div class="modal-content full-screen">
             <div class="modal-header">
                 <div class="header-left-group">
-                    <h2><i class="fas fa-edit" style="color:#4f46e5;"></i> <span id="modal-heading-text">Note Editor</span></h2>
+                    <h2><i class="fas fa-edit"></i> <span id="modal-heading-text">Note Editor</span></h2>
                 </div>
                 
                 <div class="header-column-controls">
-                    <button class="privacy-toggle-btn is-private" id="modal-privacy-btn" onclick="toggleModalPrivacy()">
+                    <button class="privacy-toggle-btn is-private" id="modal-privacy-btn">
                         <i class="fas fa-lock" id="modal-privacy-icon"></i> <span id="modal-privacy-text">Private</span>
                     </button>
-                    <button class="header-save-btn" id="save-note-btn" onclick="saveNoteAndClose()"><i class="fas fa-check-circle"></i> <span>Save Note</span></button>
-                    <button class="close-modal-btn" onclick="closeModal()"><i class="fas fa-times"></i> <span>Close</span></button>
+                    <button class="header-save-btn" id="save-note-btn"><i class="fas fa-check-circle"></i> <span>Save Note</span></button>
+                    <button class="close-modal-btn"><i class="fas fa-times"></i> <span>Close</span></button>
                 </div>
             </div>
             
             <div class="modal-body">
                 <div class="editor-header-with-logo">
                     <div class="editor-logo-changer">
-                        <i class="fas fa-sticky-note" style="font-size: 18px; color: #4f46e5;"></i>
+                        <i class="fas fa-sticky-note"></i>
                     </div>
                     <input class="editor-title" id="note-title" placeholder="Note Title..." type="text">
                 </div>
 
                 <!-- TOOLBAR SLIDER -->
                 <div class="editor-toolbar">
-                    <button onclick="execCmd('bold')" title="Bold"><b>B</b></button>
-                    <button onclick="execCmd('italic')" title="Italic"><i>I</i></button>
-                    <button onclick="execCmd('underline')" title="Underline"><u>U</u></button>
+                    <button title="Bold"><b>B</b></button>
+                    <button title="Bullet Points List"><i class="fas fa-list-ul"></i> List</button>
+                    <button title="Numbered List (1, 2, 3...)"><i class="fas fa-list-ol"></i> 1,2..</button>
+
+                    <button title="Italic"><i>I</i></button>
+                    <button title="Underline"><u>U</u></button>
 
                     <div class="color-circles-group" title="Select text to highlight/color">
-                        <button class="color-circle-btn color-yellow" onclick="applyHighlight('#facc15')"></button>
-                        <button class="color-circle-btn color-green" onclick="applyHighlight('#22c55e')"></button>
-                        <button class="color-circle-btn color-red" onclick="applyHighlight('#ef4444')"></button>
-                        <button class="color-circle-btn color-blue" onclick="applyHighlight('#3b82f6')"></button>
+                        <button class="color-circle-btn color-yellow"></button>
+                        <button class="color-circle-btn color-green"></button>
+                        <button class="color-circle-btn color-red"></button>
+                        <button class="color-circle-btn color-blue"></button>
                     </div>
 
-                    <button onclick="applyBlockStyle('p')" title="Paragraph"><b>P</b></button>
-                    <button onclick="applyBlockStyle('h2')" title="Heading"><b>H</b></button>
+                    <button title="Paragraph"><b>P</b></button>
+                    <button title="Heading"><b>H</b></button>
 
-                    <div style="position:relative; flex-shrink:0;">
-                        <button onclick="togglePopup('size-popup', this)" title="Text Size"><b>S</b></button>
+                    <div>
+                        <button title="Text Size"><b>S</b></button>
                         <div class="toolbar-popup" id="size-popup">
-                            <div class="popup-option" onclick="changeFontSize('12px')">Size 12px</div>
-                            <div class="popup-option" onclick="changeFontSize('14px')">Size 14px</div>
-                            <div class="popup-option" onclick="changeFontSize('16px')">Size 16px</div>
-                            <div class="popup-option" onclick="changeFontSize('18px')">Size 18px</div>
-                            <div class="popup-option" onclick="changeFontSize('20px')">Size 20px</div>
-                            <div class="popup-option" onclick="changeFontSize('24px')">Size 24px</div>
-                            <div class="popup-option" onclick="changeFontSize('28px')">Size 28px</div>
-                            <div class="popup-option" onclick="changeFontSize('32px')">Size 32px</div>
+                            <div class="popup-option">Size 12px</div>
+                            <div class="popup-option">Size 14px</div>
+                            <div class="popup-option">Size 16px</div>
+                            <div class="popup-option">Size 18px</div>
+                            <div class="popup-option">Size 20px</div>
+                            <div class="popup-option">Size 24px</div>
+                            <div class="popup-option">Size 28px</div>
+                            <div class="popup-option">Size 32px</div>
                         </div>
                     </div>
 
-                    <div style="position:relative; flex-shrink:0;">
-                        <button onclick="togglePopup('font-popup', this)" title="A Style"><b>A Style</b></button>
+                    <div>
+                        <button title="A Style"><b>A Style</b></button>
                         <div class="toolbar-popup" id="font-popup">
-                            <div class="popup-option" style="font-family:'Poppins';" onclick="changeFontFamily('Poppins')">Poppins</div>
-                            <div class="popup-option" style="font-family:'Playfair Display';" onclick="changeFontFamily('Playfair Display')">Playfair Display</div>
-                            <div class="popup-option" style="font-family:'Roboto Mono';" onclick="changeFontFamily('Roboto Mono')">Roboto Mono</div>
-                            <div class="popup-option" style="font-family:'Caveat';" onclick="changeFontFamily('Caveat')">Caveat (Handwriting)</div>
-                            <div class="popup-option" style="font-family:'Lobster';" onclick="changeFontFamily('Lobster')">Lobster</div>
-                            <div class="popup-option" style="font-family:'Pacifico';" onclick="changeFontFamily('Pacifico')">Pacifico</div>
-                            <div class="popup-option" style="font-family:'Arial';" onclick="changeFontFamily('Arial')">Arial Standard</div>
+                            <div class="popup-option">Poppins</div>
+                            <div class="popup-option">Playfair Display</div>
+                            <div class="popup-option">Roboto Mono</div>
+                            <div class="popup-option">Caveat (Handwriting)</div>
+                            <div class="popup-option">Lobster</div>
+                            <div class="popup-option">Pacifico</div>
+                            <div class="popup-option">Arial Standard</div>
                         </div>
                     </div>
 
                     <!-- SUPABASE MULTIPLE MEDIA & FILE UPLOAD BUTTON SECTION -->
-                    <div style="position:relative; flex-shrink:0;">
-                        <button onclick="togglePopup('media-popup', this)" title="Insert Media & Documents" style="color: #4f46e5 !important; font-weight: 600;">
+                    <div>
+                        <button title="Insert Media & Documents">
                             <i class="fas fa-paperclip"></i> Media & Files
                         </button>
                         <div class="toolbar-popup" id="media-popup">
-                            <div class="popup-option" onclick="triggerMediaUpload('image/*,video/*,application/pdf,*/*')">
+                            <div class="popup-option">
                                 <i class="fas fa-folder-open"></i> Upload Any File(s)
                             </div>
-                            <div class="popup-option" onclick="triggerMediaUpload('image/*')">
+                            <div class="popup-option">
                                 <i class="fas fa-image"></i> Insert Image(s)
                             </div>
-                            <div class="popup-option" onclick="triggerMediaUpload('video/*')">
+                            <div class="popup-option">
                                 <i class="fas fa-video"></i> Insert Video(s)
                             </div>
-                            <div class="popup-option" onclick="triggerMediaUpload('application/pdf')">
+                            <div class="popup-option">
                                 <i class="fas fa-file-pdf"></i> Insert PDF Document(s)
                             </div>
-                            <div class="popup-option" onclick="insertMediaByUrl()">
+                            <div class="popup-option">
                                 <i class="fas fa-link"></i> Insert via Web URL
                             </div>
-                            <div class="popup-option" onclick="openCodeEditorModal()" style="color:#10b981; font-weight:600;">
+                            <div class="popup-option">
                                 <i class="fas fa-code"></i> Insert Complete Code Frame
                             </div>
                         </div>
                     </div>
                     <!-- Unified Multiple File Input -->
-                    <input type="file" id="media-file-input" multiple style="display:none;" onchange="handleMediaFilesSelect(event)">
+                    <input type="file" id="media-file-input" multiple>
 
-                    <button onclick="insertUrlPinLink()" title="Attach URL link" style="color:#0284c7 !important; font-weight:600;">
+                    <button title="Attach URL link">
                         <i class="fas fa-link"></i> URL Pin
                     </button>
 
-                    <div style="position:relative; flex-shrink:0;">
-                        <button onclick="togglePopup('author-popup', this)" title="Created By Author"><i class="fas fa-user-edit"></i> Created By</button>
-                        <div class="toolbar-popup" id="author-popup" style="width: 220px;">
-                            <label style="font-size: 11px; font-weight: 600;">Author Name / Tag:</label>
-                            <input type="text" id="editor-author-input" placeholder="e.g. John Doe / Physics" style="padding: 6px; font-size: 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none;">
-                            <button onclick="saveAuthorTag()" style="margin-top: 5px; width: 100%; justify-content: center; background: #4f46e5 !important; color: white !important;">Set Tag</button>
+                    <div>
+                        <button title="Created By Author"><i class="fas fa-user-edit"></i> Created By</button>
+                        <div class="toolbar-popup" id="author-popup">
+                            <label>Author Name / Tag:</label>
+                            <input type="text" id="editor-author-input" placeholder="e.g. John Doe / Physics">
+                            <button>Set Tag</button>
                         </div>
                     </div>
 
-                    <button class="pin-toggle-btn" id="modal-pin-btn" onclick="toggleModalPin()" title="Pin/Lock Note">
+                    <button class="pin-toggle-btn" id="modal-pin-btn" title="Pin/Lock Note">
                         <i class="fas fa-thumbtack" id="modal-pin-icon"></i> <span id="modal-pin-text">Pin Note</span>
                     </button>
 
-                    <button style="color: #ff0000 !important;" onclick="insertYouTubeEmbed()" title="Add YouTube Video Link"><i class="fab fa-youtube"></i> YouTube Slider</button>
-                    <button style="color: #0f9d58 !important;" onclick="insertDriveEmbed()" title="Add Google Drive File Link"><i class="fab fa-google-drive"></i> Drive Slider</button>
+                    <button title="Add YouTube Video Link"><i class="fab fa-youtube"></i> YouTube Link</button>
+                    <button title="Add Google Drive File Link"><i class="fab fa-google-drive"></i> Drive Link</button>
                 </div>
 
                 <div class="editor-container">
@@ -496,23 +299,23 @@
     </div>
 
     <!-- CODE EDITOR MODAL -->
-    <div class="modal-overlay" id="code-editor-modal" style="z-index: 3000;">
+    <div class="modal-overlay" id="code-editor-modal">
         <div class="code-modal-card">
             <div class="code-modal-header">
-                <button class="header-save-btn" onclick="saveCodeAndInsertPreview()">
+                <button class="header-save-btn">
                     <i class="fas fa-play"></i> Save & Insert Preview Frame
                 </button>
 
-                <h3 style="font-size: 15px; font-weight: 600; display:flex; align-items:center; gap:8px;">
-                    <i class="fas fa-code" style="color:#10b981;"></i> Complete HTML / CSS / JS Code Frame
+                <h3>
+                    <i class="fas fa-code"></i> Complete HTML / CSS / JS Code Frame
                 </h3>
 
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <button class="privacy-toggle-btn" onclick="document.getElementById('code-file-input').click()" style="color:#4f46e5; border-color:#4f46e5;">
+                <div>
+                    <button class="privacy-toggle-btn">
                         <i class="fas fa-upload"></i> Upload Code File
                     </button>
-                    <input type="file" id="code-file-input" accept=".html,.css,.js,.txt" style="display:none;" onchange="handleCodeFileUpload(event)">
-                    <button class="close-modal-btn" onclick="closeCodeEditorModal()"><i class="fas fa-times"></i> Close</button>
+                    <input type="file" id="code-file-input" accept=".html,.css,.js,.txt">
+                    <button class="close-modal-btn"><i class="fas fa-times"></i> Close</button>
                 </div>
             </div>
 
@@ -523,840 +326,5 @@
     <!-- Toast Notifications -->
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- JavaScript Logic -->
-    <script>
-        // API Base URL (Change if running locally: e.g., 'http://localhost:5000/api')
-        const API_BASE_URL = window.location.origin + '/api';
-
-        function getOrCreateDeviceId() {
-            let deviceId = localStorage.getItem('user_device_id');
-            if (!deviceId) {
-                deviceId = 'device_' + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
-                localStorage.setItem('user_device_id', deviceId);
-            }
-            return deviceId;
-        }
-
-        const USER_DEVICE_ID = getOrCreateDeviceId();
-
-        let notes = [];
-        let customSubjects = [];
-        let currentEditId = null;
-        let selectedSubjectFilter = '';
-        let currentSearchQuery = '';
-        let currentDateFilter = '';
-
-        let currentPage = 1;
-        let hasMoreNotes = true;
-        let isLoadingNotes = false;
-        let isSavingNote = false;
-
-        let currentModalIsPrivate = true;
-        let currentModalIsPinned = false;
-        let currentAuthorTag = 'Custom Author';
-        let tempNewSubjectImgData = '';
-
-        document.addEventListener('DOMContentLoaded', () => {
-            updateClock();
-            setInterval(updateClock, 1000);
-            
-            fetchProfileFromBackend();
-            fetchSubjectsFromBackend();
-            fetchNotesFromBackend(true);
-
-            window.addEventListener('scroll', handleInfiniteScroll);
-
-            document.addEventListener('click', (e) => {
-                if(!e.target.closest('.toolbar-popup') && !e.target.closest('.editor-toolbar button')) {
-                    closeAllPopups();
-                }
-            });
-        });
-
-        function updateClock() {
-            const now = new Date();
-            document.getElementById('live-time').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            document.getElementById('live-date').innerText = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-        }
-
-        function toggleTheme() {
-            document.body.classList.toggle('dark-mode');
-            const icon = document.getElementById('theme-icon');
-            if (document.body.classList.contains('dark-mode')) {
-                icon.className = 'fas fa-sun';
-            } else {
-                icon.className = 'fas fa-moon';
-            }
-        }
-
-        function goHome() {
-            selectedSubjectFilter = '';
-            currentSearchQuery = '';
-            currentDateFilter = '';
-            document.getElementById('search-input').value = '';
-            document.getElementById('date-search-input').value = '';
-            document.getElementById('clear-date-btn').style.display = 'none';
-            fetchNotesFromBackend(true);
-        }
-
-        function handleSearch() {
-            currentSearchQuery = document.getElementById('search-input').value.trim();
-            fetchNotesFromBackend(true);
-        }
-
-        function filterByDate() {
-            const val = document.getElementById('date-search-input').value;
-            if (val) {
-                currentDateFilter = val;
-                document.getElementById('clear-date-btn').style.display = 'inline-flex';
-                fetchNotesFromBackend(true);
-            }
-        }
-
-        function clearDateFilter() {
-            document.getElementById('date-search-input').value = '';
-            currentDateFilter = '';
-            document.getElementById('clear-date-btn').style.display = 'none';
-            fetchNotesFromBackend(true);
-        }
-
-        function filterBySubject(subject, elem) {
-            selectedSubjectFilter = subject;
-            document.querySelectorAll('.subject-circle-item').forEach(el => el.classList.remove('active'));
-            if(elem) elem.classList.add('active');
-            fetchNotesFromBackend(true);
-        }
-
-        function handleInfiniteScroll() {
-            if (isLoadingNotes || !hasMoreNotes) return;
-
-            const scrollPosition = window.innerHeight + window.scrollY;
-            const threshold = document.documentElement.offsetHeight - 300;
-
-            if (scrollPosition >= threshold) {
-                fetchNotesFromBackend(false);
-            }
-        }
-
-        async function fetchNotesFromBackend(reset = false) {
-            if (isLoadingNotes) return;
-            isLoadingNotes = true;
-
-            if (reset) {
-                currentPage = 1;
-                notes = [];
-                hasMoreNotes = true;
-                document.getElementById('notes-container').innerHTML = '';
-            }
-
-            document.getElementById('loading-spinner').style.display = 'block';
-
-            try {
-                let url = `${API_BASE_URL}/notes?page=${currentPage}&limit=9&deviceId=${USER_DEVICE_ID}`;
-                if (currentSearchQuery) url += `&search=${encodeURIComponent(currentSearchQuery)}`;
-                if (selectedSubjectFilter) url += `&subject=${encodeURIComponent(selectedSubjectFilter)}`;
-                if (currentDateFilter) url += `&date=${encodeURIComponent(currentDateFilter)}`;
-
-                const res = await fetch(url);
-                if (res.ok) {
-                    const data = await res.json();
-                    
-                    notes = reset ? data.notes : [...notes, ...data.notes];
-                    hasMoreNotes = data.hasMore;
-                    currentPage++;
-
-                    renderNotesGrid();
-                }
-            } catch (err) {
-                showToast('Failed to load notes from server', 'error');
-            } finally {
-                isLoadingNotes = false;
-                document.getElementById('loading-spinner').style.display = 'none';
-            }
-        }
-
-        function renderNotesGrid() {
-            const container = document.getElementById('notes-container');
-            container.innerHTML = '';
-
-            if(notes.length === 0) {
-                container.innerHTML = `
-                    <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
-                        <i class="fas fa-folder-open" style="font-size: 40px; opacity: 0.3;"></i>
-                        <h3>No Notes Found</h3>
-                    </div>`;
-                return;
-            }
-
-            notes.forEach(note => {
-                const card = document.createElement('div');
-                card.className = 'note-card';
-                const noteId = note._id;
-                const likesCount = note.likes || 0;
-                const isLiked = note.userLiked || false;
-
-                card.innerHTML = `
-                    <div class="note-top-meta">
-                        ${note.isPinned ? `<span class="pinned-tag"><i class="fas fa-thumbtack"></i> Pinned</span>` : ''}
-                        <span class="like-count-tag ${isLiked ? 'liked' : ''}" onclick="toggleLike(event, '${noteId}')" title="Click to Like">
-                            <i class="${isLiked ? 'fas' : 'far'} fa-heart"></i> ${likesCount}
-                        </span>
-                        <span class="view-count-tag"><i class="fas fa-eye"></i> ${note.views || 0}</span>
-                    </div>
-
-                    <div class="note-card-header">
-                        <div class="note-circle-logo">
-                            <i class="fas fa-book" style="color: #4f46e5; font-size: 18px;"></i>
-                        </div>
-                        <div class="note-header-text">
-                            <span class="note-author-tag">${escapeHtml(note.subject || 'Custom Author')}</span>
-                            <h3 class="clickable-title" onclick="viewNote('${noteId}')">${escapeHtml(note.title)}</h3>
-                        </div>
-                    </div>
-                    <div class="note-content-container" onclick="viewNote('${noteId}')">
-                        <div class="note-body-html">${note.content}</div>
-                    </div>
-                    <div class="note-footer">
-                        <div class="note-date"><i class="far fa-clock"></i> ${note.createdAtFormatted || note.createdAt}</div>
-                        <div class="note-actions">
-                            <button class="action-btn btn-edit ${note.isPinned ? 'disabled' : ''}" 
-                                onclick="${note.isPinned ? "showToast('Pinned notes are locked and cannot be edited!', 'error')" : `openModal('${noteId}')`}" 
-                                title="${note.isPinned ? 'Pinned Note (Locked)' : 'Edit Note'}">
-                                <i class="fas ${note.isPinned ? 'fa-lock' : 'fa-pen'}"></i>
-                            </button>
-                            <button class="action-btn btn-delete" onclick="deleteNote('${noteId}')" title="Delete Note"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        async function viewNote(noteId) {
-            const note = notes.find(n => n._id === noteId);
-            if (!note) return;
-
-            document.getElementById('view-modal-title-header').innerText = note.title;
-            document.getElementById('view-note-title').innerText = note.title;
-            document.getElementById('view-note-content').innerHTML = note.content;
-            document.getElementById('view-date-stamp').innerText = `Created: ${note.createdAtFormatted || note.createdAt} | Subject: ${note.subject}`;
-            
-            document.getElementById('view-modal').classList.add('active');
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/notes/${noteId}/view`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ deviceId: USER_DEVICE_ID })
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    note.views = data.views;
-                }
-            } catch (err) {
-                console.warn('View update error:', err);
-            }
-        }
-
-        function closeViewModal() {
-            document.getElementById('view-modal').classList.remove('active');
-        }
-
-        async function toggleLike(e, noteId) {
-            e.stopPropagation();
-            try {
-                const res = await fetch(`${API_BASE_URL}/notes/${noteId}/like`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ deviceId: USER_DEVICE_ID })
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    const note = notes.find(n => n._id === noteId);
-                    if (note) {
-                        note.likes = data.likes;
-                        note.userLiked = data.userLiked;
-                        renderNotesGrid();
-                    }
-                }
-            } catch (err) {
-                showToast('Failed to update like status', 'error');
-            }
-        }
-
-        async function deleteNote(noteId) {
-            if (!confirm("Are you sure you want to delete this note?")) return;
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/notes/${noteId}?deviceId=${USER_DEVICE_ID}`, {
-                    method: 'DELETE'
-                });
-                if (res.ok) {
-                    showToast('Note deleted!', 'success');
-                    fetchNotesFromBackend(true);
-                }
-            } catch (err) {
-                showToast('Failed to delete note', 'error');
-            }
-        }
-
-        // ===== SUPABASE MULTIPLE MEDIA UPLOADER =====
-        function triggerMediaUpload(acceptTypes) {
-            closeAllPopups();
-            const input = document.getElementById('media-file-input');
-            input.accept = acceptTypes || '*/*';
-            input.click();
-        }
-
-        async function handleMediaFilesSelect(event) {
-            const files = event.target.files;
-            if (!files || files.length === 0) return;
-
-            const formData = new FormData();
-            for (let i = 0; i < files.length; i++) {
-                formData.append('media', files[i]);
-            }
-
-            showToast(`Uploading ${files.length} file(s) to Supabase...`, 'info');
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/upload`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    const uploadedFiles = data.files || [{ url: data.url, fileType: data.fileType, filename: data.filename }];
-                    
-                    uploadedFiles.forEach(file => {
-                        insertSupabaseMediaIntoEditor(file.url, file.fileType || '', file.filename);
-                    });
-
-                    showToast(`${uploadedFiles.length} File(s) stored in Supabase!`, 'success');
-                } else {
-                    const errData = await res.json();
-                    showToast(errData.error || 'Supabase upload failed', 'error');
-                }
-            } catch (err) {
-                showToast('Supabase connection error', 'error');
-            } finally {
-                event.target.value = '';
-            }
-        }
-
-        function insertSupabaseMediaIntoEditor(url, fileType, filename) {
-            const editor = document.getElementById('note-editor');
-            editor.focus();
-
-            let mediaHtml = '';
-
-            if (fileType.startsWith('image/')) {
-                mediaHtml = `<div style="margin: 10px 0;"><img src="${url}" alt="${escapeHtml(filename)}" style="max-width: 100%; border-radius: 8px; box-shadow: var(--shadow-sm);" /></div><p><br></p>`;
-            } else if (fileType.startsWith('video/')) {
-                mediaHtml = `
-                    <div style="margin: 10px 0;">
-                        <video controls style="max-width: 100%; border-radius: 8px;">
-                            <source src="${url}" type="${fileType}">
-                            Your browser does not support video playback.
-                        </video>
-                    </div><p><br></p>`;
-            } else if (fileType === 'application/pdf' || url.toLowerCase().endsWith('.pdf')) {
-                mediaHtml = `
-                    <div class="pdf-embed-box" style="margin: 10px 0;">
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <i class="fas fa-file-pdf" style="color:#e53e3e; font-size: 24px;"></i>
-                            <div>
-                                <strong style="font-size: 13px;">${escapeHtml(filename || 'PDF Document')}</strong>
-                                <div style="font-size: 11px; color: var(--text-muted);">Supabase PDF Document</div>
-                            </div>
-                        </div>
-                        <a href="${url}" target="_blank" style="padding: 6px 12px; background: #4f46e5; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600;">
-                            <i class="fas fa-external-link-alt"></i> View PDF
-                        </a>
-                    </div>
-                    <div style="margin: 10px 0;">
-                        <iframe src="${url}" style="width: 100%; height: 400px; border: 1px solid var(--border-color); border-radius: 8px;"></iframe>
-                    </div><p><br></p>`;
-            } else {
-                mediaHtml = `
-                    <div class="file-download-box" style="margin: 10px 0;">
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <i class="fas fa-file-alt" style="color:#4f46e5; font-size: 24px;"></i>
-                            <div>
-                                <strong style="font-size: 13px;">${escapeHtml(filename || 'Attachment File')}</strong>
-                            </div>
-                        </div>
-                        <a href="${url}" target="_blank" download style="padding: 6px 12px; background: #4f46e5; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600;">
-                            <i class="fas fa-download"></i> Download
-                        </a>
-                    </div><p><br></p>`;
-            }
-
-            document.execCommand('insertHTML', false, mediaHtml);
-        }
-
-        function insertMediaByUrl() {
-            closeAllPopups();
-            const url = prompt("Enter media or document URL:");
-            if (!url) return;
-
-            if (url.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
-                insertSupabaseMediaIntoEditor(url, 'image/jpeg', 'Image');
-            } else if (url.match(/\.(mp4|webm|ogg)$/i)) {
-                insertSupabaseMediaIntoEditor(url, 'video/mp4', 'Video');
-            } else if (url.match(/\.pdf$/i)) {
-                insertSupabaseMediaIntoEditor(url, 'application/pdf', 'PDF Document');
-            } else {
-                insertSupabaseMediaIntoEditor(url, 'application/octet-stream', 'Attachment');
-            }
-        }
-
-        // EDITOR CONTROL FUNCTIONS
-        function openModal(editId = null) {
-            currentEditId = editId;
-            const modal = document.getElementById('editor-modal');
-            
-            if (editId) {
-                const note = notes.find(n => n._id === editId);
-                if (note) {
-                    document.getElementById('note-title').value = note.title;
-                    document.getElementById('note-editor').innerHTML = note.content;
-                    currentAuthorTag = note.subject || 'Custom Author';
-                    currentModalIsPrivate = note.isPrivate;
-                    currentModalIsPinned = note.isPinned;
-                    document.getElementById('modal-heading-text').innerText = 'Edit Note';
-                }
-            } else {
-                document.getElementById('note-title').value = '';
-                document.getElementById('note-editor').innerHTML = '';
-                currentAuthorTag = 'Custom Author';
-                currentModalIsPrivate = false;
-                currentModalIsPinned = false;
-                document.getElementById('modal-heading-text').innerText = 'Create Note';
-            }
-
-            updateModalButtonsUI();
-            modal.classList.add('active');
-        }
-
-        function closeModal() {
-            document.getElementById('editor-modal').classList.remove('active');
-        }
-
-        function updateModalButtonsUI() {
-            const privBtn = document.getElementById('modal-privacy-btn');
-            const privIcon = document.getElementById('modal-privacy-icon');
-            const privText = document.getElementById('modal-privacy-text');
-
-            if (currentModalIsPrivate) {
-                privBtn.className = 'privacy-toggle-btn is-private';
-                privIcon.className = 'fas fa-lock';
-                privText.innerText = 'Private';
-            } else {
-                privBtn.className = 'privacy-toggle-btn is-public';
-                privIcon.className = 'fas fa-globe';
-                privText.innerText = 'Public';
-            }
-
-            const pinBtn = document.getElementById('modal-pin-btn');
-            const pinIcon = document.getElementById('modal-pin-icon');
-            const pinText = document.getElementById('modal-pin-text');
-
-            if (currentModalIsPinned) {
-                pinBtn.className = 'pin-toggle-btn is-pinned';
-                pinIcon.className = 'fas fa-thumbtack';
-                pinText.innerText = 'Pinned';
-            } else {
-                pinBtn.className = 'pin-toggle-btn';
-                pinIcon.className = 'fas fa-thumbtack';
-                pinText.innerText = 'Pin Note';
-            }
-        }
-
-        function toggleModalPrivacy() {
-            currentModalIsPrivate = !currentModalIsPrivate;
-            updateModalButtonsUI();
-        }
-
-        function toggleModalPin() {
-            currentModalIsPinned = !currentModalIsPinned;
-            updateModalButtonsUI();
-        }
-
-        function execCmd(command, value = null) {
-            document.execCommand(command, false, value);
-        }
-
-        function applyHighlight(color) {
-            document.execCommand('backColor', false, color);
-        }
-
-        function applyBlockStyle(tag) {
-            document.execCommand('formatBlock', false, `<${tag}>`);
-        }
-
-        function changeFontSize(size) {
-            document.execCommand('fontSize', false, '7');
-            const fontElements = document.getElementById('note-editor').getElementsByTagName('font');
-            for (let el of fontElements) {
-                if (el.getAttribute('size') === '7') {
-                    el.removeAttribute('size');
-                    el.style.fontSize = size;
-                }
-            }
-            closeAllPopups();
-        }
-
-        function changeFontFamily(font) {
-            document.execCommand('fontName', false, font);
-            closeAllPopups();
-        }
-
-        function togglePopup(popupId, btn) {
-            const popup = document.getElementById(popupId);
-            const isActive = popup.classList.contains('active');
-            closeAllPopups();
-            if (!isActive) {
-                popup.classList.add('active');
-                if (btn) {
-                    const rect = btn.getBoundingClientRect();
-                    popup.style.top = `${rect.bottom + 5}px`;
-                    popup.style.left = `${rect.left}px`;
-                }
-            }
-        }
-
-        function closeAllPopups() {
-            document.querySelectorAll('.toolbar-popup').forEach(p => p.classList.remove('active'));
-        }
-
-        function saveAuthorTag() {
-            const val = document.getElementById('editor-author-input').value.trim();
-            if (val) {
-                currentAuthorTag = val;
-                showToast(`Author tag set to '${val}'`, 'success');
-            }
-            closeAllPopups();
-        }
-
-        function insertUrlPinLink() {
-            const url = prompt("Enter website URL to attach:");
-            if (!url) return;
-            const text = prompt("Enter display title:", "Link");
-            const linkHtml = `<a href="${url}" target="_blank" style="color: #0284c7; text-decoration: underline; font-weight: 600;"><i class="fas fa-link"></i> ${escapeHtml(text || 'Link')}</a>&nbsp;`;
-            document.execCommand('insertHTML', false, linkHtml);
-        }
-
-        function insertYouTubeEmbed() {
-            const url = prompt("Enter YouTube video URL:");
-            if (!url) return;
-            let videoId = '';
-            if (url.includes('v=')) {
-                videoId = url.split('v=')[1].split('&')[0];
-            } else if (url.includes('youtu.be/')) {
-                videoId = url.split('youtu.be/')[1].split('?')[0];
-            }
-
-            if (videoId) {
-                const embedHtml = `
-                    <div class="media-slider-card yt-card" style="margin: 10px 0;">
-                        <iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>
-                    </div><p><br></p>`;
-                document.execCommand('insertHTML', false, embedHtml);
-            } else {
-                showToast('Invalid YouTube URL', 'error');
-            }
-        }
-
-        function insertDriveEmbed() {
-            const url = prompt("Enter Google Drive public preview URL:");
-            if (!url) return;
-            const embedHtml = `
-                <div class="media-slider-card drive-card" style="margin: 10px 0;">
-                    <iframe src="${url}"></iframe>
-                </div><p><br></p>`;
-            document.execCommand('insertHTML', false, embedHtml);
-        }
-
-        // CODE EDITOR MODAL FUNCTIONS
-        function openCodeEditorModal() {
-            closeAllPopups();
-            document.getElementById('code-editor-modal').classList.add('active');
-        }
-
-        function closeCodeEditorModal() {
-            document.getElementById('code-editor-modal').classList.remove('active');
-        }
-
-        function handleCodeFileUpload(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                document.getElementById('raw-code-input').value = event.target.result;
-            };
-            reader.readAsText(file);
-        }
-
-        function saveCodeAndInsertPreview() {
-            const rawCode = document.getElementById('raw-code-input').value.trim();
-            if (!rawCode) {
-                showToast('Code area is empty!', 'error');
-                return;
-            }
-
-            const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0; padding:10px;">${rawCode}</body></html>`;
-            const blob = new Blob([doc], { type: 'text/html' });
-            const blobUrl = URL.createObjectURL(blob);
-
-            const iframeHtml = `
-                <div style="margin: 10px 0;">
-                    <iframe class="code-embed-frame" src="${blobUrl}"></iframe>
-                </div><p><br></p>`;
-
-            closeCodeEditorModal();
-            document.getElementById('note-editor').focus();
-            document.execCommand('insertHTML', false, iframeHtml);
-            showToast('Code preview frame inserted!', 'success');
-        }
-
-        // PROFILE & SUBJECT BACKEND APIS
-        async function fetchProfileFromBackend() {
-            try {
-                const res = await fetch(`${API_BASE_URL}/profile`);
-                if (res.ok) {
-                    const profile = await res.json();
-                    if(profile.name) document.getElementById('profile-name').innerText = profile.name;
-                    if(profile.img) document.getElementById('profile-img').src = profile.img;
-                }
-            } catch (err) {
-                console.warn('Profile fetch error:', err);
-            }
-        }
-
-        async function saveProfileName() {
-            const newName = document.getElementById('profile-name').innerText;
-            try {
-                await fetch(`${API_BASE_URL}/profile`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: newName })
-                });
-                showToast('Profile name updated!', 'success');
-            } catch (err) {
-                showToast('Failed to update profile name', 'error');
-            }
-        }
-
-        async function updateProfileImg(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const formData = new FormData();
-            formData.append('media', file);
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/upload`, {
-                    method: 'POST',
-                    body: formData
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    const imgUrl = data.url;
-                    document.getElementById('profile-img').src = imgUrl;
-                    await fetch(`${API_BASE_URL}/profile`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ img: imgUrl })
-                    });
-                    showToast('Profile image updated via Supabase!', 'success');
-                }
-            } catch (err) {
-                showToast('Failed to upload profile image', 'error');
-            }
-        }
-
-        async function fetchSubjectsFromBackend() {
-            try {
-                const res = await fetch(`${API_BASE_URL}/subjects`);
-                if (res.ok) {
-                    customSubjects = await res.json();
-                    renderSubjectCircles();
-                }
-            } catch (err) {
-                console.warn('Subjects fetch error:', err);
-            }
-        }
-
-        function renderSubjectCircles() {
-            const container = document.getElementById('dynamic-subjects-list');
-            container.innerHTML = '';
-
-            customSubjects.forEach(sub => {
-                const item = document.createElement('div');
-                item.className = `subject-circle-item ${selectedSubjectFilter.toLowerCase() === sub.name.toLowerCase() ? 'active' : ''}`;
-                item.onclick = () => filterBySubject(sub.name, item);
-
-                item.innerHTML = `
-                    <div class="subject-ring">
-                        <img alt="${escapeHtml(sub.name)}" src="${sub.img}" />
-                    </div>
-                    <span>${escapeHtml(sub.name)}</span>
-                `;
-                container.appendChild(item);
-            });
-        }
-
-        function openAddSubjectModal() {
-            document.getElementById('add-subject-modal').classList.add('active');
-        }
-
-        function closeAddSubjectModal() {
-            document.getElementById('add-subject-modal').classList.remove('active');
-            document.getElementById('new-subject-name').value = '';
-            document.getElementById('subject-img-preview-box').innerHTML = '<i class="fas fa-image" style="color:var(--text-muted); font-size: 24px;"></i>';
-            tempNewSubjectImgData = '';
-        }
-
-        async function previewSubjectImage(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const formData = new FormData();
-            formData.append('media', file);
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/upload`, {
-                    method: 'POST',
-                    body: formData
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    tempNewSubjectImgData = data.url;
-                    document.getElementById('subject-img-preview-box').innerHTML = `<img src="${data.url}">`;
-                }
-            } catch (err) {
-                showToast('Failed to upload subject image', 'error');
-            }
-        }
-
-        async function saveNewSubjectCircle() {
-            const name = document.getElementById('new-subject-name').value.trim();
-            if (!name) {
-                showToast('Please enter a circle logo name!', 'error');
-                return;
-            }
-
-            const defaultImg = 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=120&120&q=80';
-            const img = tempNewSubjectImgData || defaultImg;
-
-            try {
-                const res = await fetch(`${API_BASE_URL}/subjects`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, img })
-                });
-
-                if (res.ok) {
-                    const saved = await res.json();
-                    customSubjects.unshift(saved);
-                    renderSubjectCircles();
-                    closeAddSubjectModal();
-                    showToast(`Subject '${name}' added!`, 'success');
-                }
-            } catch (err) {
-                showToast('Failed to save custom subject', 'error');
-            }
-        }
-
-        async function saveNoteAndClose() {
-            if (isSavingNote) return;
-
-            const title = document.getElementById('note-title').value.trim();
-            const content = document.getElementById('note-editor').innerHTML.trim();
-
-            if(!title && !content) {
-                showToast('Cannot save an empty note!', 'error');
-                return;
-            }
-
-            isSavingNote = true;
-            const saveBtn = document.getElementById('save-note-btn');
-            saveBtn.disabled = true;
-
-            const now = new Date();
-            const timeStamp = now.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            const payload = {
-                title: title || 'Untitled Note',
-                content: content,
-                subject: currentAuthorTag,
-                isPrivate: currentModalIsPrivate,
-                isPinned: currentModalIsPinned,
-                createdAt: timeStamp
-            };
-
-            try {
-                let res;
-                if (currentEditId) {
-                    res = await fetch(`${API_BASE_URL}/notes/${currentEditId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                } else {
-                    res = await fetch(`${API_BASE_URL}/notes`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                }
-
-                if (res.ok) {
-                    showToast('Note Saved Successfully!', 'success');
-                    closeModal();
-                    fetchNotesFromBackend(true);
-                } else {
-                    const errData = await res.json();
-                    showToast(errData.error || 'Failed to save note', 'error');
-                }
-            } catch (err) {
-                showToast('Failed to save note to server', 'error');
-            } finally {
-                isSavingNote = false;
-                saveBtn.disabled = false;
-            }
-        }
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            return text.replace(/&/g, "&amp;")
-                       .replace(/</g, "&lt;")
-                       .replace(/>/g, "&gt;")
-                       .replace(/"/g, "&quot;")
-                       .replace(/'/g, "&#039;");
-        }
-
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            
-            let iconClass = 'fas fa-info-circle';
-            if (type === 'success') iconClass = 'fas fa-check-circle';
-            if (type === 'error') iconClass = 'fas fa-exclamation-circle';
-
-            toast.innerHTML = `<i class="${iconClass}"></i> ${escapeHtml(message)}`;
-            container.appendChild(toast);
-
-            setTimeout(() => toast.classList.add('show'), 10);
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 400);
-            }, 3000);
-        }
-    </script>
 </body>
 </html>
