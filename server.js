@@ -30,7 +30,77 @@ app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(express.static(__dirname));
 
-// 1. Profile APIs
+// Helper: Supabase Upload
+async function uploadToSupabase(fileBuffer, originalName, mimeType) {
+    const ext = path.extname(originalName) || '.bin';
+    const fileName = `uploads/${Date.now()}_${Math.random().toString(36).substring(2, 8)}${ext}`;
+
+    const { data, error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(fileName, fileBuffer, {
+            contentType: mimeType,
+            upsert: true
+        });
+
+    if (error) throw error;
+
+    const { data: publicData } = supabase.storage
+        .from(BUCKET_NAME)
+        .getPublicUrl(fileName);
+
+    return { url: publicData.publicUrl, filename: originalName, fileType: mimeType };
+}
+
+// 1. Single & Multiple Media Upload API
+app.post('/api/upload', upload.array('media', 10), async (req, res) => {
+    try {
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ error: "No files uploaded" });
+        }
+
+        const uploadPromises = req.files.map(file => 
+            uploadToSupabase(file.buffer, file.originalname, file.mimetype)
+        );
+
+        const results = await Promise.all(uploadPromises);
+
+        if (results.length === 1) {
+            return res.json(results[0]);
+        }
+        res.json({ files: results });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 2. RAW CODE TO HTML FILE SUPABASE STORE API
+app.post('/api/upload-code', async (req, res) => {
+    try {
+        const { code } = req.body;
+        if (!code) return res.status(400).json({ error: "Code content is empty" });
+
+        const fullHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>body { margin: 0; padding: 10px; font-family: sans-serif; }</style>
+</head>
+<body>
+${code}
+</body>
+</html>`;
+
+        const buffer = Buffer.from(fullHTML, 'utf-8');
+        const fileResult = await uploadToSupabase(buffer, 'code_preview.html', 'text/html');
+
+        res.json({ url: fileResult.url });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 3. Profile APIs
 app.get('/api/profile', async (req, res) => {
     try {
         const { deviceId } = req.query;
@@ -108,7 +178,7 @@ app.put('/api/profile', async (req, res) => {
     }
 });
 
-// 2. Subjects APIs
+// 4. Subjects APIs
 app.get('/api/subjects', async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -168,162 +238,181 @@ app.delete('/api/subjects/:id', async (req, res) => {
     }
 });
 
-// 3. Notes APIs
+// 5. Notes CRUD & Analytics APIs
 app.get('/api/notes', async (req, res) => {
     try {
-        let { page = 1, limit = 10, search = '', subject = '', date = '', deviceId = '' } = req.query;
-        page = Math.max(1, parseInt(page));
-        limit = Math.max(1, parseInt(limit));
-        const skip = (page - 1) * limit;
+        const { page = 1, limit = 9, search = '', subject = '', date = '', deviceId = '' } = req.query;
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const from = (pageNum - 1) * limitNum;
+        const to = from + limitNum - 1;
 
         let query = supabase.from('notes').select('*', { count: 'exact' });
-
-        if (deviceId) {
-            query = query.not('deleted_for', 'cs', `{${deviceId}}`);
-        }
 
         if (search) {
             query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%`);
         }
-
         if (subject) {
             query = query.ilike('subject', subject);
         }
-
         if (date) {
             query = query.ilike('created_at_formatted', `%${date}%`);
         }
 
-        query = query.order('is_pinned', { ascending: false })
-                     .order('created_at', { ascending: false })
-                     .range(skip, skip + limit - 1);
+        query = query.order('is_pinned', { ascending: false }).order('created_at', { ascending: false }).range(from, to);
 
-        const { data: notes, count: totalNotes, error } = await query;
+        const { data, error, count } = await query;
+
         if (error) throw error;
 
-        const formattedNotes = (notes || []).map(note => {
-            const likedByArray = note.liked_by || [];
-            const isLiked = deviceId ? likedByArray.includes(deviceId) : false;
-            return {
-                _id: note.id,
-                title: note.title,
-                content: note.content,
-                subject: note.subject,
-                userProfilePic: note.user_profile_pic || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80",
-                authorDeviceId: note.author_device_id || '',
-                isPrivate: note.is_private,
-                isPinned: note.is_pinned,
-                likes: note.likes || 0,
-                likedBy: likedByArray,
-                views: note.views || 0,
-                viewedBy: note.viewed_by || [],
-                createdAtFormatted: note.created_at_formatted,
-                createdAt: note.created_at,
-                userLiked: isLiked
-            };
-        });
+        const formattedNotes = (data || []).map(note => ({
+            _id: note.id,
+            title: note.title,
+            content: note.content,
+            subject: note.subject,
+            userProfilePic: note.user_profile_pic,
+            authorDeviceId: note.author_device_id,
+            isPrivate: note.is_private,
+            isPinned: note.is_pinned,
+            likes: note.likes || 0,
+            views: note.views || 0,
+            userLiked: (note.liked_by || []).includes(deviceId),
+            createdAtFormatted: note.created_at_formatted,
+            createdAt: note.created_at
+        }));
 
         res.json({
             notes: formattedNotes,
-            hasMore: skip + formattedNotes.length < (totalNotes || 0),
-            totalNotes: totalNotes || 0,
-            currentPage: page
+            total: count || 0,
+            page: pageNum,
+            hasMore: (from + formattedNotes.length) < count
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// Feed Endpoint
-app.get('/api/feed', async (req, res) => {
+app.post('/api/notes', async (req, res) => {
     try {
-        const { data: files, error: filesError } = await supabase
-            .storage
-            .from(BUCKET_NAME)
-            .list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+        const { title, content, subject, userProfilePic, authorDeviceId, isPrivate, isPinned, createdAt } = req.body;
 
-        if (filesError) throw filesError;
+        const { data, error } = await supabase
+            .from('notes')
+            .insert([{
+                title: title || 'Untitled Note',
+                content: content || '',
+                subject: subject || 'General',
+                user_profile_pic: userProfilePic,
+                author_device_id: authorDeviceId,
+                is_private: !!isPrivate,
+                is_pinned: !!isPinned,
+                created_at_formatted: createdAt
+            }])
+            .select()
+            .single();
 
-        const mediaList = (files || []).map(file => {
-            const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(file.name);
-            return {
-                name: file.name,
-                url: data.publicUrl,
-                createdAt: file.created_at
-            };
-        });
-
-        res.json({ files: mediaList });
+        if (error) throw error;
+        res.status(201).json(data);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// Toggle Like
+app.put('/api/notes/:id', async (req, res) => {
+    try {
+        const { title, content, subject, userProfilePic, isPrivate, isPinned } = req.body;
+
+        const { data, error } = await supabase
+            .from('notes')
+            .update({
+                title,
+                content,
+                subject,
+                user_profile_pic: userProfilePic,
+                is_private: isPrivate,
+                is_pinned: isPinned
+            })
+            .eq('id', req.params.id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/notes/:id', async (req, res) => {
+    try {
+        const { error } = await supabase
+            .from('notes')
+            .delete()
+            .eq('id', req.params.id);
+
+        if (error) throw error;
+        res.json({ message: "Note deleted successfully", id: req.params.id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.put('/api/notes/:id/like', async (req, res) => {
     try {
         const { deviceId } = req.body;
-        if (!deviceId) return res.status(400).json({ error: 'Device ID required' });
+        if (!deviceId) return res.status(400).json({ error: "Device ID required" });
 
         const { data: note, error: fetchErr } = await supabase
             .from('notes')
-            .select('*')
+            .select('likes, liked_by')
             .eq('id', req.params.id)
             .single();
 
-        if (fetchErr || !note) return res.status(404).json({ error: "Note not found" });
+        if (fetchErr) throw fetchErr;
 
         let likedBy = note.liked_by || [];
         let likes = note.likes || 0;
-        const alreadyLiked = likedBy.includes(deviceId);
+        let isLiked = false;
 
-        if (alreadyLiked) {
+        if (likedBy.includes(deviceId)) {
             likedBy = likedBy.filter(id => id !== deviceId);
             likes = Math.max(0, likes - 1);
         } else {
             likedBy.push(deviceId);
             likes += 1;
+            isLiked = true;
         }
 
         const { data: updated, error: updateErr } = await supabase
             .from('notes')
-            .update({ liked_by: likedBy, likes: likes })
+            .update({ likes, liked_by: likedBy })
             .eq('id', req.params.id)
             .select()
             .single();
 
         if (updateErr) throw updateErr;
 
-        res.json({
-            likes: updated.likes,
-            userLiked: !alreadyLiked
-        });
+        res.json({ likes: updated.likes, userLiked: isLiked });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// Record View Count
 app.put('/api/notes/:id/view', async (req, res) => {
     try {
-        const { deviceId } = req.body;
-
         const { data: note, error: fetchErr } = await supabase
             .from('notes')
-            .select('*')
+            .select('views')
             .eq('id', req.params.id)
             .single();
 
-        if (fetchErr || !note) return res.status(404).json({ error: "Note not found" });
+        if (fetchErr) throw fetchErr;
 
-        let viewedBy = note.viewed_by || [];
-        if (deviceId && !viewedBy.includes(deviceId)) {
-            viewedBy.push(deviceId);
-        }
+        const views = (note.views || 0) + 1;
 
         const { data: updated, error: updateErr } = await supabase
             .from('notes')
-            .update({ views: (note.views || 0) + 1, viewed_by: viewedBy })
+            .update({ views })
             .eq('id', req.params.id)
             .select()
             .single();
@@ -336,160 +425,6 @@ app.put('/api/notes/:id/view', async (req, res) => {
     }
 });
 
-// Create Note
-app.post('/api/notes', async (req, res) => {
-    try {
-        const { title, content, subject, userProfilePic, authorDeviceId, isPrivate, isPinned, createdAt } = req.body;
-        const { data, error } = await supabase
-            .from('notes')
-            .insert([{
-                title: title || 'Untitled Note',
-                content: content || '',
-                subject: subject || 'General',
-                user_profile_pic: userProfilePic || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80',
-                author_device_id: authorDeviceId || '',
-                is_private: isPrivate || false,
-                is_pinned: isPinned || false,
-                created_at_formatted: createdAt || new Date().toLocaleString()
-            }])
-            .select()
-            .single();
-
-        if (error) throw error;
-        res.status(201).json({ ...data, _id: data.id });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
-
-// Update Note
-app.put('/api/notes/:id', async (req, res) => {
-    try {
-        const { data: note, error: fetchErr } = await supabase
-            .from('notes')
-            .select('*')
-            .eq('id', req.params.id)
-            .single();
-
-        if (fetchErr || !note) return res.status(404).json({ error: "Note not found" });
-
-        if (note.is_pinned) {
-            return res.status(403).json({ error: "Pinned notes are locked and cannot be edited." });
-        }
-
-        const updateData = {};
-        if (req.body.title !== undefined) updateData.title = req.body.title;
-        if (req.body.content !== undefined) updateData.content = req.body.content;
-        if (req.body.subject !== undefined) updateData.subject = req.body.subject;
-        if (req.body.userProfilePic !== undefined) updateData.user_profile_pic = req.body.userProfilePic;
-        if (req.body.isPrivate !== undefined) updateData.is_private = req.body.isPrivate;
-        if (req.body.isPinned !== undefined) updateData.is_pinned = req.body.isPinned;
-
-        const { data: updated, error: updateErr } = await supabase
-            .from('notes')
-            .update(updateData)
-            .eq('id', req.params.id)
-            .select()
-            .single();
-
-        if (updateErr) throw updateErr;
-        res.json({ ...updated, _id: updated.id });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Delete Note
-app.delete('/api/notes/:id', async (req, res) => {
-    try {
-        const { deviceId } = req.query;
-        if (!deviceId) return res.status(400).json({ error: "Device ID required for deletion" });
-
-        const { data: note, error: fetchErr } = await supabase
-            .from('notes')
-            .select('*')
-            .eq('id', req.params.id)
-            .single();
-
-        if (fetchErr || !note) return res.status(404).json({ error: "Note not found" });
-
-        let deletedFor = note.deleted_for || [];
-        if (!deletedFor.includes(deviceId)) {
-            deletedFor.push(deviceId);
-            await supabase
-                .from('notes')
-                .update({ deleted_for: deletedFor })
-                .eq('id', req.params.id);
-        }
-
-        res.json({ message: "Note deleted for current user", id: req.params.id });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// 4. File Upload
-app.post('/api/upload', (req, res) => {
-    upload.array('media', 10)(req, res, async (err) => {
-        if (err) {
-            console.error("Multer Upload Error:", err);
-            return res.status(500).json({ error: err.message || 'Upload failed' });
-        }
-
-        if (!req.files || req.files.length === 0) {
-            return res.status(400).json({ error: 'No files uploaded' });
-        }
-
-        try {
-            const uploadedFiles = [];
-
-            for (const file of req.files) {
-                const cleanFileName = path.parse(file.originalname).name.replace(/[^a-zA-Z0-9]/g, "_");
-                const ext = path.extname(file.originalname);
-                const filePath = `uploads/${Date.now()}_${cleanFileName}${ext}`;
-
-                const { data, error: uploadErr } = await supabase
-                    .storage
-                    .from(BUCKET_NAME)
-                    .upload(filePath, file.buffer, {
-                        contentType: file.mimetype,
-                        upsert: true
-                    });
-
-                if (uploadErr) {
-                    console.error("Supabase Storage Error Details:", uploadErr);
-                    throw uploadErr;
-                }
-
-                const { data: urlData } = supabase
-                    .storage
-                    .from(BUCKET_NAME)
-                    .getPublicUrl(filePath);
-
-                uploadedFiles.push({
-                    url: urlData.publicUrl,
-                    fileType: file.mimetype,
-                    filename: file.originalname,
-                    path: filePath
-                });
-            }
-
-            res.json({
-                message: 'Files uploaded to Supabase Storage successfully',
-                files: uploadedFiles,
-                url: uploadedFiles[0].url,
-                fileType: uploadedFiles[0].fileType,
-                filename: uploadedFiles[0].filename
-            });
-        } catch (error) {
-            console.error("Supabase Storage Upload Error:", error);
-            res.status(500).json({ error: error.message || 'Supabase upload failed' });
-        }
-    });
-});
-
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
