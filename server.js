@@ -36,21 +36,30 @@ app.use(express.static(__dirname));
 
 // ===== API ROUTES =====
 
-// 1. Profile APIs
+// 1. Profile APIs (Device ID Specific for Multi-user Support)
 app.get('/api/profile', async (req, res) => {
     try {
+        const { deviceId } = req.query;
+        if (!deviceId) {
+            return res.status(400).json({ error: "Device ID required" });
+        }
+
         const { data, error } = await supabase
             .from('profiles')
             .select('*')
-            .limit(1)
+            .eq('device_id', deviceId)
             .maybeSingle();
 
-        if (error) throw error;
+        if (error && error.code !== 'PGRST116') throw error;
         
         if (!data) {
             const { data: newProfile, error: createError } = await supabase
                 .from('profiles')
-                .insert([{ name: "Note Author" }])
+                .insert([{ 
+                    device_id: deviceId,
+                    name: "Note Author", 
+                    img: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80" 
+                }])
                 .select()
                 .single();
             if (createError) throw createError;
@@ -64,15 +73,21 @@ app.get('/api/profile', async (req, res) => {
 
 app.put('/api/profile', async (req, res) => {
     try {
-        const { name, img } = req.body;
-        const { data: existing } = await supabase.from('profiles').select('id').limit(1).maybeSingle();
+        const { deviceId, name, img } = req.body;
+        if (!deviceId) return res.status(400).json({ error: "Device ID required" });
+
+        const { data: existing } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('device_id', deviceId)
+            .maybeSingle();
 
         let result;
-        if (existing) {
-            const updatePayload = {};
-            if (name !== undefined) updatePayload.name = name;
-            if (img !== undefined) updatePayload.img = img;
+        const updatePayload = { device_id: deviceId };
+        if (name !== undefined) updatePayload.name = name;
+        if (img !== undefined) updatePayload.img = img;
 
+        if (existing) {
             const { data, error } = await supabase
                 .from('profiles')
                 .update(updatePayload)
@@ -84,7 +99,11 @@ app.put('/api/profile', async (req, res) => {
         } else {
             const { data, error } = await supabase
                 .from('profiles')
-                .insert([{ name: name || "Note Author", img }])
+                .insert([{ 
+                    ...updatePayload, 
+                    name: name || "Note Author",
+                    img: img || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80"
+                }])
                 .select()
                 .single();
             if (error) throw error;
@@ -115,10 +134,23 @@ app.get('/api/subjects', async (req, res) => {
 app.post('/api/subjects', async (req, res) => {
     try {
         const { name, img } = req.body;
+        if (!name) return res.status(400).json({ error: "Subject name is required" });
+
+        // Check if already exists to prevent duplicate save
+        const { data: existing } = await supabase
+            .from('subjects')
+            .select('id')
+            .ilike('name', name)
+            .maybeSingle();
+
+        if (existing) {
+            return res.status(400).json({ error: "Circle logo with this name already exists!" });
+        }
+
         const { data, error } = await supabase
             .from('subjects')
             .insert([{
-                name: name || "Custom Subject",
+                name: name,
                 img: img || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=120&120&q=80"
             }])
             .select()
@@ -186,6 +218,8 @@ app.get('/api/notes', async (req, res) => {
                 title: note.title,
                 content: note.content,
                 subject: note.subject,
+                userProfilePic: note.user_profile_pic || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80",
+                authorDeviceId: note.author_device_id || '',
                 isPrivate: note.is_private,
                 isPinned: note.is_pinned,
                 likes: note.likes || 0,
@@ -314,13 +348,15 @@ app.put('/api/notes/:id/view', async (req, res) => {
 // Create Note
 app.post('/api/notes', async (req, res) => {
     try {
-        const { title, content, subject, isPrivate, isPinned, createdAt } = req.body;
+        const { title, content, subject, userProfilePic, authorDeviceId, isPrivate, isPinned, createdAt } = req.body;
         const { data, error } = await supabase
             .from('notes')
             .insert([{
                 title: title || 'Untitled Note',
                 content: content || '',
                 subject: subject || 'General',
+                user_profile_pic: userProfilePic || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80',
+                author_device_id: authorDeviceId || '',
                 is_private: isPrivate || false,
                 is_pinned: isPinned || false,
                 created_at_formatted: createdAt || new Date().toLocaleString()
@@ -354,6 +390,7 @@ app.put('/api/notes/:id', async (req, res) => {
         if (req.body.title !== undefined) updateData.title = req.body.title;
         if (req.body.content !== undefined) updateData.content = req.body.content;
         if (req.body.subject !== undefined) updateData.subject = req.body.subject;
+        if (req.body.userProfilePic !== undefined) updateData.user_profile_pic = req.body.userProfilePic;
         if (req.body.isPrivate !== undefined) updateData.is_private = req.body.isPrivate;
         if (req.body.isPinned !== undefined) updateData.is_pinned = req.body.isPinned;
 
