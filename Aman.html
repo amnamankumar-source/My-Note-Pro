@@ -31,6 +31,30 @@
           opacity: 0 !important;
         }
 
+        body, .content, .post-body, .container, .main-wrapper, .page_body, .outer-container {
+          margin: 0 !important;
+          padding: 0 !important;
+          top: -10px !important;
+          width: 100% !important;
+          max-width: 100% !important;
+        }
+
+        #footer, .footer, #footer-wrapper, .site-footer {
+          background: #000000 !important;
+          height: 1px !important;
+          min-height: 1px !important;
+          overflow: hidden !important;
+          opacity: 0.01 !important;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+        #footer *, .footer *, #footer-wrapper *, .site-footer * {
+          color: #000000 !important;
+          font-size: 0px !important;
+          line-height: 0 !important;
+          pointer-events: none !important;
+        }
+
         /* Variables */
         :root {
             --bg-color: #f4f7f6 !important; 
@@ -87,6 +111,9 @@
         .logo-area h1.app-title { display: block !important; font-size: 20px; font-weight: 700; color: var(--text-main) !important; margin: 0; white-space: nowrap; }
         .header-actions { display: flex !important; align-items: center; gap: 12px; flex-wrap: wrap; }
 
+        .auth-btn { background: #4f46e5 !important; color: white !important; border: none; padding: 8px 16px; border-radius: 9999px; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+        .auth-btn.logout { background: rgba(229, 62, 62, 0.15) !important; color: #e53e3e !important; }
+
         .theme-toggle-btn { background: var(--surface-color) !important; border: 1.5px solid var(--border-color) !important; color: var(--text-main) !important; width: 40px !important; height: 40px !important; border-radius: 50% !important; font-size: 16px !important; cursor: pointer !important; flex-shrink: 0; }
         .live-clock { text-align: right; background: var(--surface-color) !important; padding: 8px 16px; border-radius: 9999px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); }
         .live-clock .time { font-size: 16px; font-weight: 600; color: #4f46e5; line-height: 1.2; }
@@ -136,8 +163,8 @@
         .note-author-tag { font-size: 11px; font-weight: 600; color: #4f46e5; display: inline-flex !important; align-items: center; gap: 6px; background: rgba(79, 70, 229, 0.08); padding: 3px 10px; border-radius: 9999px; width: fit-content; cursor: pointer; }
         .note-card h3.clickable-title { font-size: 17px; color: var(--text-main) !important; font-weight: 600; line-height: 1.3; cursor: pointer; margin: 0; word-break: break-word; }
         .note-content-container { flex: 1; display: flex !important; flex-direction: column; cursor: pointer; }
-        .note-body-html { font-size: 14px; line-height: 1.7; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-height: 110px; word-break: break-word; color: var(--text-muted) !important; }
-        .note-body-html img, .note-body-html video { max-width: 100%; max-height: 100px; object-fit: cover; border-radius: 6px; }
+        .note-body-html { font-size: 14px; line-height: 1.7; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-height: 230px; word-break: break-word; color: var(--text-muted) !important; }
+        .note-body-html img, .note-body-html video { max-width: 100%; max-height: 100%; object-fit: cover; border-radius: 6px; }
         .pdf-embed-box, .file-download-box { width: 100%; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; background: var(--editor-toolbar-bg); margin: 8px 0; display: flex; align-items: center; justify-content: space-between; }
 
         .note-footer { margin-top: auto; padding-top: 15px; border-top: 1px solid var(--border-color); display: flex !important; justify-content: space-between; align-items: center; }
@@ -151,7 +178,7 @@
 
         .loading-spinner { text-align: center; padding: 20px; font-weight: 600; color: #4f46e5; grid-column: 1/-1; }
 
-        /* Upload Progress Bar */
+        /* Modals & Upload Progress */
         .upload-progress-wrapper { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); z-index: 99999; display: none; flex-direction: column; align-items: center; justify-content: center; color: white; gap: 15px; }
         .upload-progress-wrapper.active { display: flex !important; }
         .upload-progress-box { width: 90%; max-width: 400px; background: #1e293b; padding: 25px; border-radius: 20px; border: 1px solid #334155; box-shadow: 0 20px 40px rgba(0,0,0,0.5); text-align: center; display: flex; flex-direction: column; gap: 12px; }
@@ -159,7 +186,6 @@
         .progress-bar-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #4f46e5, #d53f8c); border-radius: 9999px; transition: width 0.3s ease; }
         .progress-text { font-size: 14px; font-weight: 600; color: #f8fafc; }
 
-        /* Vertical Shorts Status Player */
         .status-player-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000000; z-index: 100000; display: none; flex-direction: column; overflow: hidden; }
         .status-player-overlay.active { display: flex !important; }
         .status-shorts-container { width: 100%; height: 100%; display: flex; flex-direction: column; overflow-y: scroll; scroll-snap-type: y mandatory; scrollbar-width: none; }
@@ -167,8 +193,6 @@
         
         .status-slide-item { width: 100vw; height: 100vh; scroll-snap-align: start; scroll-snap-stop: always; position: relative; display: flex; align-items: center; justify-content: center; background: #000; flex-shrink: 0; }
         .status-slide-content { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
-        
-        /* Full Frame No Margin Media Styles */
         .status-slide-content img, .status-slide-content video { width: 100%; height: 100%; object-fit: contain; background: #000; }
         .status-slide-content iframe { width: 100%; height: 100%; border: none !important; margin: 0 !important; padding: 0 !important; }
         
@@ -180,17 +204,11 @@
         .status-post-time { font-size: 11px; color: rgba(255,255,255,0.7); }
         .close-status-btn { background: rgba(255,255,255,0.2); color: white; border: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; }
 
-        .status-bottom-text { position: absolute; bottom: 30px; left: 20px; right: 20px; z-index: 10; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.15); color: white; max-height: 35vh; overflow-y: auto; }
-        .status-bottom-text h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; color: #38bdf8; }
-        .status-bottom-text div { font-size: 13px; line-height: 1.5; color: #e2e8f0; word-break: break-word; }
-
-        /* Modals */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(5px); z-index: 1000; display: flex !important; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
         .modal-overlay.active { opacity: 1 !important; pointer-events: auto !important; }
         .modal-content.full-screen { width: 100%; height: 100%; max-width: 100vw; max-height: 100vh; background: var(--surface-color) !important; display: flex !important; flex-direction: column; overflow: hidden; }
 
         .modal-header { padding: 12px 18px; border-bottom: 1px solid var(--border-color); display: flex !important; flex-direction: row !important; justify-content: space-between !important; align-items: center !important; background: var(--surface-color) !important; gap: 16px; flex-shrink: 0; }
-        
         .modal-header .header-left-group { flex: 1 1 auto !important; min-width: 0 !important; display: flex !important; flex-direction: column !important; gap: 4px; }
         .modal-header h2 { font-size: 16px; font-weight: 600; color: var(--text-main) !important; display: flex !important; align-items: flex-start; gap: 8px; margin: 0; white-space: normal !important; word-break: break-word !important; overflow-wrap: anywhere !important; line-height: 1.4; }
         .modal-header h2 i { margin-top: 3px; flex-shrink: 0; }
@@ -232,14 +250,12 @@
         .rich-editor-area img, .rich-editor-area video { max-width: 100%; height: auto; border-radius: 8px; margin: 10px 0; display: block; }
         .rich-editor-area iframe { width: 100%; height: 400px; border: 1px solid var(--border-color); border-radius: 8px; margin: 10px 0; }
 
-        .media-slider-container { display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 15px; overflow-x: auto !important; overflow-y: hidden !important; padding: 10px 5px !important; margin: 10px 0 !important; width: 100% !important; scrollbar-width: thin; -webkit-overflow-scrolling: touch; border-radius: 12px; background: rgba(0,0,0,0.02); }
         .media-slider-card { flex: 0 0 auto !important; border-radius: 14px !important; overflow: hidden; border: 1px solid var(--border-color); background: #000; position: relative; box-shadow: var(--shadow-md); }
-        .media-slider-card.yt-card { width: 280px !important; height: 480px !important; max-height: 65vh !important; border-radius: 16px !important; }
-        .media-slider-card.drive-card { width: 320px !important; height: 420px !important; background: var(--surface-color) !important; display: flex !important; flex-direction: column !important; }
+        .media-slider-card.yt-card { width: 100% !important; height: 100% !important; max-height: 65vh !important; border-radius: 16px !important; }
+        .media-slider-card.drive-card { width: 100% !important; height: 100% !important; background: var(--surface-color) !important; display: flex !important; flex-direction: column !important;}
         .media-slider-card iframe { width: 100%; height: 100%; border: none; }
 
-        /* Code Preview Frame styling */
-        .code-embed-frame { width: 100%; height: 350px; border: 1px solid var(--border-color); border-radius: 12px; background: #ffffff; margin: 12px 0; box-shadow: var(--shadow-sm); overflow: hidden; }
+        .code-embed-frame { width: 100%; height: 380px; border: 1px solid var(--border-color); border-radius: 12px; background: #ffffff; margin: 12px 0; box-shadow: var(--shadow-sm); overflow: hidden; }
 
         .view-note-title { font-size: 22px; font-weight: 700; color: var(--text-main) !important; margin-bottom: 12px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; word-break: break-word; }
         .view-note-body { font-size: 15px; line-height: 1.8; color: var(--text-main) !important; word-break: break-word; }
@@ -260,10 +276,13 @@
         .preview-img-box { width: 60px; height: 60px; border-radius: 50%; border: 2px dashed var(--border-color); display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 5px auto; }
         .preview-img-box img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Code Editor Modal Specific Styles */
-        .code-modal-card { background: var(--surface-color) !important; width: 95%; max-width: 850px; height: 85vh; border-radius: 20px; padding: 20px; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 12px; z-index: 2000; }
+        .code-modal-card { background: var(--surface-color) !important; width: 95%; max-width: 950px; height: 90vh; border-radius: 20px; padding: 20px; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 12px; z-index: 2000; }
         .code-modal-header { display: flex; justify-content: space-between; align-items: center; width: 100%; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
-        .code-textarea { width: 100%; flex: 1; font-family: 'Roboto Mono', monospace; font-size: 13px; background: #0f172a; color: #38bdf8; border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; outline: none; resize: none; line-height: 1.5; }
+        .code-modal-split-body { flex: 1; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+        .code-textarea { width: 100%; flex: 1; min-height: 180px; font-family: 'Roboto Mono', monospace; font-size: 13px; background: #0f172a; color: #38bdf8; border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; outline: none; resize: none; line-height: 1.5; }
+        .live-preview-box { width: 100%; flex: 1.2; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: #ffffff; display: flex; flex-direction: column; }
+        .live-preview-header { background: var(--editor-toolbar-bg); padding: 6px 12px; font-size: 11px; font-weight: 700; color: var(--text-muted); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 6px; }
+        .live-preview-iframe { width: 100%; flex: 1; border: none; background: #ffffff; }
 
         @media (max-width: 768px) {
             .btn-add { display: none !important; } 
@@ -290,14 +309,16 @@
             </div>
             
             <div class="profile-section">
-                <div class="profile-img-wrapper" onclick="document.getElementById('profile-img-upload').click()" title="Change Profile Picture">
+                <div class="profile-img-wrapper" onclick="triggerProfileImgUpload()" title="Change Profile Picture">
                     <img alt="Profile" id="profile-img" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80" />
                     <input accept="image/*" id="profile-img-upload" onchange="updateProfileImg(event)" style="display: none;" type="file" />
                 </div>
-                <div class="profile-name" contenteditable="true" id="profile-name" onblur="saveProfileName()" title="Click to edit name">Note Author</div>
+                <div class="profile-name" contenteditable="true" id="profile-name" onblur="saveProfileName()" title="Click to edit name">Guest User</div>
             </div>
 
             <div class="header-actions">
+                <button class="auth-btn" id="login-nav-btn" onclick="openLoginModal()"><i class="fab fa-google"></i> Gmail Login</button>
+                <button class="auth-btn logout" id="logout-nav-btn" onclick="logoutUser()" style="display:none;"><i class="fas fa-sign-out-alt"></i> Logout</button>
                 <button class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
                     <i class="fas fa-moon" id="theme-icon"></i>
                 </button>
@@ -324,7 +345,7 @@
                 </div>
             </div>
 
-            <button class="btn-add" onclick="openModal()">
+            <button class="btn-add" onclick="protectedAction(openModal)">
                 <i class="fas fa-pen-nib"></i> Write Note
             </button>
         </div>
@@ -338,7 +359,7 @@
                 <span>All Notes</span>
             </div>
 
-            <div class="subject-circle-item" onclick="openAddSubjectModal()" title="Add Custom Circle Logo">
+            <div class="subject-circle-item" onclick="protectedAction(openAddSubjectModal)" title="Add Custom Circle Logo">
                 <div class="subject-ring add-subject-ring">
                     <i class="fas fa-plus"></i>
                 </div>
@@ -351,22 +372,49 @@
         <!-- Notes Grid Area -->
         <div class="notes-grid" id="notes-container"></div>
         
-        <!-- Infinite Scroll Loader -->
         <div id="loading-spinner" class="loading-spinner" style="display: none;">
             <i class="fas fa-spinner fa-spin"></i> Loading more notes...
         </div>
     </div>
 
     <!-- Floating Action Button -->
-    <button class="fab-add-btn" id="fab-add-btn" onclick="openModal()" title="Add New Note">
+    <button class="fab-add-btn" id="fab-add-btn" onclick="protectedAction(openModal)" title="Add New Note">
         <i class="fas fa-plus"></i>
     </button>
+
+    <!-- GMAIL + OTP AUTHENTICATION MODAL -->
+    <div class="modal-overlay" id="login-modal">
+        <div class="simple-modal-card">
+            <h3 style="display:flex; align-items:center; gap:8px;"><i class="fab fa-google" style="color:#ea4335;"></i> Login via Gmail OTP</h3>
+            <p style="font-size: 12px; color: var(--text-muted);">Apni Gmail ID se verify karke Notes add/edit karein.</p>
+            
+            <div id="email-step-box">
+                <div class="input-group">
+                    <label>Gmail / Email Address:</label>
+                    <input type="email" id="user-email-input" placeholder="example@gmail.com">
+                </div>
+                <button class="header-save-btn" style="width: 100%; justify-content: center; margin-top: 10px; background: #ea4335 !important;" onclick="sendOTP()"><i class="fas fa-paper-plane"></i> Send OTP to Gmail</button>
+            </div>
+
+            <div id="otp-step-box" style="display: none;">
+                <div class="input-group">
+                    <label>Enter 6-Digit OTP:</label>
+                    <input type="text" id="user-otp-input" placeholder="Enter OTP received in Email" maxlength="6">
+                </div>
+                <button class="header-save-btn" style="width: 100%; justify-content: center; margin-top: 10px;" onclick="verifyOTP()"><i class="fas fa-check-circle"></i> Verify & Login</button>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 5px;">
+                <button class="close-modal-btn" onclick="closeLoginModal()">Close</button>
+            </div>
+        </div>
+    </div>
 
     <!-- 100% UPLOAD PROGRESS BAR MODAL -->
     <div class="upload-progress-wrapper" id="upload-progress-modal">
         <div class="upload-progress-box">
             <i class="fas fa-cloud-upload-alt" style="font-size: 38px; color: #4f46e5;"></i>
-            <div class="progress-text" id="progress-text-info">Uploading to Supabase Storage...</div>
+            <div class="progress-text" id="progress-text-info">Uploading to Storage...</div>
             <div class="progress-bar-bg">
                 <div class="progress-bar-fill" id="progress-bar-fill"></div>
             </div>
@@ -388,11 +436,6 @@
         </div>
 
         <div class="status-shorts-container" id="status-shorts-container"></div>
-
-        <div class="status-bottom-text" id="status-bottom-text" style="display:none;">
-            <h3 id="status-bottom-title">Title</h3>
-            <div id="status-bottom-content"></div>
-        </div>
     </div>
 
     <!-- ADD CUSTOM CIRCLE LOGO MODAL -->
@@ -462,10 +505,8 @@
                     <input class="editor-title" id="note-title" placeholder="Note Title..." type="text">
                 </div>
 
-                <!-- TOOLBAR SLIDER -->
                 <div class="editor-toolbar">
                     <button onclick="execCmd('bold')" title="Bold"><b>B</b></button>
-                    <!-- FEATURE UPDATE 6: BULLET POINTS & NUMBERED LIST BUTTONS ADDED AFTER B -->
                     <button onclick="execCmd('insertUnorderedList')" title="Bullet Points List"><i class="fas fa-list-ul"></i> List</button>
                     <button onclick="execCmd('insertOrderedList')" title="Numbered List (1, 2, 3...)"><i class="fas fa-list-ol"></i> 1,2..</button>
 
@@ -509,7 +550,6 @@
                         </div>
                     </div>
 
-                    <!-- SUPABASE MULTIPLE MEDIA & FILE UPLOAD BUTTON SECTION -->
                     <div style="position:relative; flex-shrink:0;">
                         <button onclick="togglePopup('media-popup', this)" title="Insert Media & Documents" style="color: #4f46e5 !important; font-weight: 600;">
                             <i class="fas fa-paperclip"></i> Media & Files
@@ -535,7 +575,6 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Unified Multiple File Input -->
                     <input type="file" id="media-file-input" multiple style="display:none;" onchange="handleMediaFilesSelect(event)">
 
                     <button onclick="insertUrlPinLink()" title="Attach URL link" style="color:#0284c7 !important; font-weight:600;">
@@ -566,12 +605,12 @@
         </div>
     </div>
 
-    <!-- CODE EDITOR MODAL -->
+    <!-- CODE EDITOR MODAL WITH REAL-TIME PREVIEW -->
     <div class="modal-overlay" id="code-editor-modal" style="z-index: 3000;">
         <div class="code-modal-card">
             <div class="code-modal-header">
                 <button class="header-save-btn" onclick="saveCodeAndInsertPreview()">
-                    <i class="fas fa-play"></i> Save & Insert Preview Frame
+                    <i class="fas fa-play"></i> Save & Insert Frame Preview
                 </button>
 
                 <h3 style="font-size: 15px; font-weight: 600; display:flex; align-items:center; gap:8px;">
@@ -587,7 +626,16 @@
                 </div>
             </div>
 
-            <textarea id="raw-code-input" class="code-textarea" placeholder="Paste your HTML, CSS, & JavaScript complete code here..."></textarea>
+            <div class="code-modal-split-body">
+                <textarea id="raw-code-input" class="code-textarea" oninput="updateLiveCodePreview()" placeholder="Paste your HTML, CSS, & JavaScript complete code here..."></textarea>
+                
+                <div class="live-preview-box">
+                    <div class="live-preview-header">
+                        <i class="fas fa-desktop" style="color:#4f46e5;"></i> Live Output Interactive Preview
+                    </div>
+                    <iframe id="live-code-preview-frame" class="live-preview-iframe" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation"></iframe>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -621,9 +669,12 @@
         let isLoadingNotes = false;
         let isSavingNote = false;
 
+        let authToken = localStorage.getItem('auth_token') || null;
+        let currentUser = JSON.parse(localStorage.getItem('user_info') || 'null');
+
         let currentUserProfile = {
-            name: 'Note Author',
-            img: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80'
+            name: currentUser ? (currentUser.name || currentUser.email) : 'Guest User',
+            img: currentUser ? (currentUser.img || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80') : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80'
         };
 
         let currentModalIsPrivate = true;
@@ -635,7 +686,7 @@
             updateClock();
             setInterval(updateClock, 1000);
             
-            fetchProfileFromBackend();
+            checkAuthUI();
             fetchSubjectsFromBackend();
             fetchNotesFromBackend(true);
 
@@ -647,6 +698,136 @@
                 }
             });
         });
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast show`;
+            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${message}`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400);
+            }, 3000);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        // AUTHENTICATION UI HELPER
+        function checkAuthUI() {
+            if (authToken && currentUser) {
+                document.getElementById('login-nav-btn').style.display = 'none';
+                document.getElementById('logout-nav-btn').style.display = 'flex';
+                document.getElementById('profile-name').innerText = currentUser.name || currentUser.email;
+                if(currentUser.img) document.getElementById('profile-img').src = currentUser.img;
+            } else {
+                document.getElementById('login-nav-btn').style.display = 'flex';
+                document.getElementById('logout-nav-btn').style.display = 'none';
+                document.getElementById('profile-name').innerText = 'Guest User';
+            }
+        }
+
+        function protectedAction(callback, ...args) {
+            if (!authToken) {
+                showToast('Please Login via Gmail OTP first to perform this action!', 'error');
+                openLoginModal();
+                return;
+            }
+            callback(...args);
+        }
+
+        // GMAIL & OTP AUTH SYSTEM
+        function openLoginModal() {
+            document.getElementById('login-modal').classList.add('active');
+            document.getElementById('email-step-box').style.display = 'block';
+            document.getElementById('otp-step-box').style.display = 'none';
+        }
+
+        function closeLoginModal() {
+            document.getElementById('login-modal').classList.remove('active');
+        }
+
+        async function sendOTP() {
+            let email = document.getElementById('user-email-input').value.trim();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            
+            if (!email || !emailRegex.test(email)) {
+                showToast('Please enter a valid Gmail / Email address!', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/auth/send-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+
+                if (res.ok) {
+                    showToast('OTP sent successfully to ' + email, 'success');
+                    document.getElementById('email-step-box').style.display = 'none';
+                    document.getElementById('otp-step-box').style.display = 'block';
+                } else {
+                    const data = await res.json();
+                    showToast(data.error || 'Failed to send OTP to Gmail.', 'error');
+                }
+            } catch (err) {
+                showToast('Server error sending OTP', 'error');
+            }
+        }
+
+        async function verifyOTP() {
+            let email = document.getElementById('user-email-input').value.trim();
+            const otp = document.getElementById('user-otp-input').value.trim();
+
+            if (!otp || otp.length < 4) {
+                showToast('Please enter valid OTP!', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, otp })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    authToken = data.token;
+                    currentUser = data.user;
+
+                    localStorage.setItem('auth_token', authToken);
+                    localStorage.setItem('user_info', JSON.stringify(currentUser));
+
+                    currentUserProfile.name = currentUser.name || currentUser.email;
+                    currentUserProfile.img = currentUser.img || currentUserProfile.img;
+
+                    checkAuthUI();
+                    closeLoginModal();
+                    showToast('Gmail Login Successful!', 'success');
+                    fetchNotesFromBackend(true);
+                } else {
+                    const data = await res.json();
+                    showToast(data.error || 'Invalid OTP!', 'error');
+                }
+            } catch (err) {
+                showToast('Verification failed', 'error');
+            }
+        }
+
+        function logoutUser() {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_info');
+            authToken = null;
+            currentUser = null;
+            checkAuthUI();
+            showToast('Logged Out Successfully!', 'info');
+            fetchNotesFromBackend(true);
+        }
 
         function updateClock() {
             const now = new Date();
@@ -732,7 +913,10 @@
                 if (selectedSubjectFilter) url += `&subject=${encodeURIComponent(selectedSubjectFilter)}`;
                 if (currentDateFilter) url += `&date=${encodeURIComponent(currentDateFilter)}`;
 
-                const res = await fetch(url);
+                const res = await fetch(url, {
+                    headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+                });
+
                 if (res.ok) {
                     const data = await res.json();
                     
@@ -754,7 +938,7 @@
             const container = document.getElementById('notes-container');
             container.innerHTML = '';
 
-            if(notes.length === 0) {
+            if(!notes || notes.length === 0) {
                 container.innerHTML = `
                     <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px;">
                         <i class="fas fa-folder-open" style="font-size: 40px; opacity: 0.3;"></i>
@@ -769,9 +953,9 @@
                 const noteId = note._id;
                 const likesCount = note.likes || 0;
                 const isLiked = note.userLiked || false;
-
-                // Feature Update 3: Note Circle Logo me User Profile Picture
                 const noteUserPic = note.userProfilePic || currentUserProfile.img;
+
+                const isAuthor = currentUser && (note.authorUserId === currentUser.id || note.authorDeviceId === USER_DEVICE_ID);
 
                 card.innerHTML = `
                     <div class="note-top-meta">
@@ -797,12 +981,16 @@
                     <div class="note-footer">
                         <div class="note-date"><i class="far fa-clock"></i> ${note.createdAtFormatted || note.createdAt}</div>
                         <div class="note-actions">
-                            <button class="action-btn btn-edit ${note.isPinned ? 'disabled' : ''}" 
-                                onclick="${note.isPinned ? "showToast('Pinned notes are locked and cannot be edited!', 'error')" : `openModal('${noteId}')`}" 
-                                title="${note.isPinned ? 'Pinned Note (Locked)' : 'Edit Note'}">
-                                <i class="fas ${note.isPinned ? 'fa-lock' : 'fa-pen'}"></i>
-                            </button>
-                            <button class="action-btn btn-delete" onclick="deleteNote('${noteId}')" title="Delete Note"><i class="fas fa-trash"></i></button>
+                            ${authToken && isAuthor ? `
+                                <button class="action-btn btn-edit ${note.isPinned ? 'disabled' : ''}" 
+                                    onclick="${note.isPinned ? "showToast('Pinned notes are locked!', 'error')" : `openModal('${noteId}')`}" 
+                                    title="Edit Note">
+                                    <i class="fas ${note.isPinned ? 'fa-lock' : 'fa-pen'}"></i>
+                                </button>
+                                <button class="action-btn btn-delete" onclick="deleteNote('${noteId}')" title="Delete Note"><i class="fas fa-trash"></i></button>
+                            ` : `
+                                <span style="font-size:11px; color:var(--text-muted);"><i class="fas fa-eye"></i> Read-only</span>
+                            `}
                         </div>
                     </div>
                 `;
@@ -810,88 +998,97 @@
             });
         }
 
-        // ===== FEATURE UPDATE 5: VERTICAL SHORTS STATUS PLAYER SYSTEM =====
+        const IFRAME_LINK_HANDLER_SCRIPT = `
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    document.querySelectorAll('a').forEach(function(a) {
+                        a.setAttribute('target', '_blank');
+                        a.setAttribute('rel', 'noopener noreferrer');
+                        a.addEventListener('click', function(e) {
+                            var href = this.getAttribute('href');
+                            if(href && !href.startsWith('javascript:')) {
+                                e.preventDefault();
+                                window.open(href, '_blank');
+                            }
+                        });
+                    });
+                });
+            <\/script>
+        `;
+
         function openStatusPlayer(startNoteId) {
             const overlay = document.getElementById('status-player-overlay');
             const container = document.getElementById('status-shorts-container');
             container.innerHTML = '';
 
-            const activeNote = notes.find(n => n._id === startNoteId) || notes[0];
+            const activeNote = notes.find(n => n._id === startNoteId);
             if (!activeNote) return;
 
             document.getElementById('status-user-img').src = activeNote.userProfilePic || currentUserProfile.img;
             document.getElementById('status-user-name').innerText = activeNote.subject || 'Note Author';
             document.getElementById('status-post-time').innerText = activeNote.createdAtFormatted || activeNote.createdAt;
 
-            // Extract embeds / media from content or full content display
-            notes.forEach(note => {
-                const slide = document.createElement('div');
-                slide.className = 'status-slide-item';
+            const mediaItems = extractMediaItemsFromContent(activeNote.content, activeNote.title);
 
-                let processedContent = processMediaUrlsForStatus(note.content);
-
-                slide.innerHTML = `
-                    <div class="status-slide-content">
-                        ${processedContent}
-                    </div>
-                `;
-                container.appendChild(slide);
-            });
+            if (mediaItems.length === 0) {
+                container.innerHTML = `
+                    <div class="status-slide-item">
+                        <div style="color:white; font-size:18px; padding:30px; text-align:center; max-width:600px;">
+                            <h2 style="color:#38bdf8; margin-bottom:15px;">${escapeHtml(activeNote.title)}</h2>
+                            <div>${activeNote.content}</div>
+                        </div>
+                    </div>`;
+            } else {
+                mediaItems.forEach(itemHtml => {
+                    const slide = document.createElement('div');
+                    slide.className = 'status-slide-item';
+                    slide.innerHTML = `<div class="status-slide-content">${itemHtml}</div>`;
+                    container.appendChild(slide);
+                });
+            }
 
             overlay.classList.add('active');
+        }
 
-            // Scroll to the selected note slide
-            const selectedIndex = notes.findIndex(n => n._id === startNoteId);
-            if (selectedIndex > 0) {
-                const slideHeight = window.innerHeight;
-                container.scrollTop = selectedIndex * slideHeight;
-            }
+        function extractMediaItemsFromContent(content, title) {
+            if (!content) return [];
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+            const items = [];
+
+            const iframes = tempDiv.querySelectorAll('iframe');
+            iframes.forEach(iframe => {
+                const src = iframe.getAttribute('src');
+                const srcdoc = iframe.getAttribute('srcdoc');
+                if (src) {
+                    items.push(`<iframe src="${src}" allow="autoplay; encrypted-media" allowfullscreen style="width:100vw; height:100vh; border:none; background:#fff;"></iframe>`);
+                } else if (srcdoc) {
+                    items.push(`<iframe srcdoc="${escapeHtml(srcdoc)}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation" style="width:100vw; height:100vh; border:none; background:#fff;"></iframe>`);
+                }
+            });
+
+            const images = tempDiv.querySelectorAll('img');
+            images.forEach(img => {
+                const src = img.getAttribute('src');
+                if (src) {
+                    items.push(`<img src="${src}" style="width:100vw; height:100vh; object-fit:contain; background:#000;" />`);
+                }
+            });
+
+            const videos = tempDiv.querySelectorAll('video');
+            videos.forEach(video => {
+                const src = video.getAttribute('src') || (video.querySelector('source') ? video.querySelector('source').getAttribute('src') : '');
+                if (src) {
+                    items.push(`<video src="${src}" controls autoplay style="width:100vw; height:100vh; object-fit:contain; background:#000;"></video>`);
+                }
+            });
+
+            return items;
         }
 
         function closeStatusPlayer() {
             document.getElementById('status-player-overlay').classList.remove('active');
             document.getElementById('status-shorts-container').innerHTML = '';
-        }
-
-        // URL Universal Embed Converter for Full Frame Status Player (Supports File, Live, Post, Shorts, Share, Embed, Drive, PDF)
-        function processMediaUrlsForStatus(content) {
-            if (!content) return `<div style="color:white; font-size:20px; padding:30px; text-align:center;">Empty Post Note</div>`;
-
-            // Helper to convert URLs in note to full frame embedded iframes
-            let tempDiv = document.createElement('div');
-            tempDiv.innerHTML = content;
-
-            // Transform YouTube URLs (live, shorts, share, file, embed, post)
-            const ytRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]+)/gi;
-            
-            // Transform Google Drive URLs (file, live, post, embed, pdf, share)
-            const driveRegex = /https?:\/\/drive\.google\.com\/(?:file\/d\/|open\?id=|file\/d\/[a-zA-Z0-9_-]+\/preview|file\/d\/[a-zA-Z0-9_-]+\/view)([a-zA-Z0-9_-]+)/gi;
-
-            let ytMatches = content.match(ytRegex);
-            let driveMatches = content.match(driveRegex);
-
-            if (ytMatches && ytMatches.length > 0) {
-                let match = ytMatches[0];
-                let videoId = '';
-                if (match.includes('v=')) videoId = match.split('v=')[1].split('&')[0];
-                else if (match.includes('youtu.be/')) videoId = match.split('youtu.be/')[1].split('?')[0];
-                else if (match.includes('/shorts/')) videoId = match.split('/shorts/')[1].split('?')[0];
-                else if (match.includes('/live/')) videoId = match.split('/live/')[1].split('?')[0];
-                else if (match.includes('/embed/')) videoId = match.split('/embed/')[1].split('?')[0];
-
-                if (videoId) {
-                    return `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&controls=1" allow="autoplay; encrypted-media" allowfullscreen style="width:100vw; height:100vh; border:none;"></iframe>`;
-                }
-            }
-
-            if (driveMatches && driveMatches.length > 0) {
-                let match = driveMatches[0];
-                let driveUrl = match.replace('/view', '/preview').replace('/edit', '/preview');
-                return `<iframe src="${driveUrl}" style="width:100vw; height:100vh; border:none; background:#fff;"></iframe>`;
-            }
-
-            // Fallback for html with images or native videos
-            return `<div style="width:100vw; height:100vh; padding:80px 20px 40px 20px; overflow-y:auto; color:#fff; background:#0f172a; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">${content}</div>`;
         }
 
         async function viewNote(noteId) {
@@ -905,7 +1102,6 @@
             
             document.getElementById('view-modal').classList.add('active');
 
-            // Increment view count
             try {
                 const res = await fetch(`${API_BASE_URL}/notes/${noteId}/view`, {
                     method: 'PUT',
@@ -930,7 +1126,10 @@
             try {
                 const res = await fetch(`${API_BASE_URL}/notes/${noteId}/like`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+                    },
                     body: JSON.stringify({ deviceId: USER_DEVICE_ID })
                 });
                 if (res.ok) {
@@ -948,11 +1147,13 @@
         }
 
         async function deleteNote(noteId) {
+            if (!authToken) return protectedAction(() => {});
             if (!confirm("Are you sure you want to delete this note?")) return;
 
             try {
-                const res = await fetch(`${API_BASE_URL}/notes/${noteId}?deviceId=${USER_DEVICE_ID}`, {
-                    method: 'DELETE'
+                const res = await fetch(`${API_BASE_URL}/notes/${noteId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
                 if (res.ok) {
                     showToast('Note deleted!', 'success');
@@ -963,7 +1164,6 @@
             }
         }
 
-        // ===== FEATURE UPDATE 4: SUPABASE UPLOAD WITH 100% PROGRESS BAR =====
         function triggerMediaUpload(acceptTypes) {
             closeAllPopups();
             const input = document.getElementById('media-file-input');
@@ -988,6 +1188,7 @@
         }
 
         async function handleMediaFilesSelect(event) {
+            if(!authToken) return protectedAction(() => {});
             const files = event.target.files;
             if (!files || files.length === 0) return;
 
@@ -996,9 +1197,8 @@
                 formData.append('media', files[i]);
             }
 
-            // Start Progress Animation 0% -> 100%
             let progress = 0;
-            updateUploadProgress(5, `Uploading ${files.length} file(s) to Supabase Storage...`);
+            updateUploadProgress(5, `Uploading ${files.length} file(s)...`);
             
             const progressInterval = setInterval(() => {
                 if (progress < 90) {
@@ -1011,6 +1211,7 @@
             try {
                 const res = await fetch(`${API_BASE_URL}/upload`, {
                     method: 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}` },
                     body: formData
                 });
 
@@ -1026,16 +1227,16 @@
                             insertSupabaseMediaIntoEditor(file.url, file.fileType || '', file.filename);
                         });
                         updateUploadProgress(-1);
-                        showToast(`${uploadedFiles.length} File(s) stored in Supabase!`, 'success');
+                        showToast(`${uploadedFiles.length} File(s) stored!`, 'success');
                     }, 500);
                 } else {
                     updateUploadProgress(-1);
-                    showToast('Supabase upload failed', 'error');
+                    showToast('Upload failed', 'error');
                 }
             } catch (err) {
                 clearInterval(progressInterval);
                 updateUploadProgress(-1);
-                showToast('Supabase connection error', 'error');
+                showToast('Upload connection error', 'error');
             } finally {
                 event.target.value = '';
             }
@@ -1064,10 +1265,10 @@
                             <i class="fas fa-file-pdf" style="color:#e53e3e; font-size: 24px;"></i>
                             <div>
                                 <strong style="font-size: 13px;">${escapeHtml(filename || 'PDF Document')}</strong>
-                                <div style="font-size: 11px; color: var(--text-muted);">Supabase PDF Document</div>
+                                <div style="font-size: 11px; color: var(--text-muted);">PDF Document</div>
                             </div>
                         </div>
-                        <a href="${url}" target="_blank" style="padding: 6px 12px; background: #4f46e5; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600;">
+                        <a href="${url}" target="_blank" rel="noopener noreferrer" style="padding: 6px 12px; background: #4f46e5; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600;">
                             <i class="fas fa-external-link-alt"></i> View PDF
                         </a>
                     </div>
@@ -1083,7 +1284,7 @@
                                 <strong style="font-size: 13px;">${escapeHtml(filename || 'Attachment File')}</strong>
                             </div>
                         </div>
-                        <a href="${url}" target="_blank" download style="padding: 6px 12px; background: #4f46e5; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600;">
+                        <a href="${url}" target="_blank" download rel="noopener noreferrer" style="padding: 6px 12px; background: #4f46e5; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600;">
                             <i class="fas fa-download"></i> Download
                         </a>
                     </div><p><br></p>`;
@@ -1108,7 +1309,6 @@
             }
         }
 
-        // EDITOR CONTROL FUNCTIONS
         function openModal(editId = null) {
             currentEditId = editId;
             const modal = document.getElementById('editor-modal');
@@ -1240,7 +1440,7 @@
             const url = prompt("Enter website URL to attach:");
             if (!url) return;
             const text = prompt("Enter display title:", "Link");
-            const linkHtml = `<a href="${url}" target="_blank" style="color: #0284c7; text-decoration: underline; font-weight: 600;"><i class="fas fa-link"></i> ${escapeHtml(text || 'Link')}</a>&nbsp;`;
+            const linkHtml = `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #0284c7; text-decoration: underline; font-weight: 600;"><i class="fas fa-link"></i> ${escapeHtml(text || 'Link')}</a>&nbsp;`;
             document.execCommand('insertHTML', false, linkHtml);
         }
 
@@ -1261,7 +1461,7 @@
             if (videoId) {
                 const embedHtml = `
                     <div class="media-slider-card yt-card" style="margin: 10px 0;">
-                        <iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>
+                        <iframe src="https://www.youtube.com/embed/${videoId}" allow="autoplay; encrypted-media" allowfullscreen></iframe>
                     </div><p><br></p>`;
                 document.execCommand('insertHTML', false, embedHtml);
             } else {
@@ -1275,19 +1475,25 @@
             let driveUrl = url.replace('/view', '/preview').replace('/edit', '/preview');
             const embedHtml = `
                 <div class="media-slider-card drive-card" style="margin: 10px 0;">
-                    <iframe src="${driveUrl}"></iframe>
+                    <iframe src="${driveUrl}" allowfullscreen></iframe>
                 </div><p><br></p>`;
             document.execCommand('insertHTML', false, embedHtml);
         }
 
-        // CODE EDITOR MODAL FUNCTIONS
         function openCodeEditorModal() {
             closeAllPopups();
             document.getElementById('code-editor-modal').classList.add('active');
+            updateLiveCodePreview();
         }
 
         function closeCodeEditorModal() {
             document.getElementById('code-editor-modal').classList.remove('active');
+        }
+
+        function updateLiveCodePreview() {
+            const rawCode = document.getElementById('raw-code-input').value;
+            const iframe = document.getElementById('live-code-preview-frame');
+            iframe.srcdoc = rawCode + IFRAME_LINK_HANDLER_SCRIPT;
         }
 
         function handleCodeFileUpload(e) {
@@ -1297,6 +1503,7 @@
             const reader = new FileReader();
             reader.onload = (event) => {
                 document.getElementById('raw-code-input').value = event.target.result;
+                updateLiveCodePreview();
             };
             reader.readAsText(file);
         }
@@ -1308,48 +1515,34 @@
                 return;
             }
 
-            const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0; padding:10px;">${rawCode}</body></html>`;
-            const blob = new Blob([doc], { type: 'text/html' });
-            const blobUrl = URL.createObjectURL(blob);
-
+            const fullCodeWithScript = rawCode + IFRAME_LINK_HANDLER_SCRIPT;
             const iframeHtml = `
-                <div style="margin: 10px 0;">
-                    <iframe class="code-embed-frame" src="${blobUrl}"></iframe>
+                <div style="margin: 12px 0;">
+                    <iframe class="code-embed-frame" srcdoc="${escapeHtml(fullCodeWithScript)}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation"></iframe>
                 </div><p><br></p>`;
 
             closeCodeEditorModal();
             document.getElementById('note-editor').focus();
             document.execCommand('insertHTML', false, iframeHtml);
-            showToast('Code preview frame inserted!', 'success');
+            showToast('Code output frame preview inserted!', 'success');
         }
 
-        // ===== FEATURE UPDATE 1: MULTI-USER PROFILE APIS =====
-        async function fetchProfileFromBackend() {
-            try {
-                const res = await fetch(`${API_BASE_URL}/profile?deviceId=${USER_DEVICE_ID}`);
-                if (res.ok) {
-                    const profile = await res.json();
-                    if(profile.name) {
-                        document.getElementById('profile-name').innerText = profile.name;
-                        currentUserProfile.name = profile.name;
-                    }
-                    if(profile.img) {
-                        document.getElementById('profile-img').src = profile.img;
-                        currentUserProfile.img = profile.img;
-                    }
-                }
-            } catch (err) {
-                console.warn('Profile fetch error:', err);
-            }
+        function triggerProfileImgUpload() {
+            if(!authToken) return protectedAction(() => {});
+            document.getElementById('profile-img-upload').click();
         }
 
         async function saveProfileName() {
+            if(!authToken) return;
             const newName = document.getElementById('profile-name').innerText.trim();
             currentUserProfile.name = newName || "Note Author";
             try {
                 await fetch(`${API_BASE_URL}/profile`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
                     body: JSON.stringify({ deviceId: USER_DEVICE_ID, name: currentUserProfile.name })
                 });
                 showToast('Profile name updated!', 'success');
@@ -1359,6 +1552,7 @@
         }
 
         async function updateProfileImg(event) {
+            if(!authToken) return protectedAction(() => {});
             const file = event.target.files[0];
             if (!file) return;
 
@@ -1370,6 +1564,7 @@
             try {
                 const res = await fetch(`${API_BASE_URL}/upload`, {
                     method: 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}` },
                     body: formData
                 });
                 if (res.ok) {
@@ -1382,7 +1577,10 @@
 
                     await fetch(`${API_BASE_URL}/profile`, {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${authToken}`
+                        },
                         body: JSON.stringify({ deviceId: USER_DEVICE_ID, img: imgUrl })
                     });
 
@@ -1399,7 +1597,6 @@
             }
         }
 
-        // ===== FEATURE UPDATE 2: CUSTOM CIRCLE LOGO DUPLICATE PREVENT =====
         async function fetchSubjectsFromBackend() {
             try {
                 const res = await fetch(`${API_BASE_URL}/subjects`);
@@ -1444,6 +1641,7 @@
         }
 
         async function previewSubjectImage(event) {
+            if(!authToken) return protectedAction(() => {});
             const file = event.target.files[0];
             if (!file) return;
 
@@ -1455,6 +1653,7 @@
             try {
                 const res = await fetch(`${API_BASE_URL}/upload`, {
                     method: 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}` },
                     body: formData
                 });
                 if (res.ok) {
@@ -1473,6 +1672,7 @@
         }
 
         async function saveNewSubjectCircle() {
+            if(!authToken) return protectedAction(() => {});
             const saveBtn = document.getElementById('save-subject-btn');
             const name = document.getElementById('new-subject-name').value.trim();
             if (!name) {
@@ -1487,7 +1687,10 @@
             try {
                 const res = await fetch(`${API_BASE_URL}/subjects`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
                     body: JSON.stringify({ name, img })
                 });
 
@@ -1498,24 +1701,24 @@
                     closeAddSubjectModal();
                     showToast(`Subject '${name}' added!`, 'success');
                 } else {
-                    const err = await res.json();
-                    showToast(err.error || 'Failed to save logo', 'error');
+                    showToast('Failed to save subject', 'error');
                 }
             } catch (err) {
-                showToast('Failed to save custom subject', 'error');
+                showToast('Server error', 'error');
             } finally {
                 saveBtn.disabled = false;
             }
         }
 
         async function saveNoteAndClose() {
+            if(!authToken) return protectedAction(() => {});
             if (isSavingNote) return;
 
             const title = document.getElementById('note-title').value.trim();
             const content = document.getElementById('note-editor').innerHTML.trim();
 
-            if(!title && !content) {
-                showToast('Cannot save an empty note!', 'error');
+            if (!title || !content) {
+                showToast('Title and content are required!', 'error');
                 return;
             }
 
@@ -1523,18 +1726,13 @@
             const saveBtn = document.getElementById('save-note-btn');
             saveBtn.disabled = true;
 
-            const now = new Date();
-            const timeStamp = now.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            const payload = {
-                title: title || 'Untitled Note',
-                content: content,
+            const noteData = {
+                title,
+                content,
                 subject: currentAuthorTag,
-                userProfilePic: currentUserProfile.img,
-                authorDeviceId: USER_DEVICE_ID,
                 isPrivate: currentModalIsPrivate,
                 isPinned: currentModalIsPinned,
-                createdAt: timeStamp
+                deviceId: USER_DEVICE_ID
             };
 
             try {
@@ -1542,59 +1740,36 @@
                 if (currentEditId) {
                     res = await fetch(`${API_BASE_URL}/notes/${currentEditId}`, {
                         method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${authToken}`
+                        },
+                        body: JSON.stringify(noteData)
                     });
                 } else {
                     res = await fetch(`${API_BASE_URL}/notes`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${authToken}`
+                        },
+                        body: JSON.stringify(noteData)
                     });
                 }
 
                 if (res.ok) {
-                    showToast('Note Saved Successfully!', 'success');
                     closeModal();
+                    showToast(currentEditId ? 'Note updated!' : 'Note created!', 'success');
                     fetchNotesFromBackend(true);
                 } else {
-                    const errData = await res.json();
-                    showToast(errData.error || 'Failed to save note', 'error');
+                    showToast('Failed to save note', 'error');
                 }
             } catch (err) {
-                showToast('Failed to save note to server', 'error');
+                showToast('Server connection error', 'error');
             } finally {
                 isSavingNote = false;
                 saveBtn.disabled = false;
             }
-        }
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            return text.replace(/&/g, "&amp;")
-                       .replace(/</g, "&lt;")
-                       .replace(/>/g, "&gt;")
-                       .replace(/"/g, "&quot;")
-                       .replace(/'/g, "&#039;");
-        }
-
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            
-            let iconClass = 'fas fa-info-circle';
-            if (type === 'success') iconClass = 'fas fa-check-circle';
-            if (type === 'error') iconClass = 'fas fa-exclamation-circle';
-
-            toast.innerHTML = `<i class="${iconClass}"></i> ${escapeHtml(message)}`;
-            container.appendChild(toast);
-
-            setTimeout(() => toast.classList.add('show'), 10);
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 400);
-            }, 3000);
         }
     </script>
 </body>
