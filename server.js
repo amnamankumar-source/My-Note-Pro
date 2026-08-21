@@ -3,12 +3,14 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
+const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 const BUCKET_NAME = 'my_note_pro';
+const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
@@ -18,6 +20,9 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// OTP Storage (In-Memory Store)
+const otpStore = {}; 
 
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -30,25 +35,120 @@ app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(express.static(__dirname));
 
-// 1. Profile APIs
-app.get('/api/profile', async (req, res) => {
-    try {
-        const { deviceId } = req.query;
-        if (!deviceId) return res.status(400).json({ error: "Device ID required" });
+// ==========================================
+// Middleware: JWT Verification
+// ==========================================
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
 
-        const { data, error } = await supabase
+    if (!token) {
+        return res.status(401).json({ error: 'Unauthorized: Please Login First' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.status(403).json({ error: 'Invalid or Expired Token' });
+        req.user = user;
+        next();
+    });
+};
+
+// ==========================================
+// 1. Authentication APIs (OTP & JWT)
+// ==========================================
+
+// Send OTP Endpoint
+app.post('/api/auth/send-otp', async (req, res) => {
+    try {
+        const { phone } = req.body;
+        if (!phone) return res.status(400).json({ error: 'Mobile number required' });
+
+        const otp = '123456'; // Testing OTP (Integrate SMS API here)
+        otpStore[phone] = {
+            otp: otp,
+            expires: Date.now() + 5 * 60 * 1000 // 5 Minutes validity
+        };
+
+        console.log(`[OTP SENT] Phone: ${phone}, OTP: ${otp}`);
+        return res.json({ success: true, message: 'OTP Sent Successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Verify OTP & Generate JWT
+app.post('/api/auth/verify-otp', async (req, res) => {
+    try {
+        const { phone, otp } = req.body;
+        
+        if (!phone || !otp) return res.status(400).json({ error: 'Phone and OTP required' });
+
+        const record = otpStore[phone];
+        if (!record || record.otp !== otp || Date.now() > record.expires) {
+            return res.status(400).json({ error: 'Invalid or Expired OTP' });
+        }
+
+        delete otpStore[phone]; // Clear OTP after verification
+
+        // Supabase DB: Fetch or Create User Profile
+        let { data: profile } = await supabase
             .from('profiles')
             .select('*')
-            .eq('device_id', deviceId)
+            .eq('phone', phone)
             .maybeSingle();
 
+        if (!profile) {
+            const { data: newProfile, error: createError } = await supabase
+                .from('profiles')
+                .insert([{ 
+                    phone: phone,
+                    name: `User_${phone.slice(-4)}`, 
+                    img: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80" 
+                }])
+                .select()
+                .single();
+
+            if (createError) throw createError;
+            profile = newProfile;
+        }
+
+        // Generate JWT Token (valid for 30 days)
+        const token = jwt.sign({ id: profile.id, phone: profile.phone }, JWT_SECRET, { expiresIn: '30d' });
+
+        return res.json({
+            token: token,
+            user: profile
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==========================================
+// 2. Profile APIs
+// ==========================================
+app.get('/api/profile', async (req, res) => {
+    try {
+        const { deviceId, phone } = req.query;
+        let query = supabase.from('profiles').select('*');
+
+        if (phone) {
+            query = query.eq('phone', phone);
+        } else if (deviceId) {
+            query = query.eq('device_id', deviceId);
+        } else {
+            return res.status(400).json({ error: "Device ID or Phone required" });
+        }
+
+        const { data, error } = await query.maybeSingle();
         if (error && error.code !== 'PGRST116') throw error;
         
         if (!data) {
             const { data: newProfile, error: createError } = await supabase
                 .from('profiles')
                 .insert([{ 
-                    device_id: deviceId,
+                    device_id: deviceId || null,
+                    phone: phone || null,
                     name: "Note Author", 
                     img: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80" 
                 }])
@@ -63,52 +163,33 @@ app.get('/api/profile', async (req, res) => {
     }
 });
 
-app.put('/api/profile', async (req, res) => {
+app.put('/api/profile', authenticateToken, async (req, res) => {
     try {
         const { deviceId, name, img } = req.body;
-        if (!deviceId) return res.status(400).json({ error: "Device ID required" });
+        const userId = req.user.id;
 
-        const { data: existing } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('device_id', deviceId)
-            .maybeSingle();
-
-        let result;
-        const updatePayload = { device_id: deviceId };
+        const updatePayload = {};
         if (name !== undefined) updatePayload.name = name;
         if (img !== undefined) updatePayload.img = img;
+        if (deviceId !== undefined) updatePayload.device_id = deviceId;
 
-        if (existing) {
-            const { data, error } = await supabase
-                .from('profiles')
-                .update(updatePayload)
-                .eq('id', existing.id)
-                .select()
-                .single();
-            if (error) throw error;
-            result = data;
-        } else {
-            const { data, error } = await supabase
-                .from('profiles')
-                .insert([{ 
-                    ...updatePayload, 
-                    name: name || "Note Author",
-                    img: img || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80"
-                }])
-                .select()
-                .single();
-            if (error) throw error;
-            result = data;
-        }
+        const { data, error } = await supabase
+            .from('profiles')
+            .update(updatePayload)
+            .eq('id', userId)
+            .select()
+            .single();
 
-        res.json({ message: "Profile updated successfully", profile: result });
+        if (error) throw error;
+        res.json({ message: "Profile updated successfully", profile: data });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// 2. Subjects APIs
+// ==========================================
+// 3. Subjects APIs
+// ==========================================
 app.get('/api/subjects', async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -123,7 +204,7 @@ app.get('/api/subjects', async (req, res) => {
     }
 });
 
-app.post('/api/subjects', async (req, res) => {
+app.post('/api/subjects', authenticateToken, async (req, res) => {
     try {
         const { name, img } = req.body;
         if (!name) return res.status(400).json({ error: "Subject name is required" });
@@ -154,7 +235,7 @@ app.post('/api/subjects', async (req, res) => {
     }
 });
 
-app.delete('/api/subjects/:id', async (req, res) => {
+app.delete('/api/subjects/:id', authenticateToken, async (req, res) => {
     try {
         const { error } = await supabase
             .from('subjects')
@@ -168,7 +249,11 @@ app.delete('/api/subjects/:id', async (req, res) => {
     }
 });
 
-// 3. Notes APIs
+// ==========================================
+// 4. Notes APIs (Public & Protected)
+// ==========================================
+
+// Public Route: View Notes
 app.get('/api/notes', async (req, res) => {
     try {
         let { page = 1, limit = 10, search = '', subject = '', date = '', deviceId = '' } = req.query;
@@ -211,6 +296,7 @@ app.get('/api/notes', async (req, res) => {
                 subject: note.subject,
                 userProfilePic: note.user_profile_pic || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80",
                 authorDeviceId: note.author_device_id || '',
+                authorUserId: note.author_user_id || null,
                 isPrivate: note.is_private,
                 isPinned: note.is_pinned,
                 likes: note.likes || 0,
@@ -234,26 +320,98 @@ app.get('/api/notes', async (req, res) => {
     }
 });
 
-// Feed Endpoint
-app.get('/api/feed', async (req, res) => {
+// Protected Route: Create Note
+app.post('/api/notes', authenticateToken, async (req, res) => {
     try {
-        const { data: files, error: filesError } = await supabase
-            .storage
-            .from(BUCKET_NAME)
-            .list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+        const { title, content, subject, userProfilePic, authorDeviceId, isPrivate, isPinned, createdAt } = req.body;
+        
+        const { data, error } = await supabase
+            .from('notes')
+            .insert([{
+                title: title || 'Untitled Note',
+                content: content || '',
+                subject: subject || 'General',
+                user_profile_pic: userProfilePic || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80',
+                author_device_id: authorDeviceId || '',
+                author_user_id: req.user.id,
+                is_private: isPrivate || false,
+                is_pinned: isPinned || false,
+                created_at_formatted: createdAt || new Date().toLocaleString()
+            }])
+            .select()
+            .single();
 
-        if (filesError) throw filesError;
+        if (error) throw error;
+        res.status(201).json({ ...data, _id: data.id, author: req.user.id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
-        const mediaList = (files || []).map(file => {
-            const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(file.name);
-            return {
-                name: file.name,
-                url: data.publicUrl,
-                createdAt: file.created_at
-            };
-        });
+// Protected Route: Update Note
+app.put('/api/notes/:id', authenticateToken, async (req, res) => {
+    try {
+        const { data: note, error: fetchErr } = await supabase
+            .from('notes')
+            .select('*')
+            .eq('id', req.params.id)
+            .single();
 
-        res.json({ files: mediaList });
+        if (fetchErr || !note) return res.status(404).json({ error: "Note not found" });
+
+        if (note.is_pinned) {
+            return res.status(403).json({ error: "Pinned notes are locked and cannot be edited." });
+        }
+
+        const updateData = {};
+        if (req.body.title !== undefined) updateData.title = req.body.title;
+        if (req.body.content !== undefined) updateData.content = req.body.content;
+        if (req.body.subject !== undefined) updateData.subject = req.body.subject;
+        if (req.body.userProfilePic !== undefined) updateData.user_profile_pic = req.body.userProfilePic;
+        if (req.body.isPrivate !== undefined) updateData.is_private = req.body.isPrivate;
+        if (req.body.isPinned !== undefined) updateData.is_pinned = req.body.isPinned;
+
+        const { data: updated, error: updateErr } = await supabase
+            .from('notes')
+            .update(updateData)
+            .eq('id', req.params.id)
+            .select()
+            .single();
+
+        if (updateErr) throw updateErr;
+        res.json({ message: 'Note updated successfully', ...updated, _id: updated.id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Protected Route: Delete Note
+app.delete('/api/notes/:id', authenticateToken, async (req, res) => {
+    try {
+        const { deviceId } = req.query;
+
+        const { data: note, error: fetchErr } = await supabase
+            .from('notes')
+            .select('*')
+            .eq('id', req.params.id)
+            .single();
+
+        if (fetchErr || !note) return res.status(404).json({ error: "Note not found" });
+
+        if (deviceId) {
+            let deletedFor = note.deleted_for || [];
+            if (!deletedFor.includes(deviceId)) {
+                deletedFor.push(deviceId);
+                await supabase
+                    .from('notes')
+                    .update({ deleted_for: deletedFor })
+                    .eq('id', req.params.id);
+            }
+        } else {
+            await supabase.from('notes').delete().eq('id', req.params.id);
+        }
+
+        res.json({ message: "Note deleted successfully", id: req.params.id });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -336,100 +494,35 @@ app.put('/api/notes/:id/view', async (req, res) => {
     }
 });
 
-// Create Note
-app.post('/api/notes', async (req, res) => {
+// Feed Endpoint
+app.get('/api/feed', async (req, res) => {
     try {
-        const { title, content, subject, userProfilePic, authorDeviceId, isPrivate, isPinned, createdAt } = req.body;
-        const { data, error } = await supabase
-            .from('notes')
-            .insert([{
-                title: title || 'Untitled Note',
-                content: content || '',
-                subject: subject || 'General',
-                user_profile_pic: userProfilePic || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80',
-                author_device_id: authorDeviceId || '',
-                is_private: isPrivate || false,
-                is_pinned: isPinned || false,
-                created_at_formatted: createdAt || new Date().toLocaleString()
-            }])
-            .select()
-            .single();
+        const { data: files, error: filesError } = await supabase
+            .storage
+            .from(BUCKET_NAME)
+            .list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
 
-        if (error) throw error;
-        res.status(201).json({ ...data, _id: data.id });
+        if (filesError) throw filesError;
+
+        const mediaList = (files || []).map(file => {
+            const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(file.name);
+            return {
+                name: file.name,
+                url: data.publicUrl,
+                createdAt: file.created_at
+            };
+        });
+
+        res.json({ files: mediaList });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// Update Note
-app.put('/api/notes/:id', async (req, res) => {
-    try {
-        const { data: note, error: fetchErr } = await supabase
-            .from('notes')
-            .select('*')
-            .eq('id', req.params.id)
-            .single();
-
-        if (fetchErr || !note) return res.status(404).json({ error: "Note not found" });
-
-        if (note.is_pinned) {
-            return res.status(403).json({ error: "Pinned notes are locked and cannot be edited." });
-        }
-
-        const updateData = {};
-        if (req.body.title !== undefined) updateData.title = req.body.title;
-        if (req.body.content !== undefined) updateData.content = req.body.content;
-        if (req.body.subject !== undefined) updateData.subject = req.body.subject;
-        if (req.body.userProfilePic !== undefined) updateData.user_profile_pic = req.body.userProfilePic;
-        if (req.body.isPrivate !== undefined) updateData.is_private = req.body.isPrivate;
-        if (req.body.isPinned !== undefined) updateData.is_pinned = req.body.isPinned;
-
-        const { data: updated, error: updateErr } = await supabase
-            .from('notes')
-            .update(updateData)
-            .eq('id', req.params.id)
-            .select()
-            .single();
-
-        if (updateErr) throw updateErr;
-        res.json({ ...updated, _id: updated.id });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Delete Note
-app.delete('/api/notes/:id', async (req, res) => {
-    try {
-        const { deviceId } = req.query;
-        if (!deviceId) return res.status(400).json({ error: "Device ID required for deletion" });
-
-        const { data: note, error: fetchErr } = await supabase
-            .from('notes')
-            .select('*')
-            .eq('id', req.params.id)
-            .single();
-
-        if (fetchErr || !note) return res.status(404).json({ error: "Note not found" });
-
-        let deletedFor = note.deleted_for || [];
-        if (!deletedFor.includes(deviceId)) {
-            deletedFor.push(deviceId);
-            await supabase
-                .from('notes')
-                .update({ deleted_for: deletedFor })
-                .eq('id', req.params.id);
-        }
-
-        res.json({ message: "Note deleted for current user", id: req.params.id });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// 4. File Upload
-app.post('/api/upload', (req, res) => {
+// ==========================================
+// 5. File Upload
+// ==========================================
+app.post('/api/upload', authenticateToken, (req, res) => {
     upload.array('media', 10)(req, res, async (err) => {
         if (err) {
             console.error("Multer Upload Error:", err);
@@ -456,10 +549,7 @@ app.post('/api/upload', (req, res) => {
                         upsert: true
                     });
 
-                if (uploadErr) {
-                    console.error("Supabase Storage Error Details:", uploadErr);
-                    throw uploadErr;
-                }
+                if (uploadErr) throw uploadErr;
 
                 const { data: urlData } = supabase
                     .storage
