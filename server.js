@@ -35,20 +35,6 @@ app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(express.static(__dirname));
 
-// Helper Function: Phone formatting back-end check
-function formatPhoneNumber(phone) {
-    if (!phone) return null;
-    let cleanPhone = phone.trim();
-    if (!cleanPhone.startsWith('+')) {
-        if (cleanPhone.length === 10) {
-            cleanPhone = '+91' + cleanPhone;
-        } else if (cleanPhone.length === 12 && cleanPhone.startsWith('91')) {
-            cleanPhone = '+' + cleanPhone;
-        }
-    }
-    return cleanPhone;
-}
-
 // ==========================================
 // Middleware: JWT Verification
 // ==========================================
@@ -68,64 +54,66 @@ const authenticateToken = (req, res, next) => {
 };
 
 // ==========================================
-// 1. Authentication APIs (OTP & JWT)
+// 1. Email / Gmail Authentication APIs (OTP & JWT)
 // ==========================================
 
-// Send OTP Endpoint (UPDATED)
+// Send OTP Endpoint (Email based)
 app.post('/api/auth/send-otp', async (req, res) => {
     try {
-        let { phone } = req.body;
-        if (!phone) return res.status(400).json({ error: 'Mobile number required' });
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: 'Email address is required' });
 
-        // Auto-format phone to E.164 (+91XXXXXXXXXX)
-        phone = formatPhoneNumber(phone);
+        const cleanEmail = email.trim().toLowerCase();
         
-        if (!phone || phone.length < 13) {
-            return res.status(400).json({ error: 'Invalid mobile number format' });
+        // Simple Email Format Validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(cleanEmail)) {
+            return res.status(400).json({ error: 'Invalid email address format' });
         }
 
-        const otp = '123456'; // Testing OTP (Integrate Fast2SMS/Twilio here)
-        otpStore[phone] = {
+        const otp = '123456'; // Testing OTP (Production me Nodemailer/Nodemailer-SMTP/Supabase Auth se replace karein)
+        otpStore[cleanEmail] = {
             otp: otp,
             expires: Date.now() + 5 * 60 * 1000 // 5 Minutes validity
         };
 
-        console.log(`[OTP SENT] Phone: ${phone}, OTP: ${otp}`);
-        return res.json({ success: true, message: 'OTP Sent Successfully', phone: phone });
+        console.log(`[OTP SENT] Email: ${cleanEmail}, OTP: ${otp}`);
+        return res.status(200).json({ success: true, message: 'OTP Sent to Email Successfully', email: cleanEmail });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err.message || 'Error sending OTP' });
     }
 });
 
-// Verify OTP & Generate JWT (UPDATED)
+// Verify OTP & Generate JWT (Email based)
 app.post('/api/auth/verify-otp', async (req, res) => {
     try {
-        let { phone, otp } = req.body;
+        let { email, otp } = req.body;
         
-        if (!phone || !otp) return res.status(400).json({ error: 'Phone and OTP required' });
+        if (!email || !otp) return res.status(400).json({ error: 'Email and OTP are required' });
 
-        phone = formatPhoneNumber(phone);
+        const cleanEmail = email.trim().toLowerCase();
+        const record = otpStore[cleanEmail];
 
-        const record = otpStore[phone];
         if (!record || record.otp !== otp || Date.now() > record.expires) {
             return res.status(400).json({ error: 'Invalid or Expired OTP' });
         }
 
-        delete otpStore[phone]; // Clear OTP after verification
+        delete otpStore[cleanEmail]; // Clear OTP after verification
 
-        // Supabase DB: Fetch or Create User Profile
+        // Supabase DB: Fetch or Create User Profile using Email
         let { data: profile } = await supabase
             .from('profiles')
             .select('*')
-            .eq('phone', phone)
+            .eq('email', cleanEmail)
             .maybeSingle();
 
         if (!profile) {
+            const defaultName = cleanEmail.split('@')[0];
             const { data: newProfile, error: createError } = await supabase
                 .from('profiles')
                 .insert([{ 
-                    phone: phone,
-                    name: `User_${phone.slice(-4)}`, 
+                    email: cleanEmail,
+                    name: defaultName, 
                     img: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80" 
                 }])
                 .select()
@@ -136,9 +124,9 @@ app.post('/api/auth/verify-otp', async (req, res) => {
         }
 
         // Generate JWT Token (valid for 30 days)
-        const token = jwt.sign({ id: profile.id, phone: profile.phone }, JWT_SECRET, { expiresIn: '30d' });
+        const token = jwt.sign({ id: profile.id, email: profile.email }, JWT_SECRET, { expiresIn: '30d' });
 
-        return res.json({
+        return res.status(200).json({
             token: token,
             user: profile
         });
@@ -152,16 +140,15 @@ app.post('/api/auth/verify-otp', async (req, res) => {
 // ==========================================
 app.get('/api/profile', async (req, res) => {
     try {
-        let { deviceId, phone } = req.query;
+        let { deviceId, email } = req.query;
         let query = supabase.from('profiles').select('*');
 
-        if (phone) {
-            phone = formatPhoneNumber(phone);
-            query = query.eq('phone', phone);
+        if (email) {
+            query = query.eq('email', email.trim().toLowerCase());
         } else if (deviceId) {
             query = query.eq('device_id', deviceId);
         } else {
-            return res.status(400).json({ error: "Device ID or Phone required" });
+            return res.status(400).json({ error: "Device ID or Email required" });
         }
 
         const { data, error } = await query.maybeSingle();
@@ -172,8 +159,8 @@ app.get('/api/profile', async (req, res) => {
                 .from('profiles')
                 .insert([{ 
                     device_id: deviceId || null,
-                    phone: phone || null,
-                    name: "Note Author", 
+                    email: email ? email.trim().toLowerCase() : null,
+                    name: email ? email.split('@')[0] : "Note Author", 
                     img: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80" 
                 }])
                 .select()
