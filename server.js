@@ -71,7 +71,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
             return res.status(400).json({ error: 'Invalid email address format' });
         }
 
-        const otp = '123456'; // Testing OTP (Production me Nodemailer/Nodemailer-SMTP/Supabase Auth se replace karein)
+        const otp = '123456'; // Testing OTP (Production me Nodemailer/Supabase Auth se replace karein)
         otpStore[cleanEmail] = {
             otp: otp,
             expires: Date.now() + 5 * 60 * 1000 // 5 Minutes validity
@@ -136,7 +136,29 @@ app.post('/api/auth/verify-otp', async (req, res) => {
 });
 
 // ==========================================
-// 2. Profile APIs
+// 2. Admin APIs (Track Registered Users / Emails)
+// ==========================================
+app.get('/api/admin/users', async (req, res) => {
+    try {
+        const { data: users, error } = await supabase
+            .from('profiles')
+            .select('id, email, name, created_at')
+            .not('email', 'is', null)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        res.json({
+            totalUsers: users.length,
+            users: users
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==========================================
+// 3. Profile APIs
 // ==========================================
 app.get('/api/profile', async (req, res) => {
     try {
@@ -199,7 +221,7 @@ app.put('/api/profile', authenticateToken, async (req, res) => {
 });
 
 // ==========================================
-// 3. Subjects APIs
+// 4. Subjects APIs
 // ==========================================
 app.get('/api/subjects', async (req, res) => {
     try {
@@ -261,7 +283,7 @@ app.delete('/api/subjects/:id', authenticateToken, async (req, res) => {
 });
 
 // ==========================================
-// 4. Notes APIs (Public & Protected)
+// 5. Notes APIs (Public & Protected)
 // ==========================================
 
 // Public Route: View Notes
@@ -531,7 +553,7 @@ app.get('/api/feed', async (req, res) => {
 });
 
 // ==========================================
-// 5. File Upload
+// 6. File Upload
 // ==========================================
 app.post('/api/upload', authenticateToken, (req, res) => {
     upload.array('media', 10)(req, res, async (err) => {
