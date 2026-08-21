@@ -35,6 +35,20 @@ app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(express.static(__dirname));
 
+// Helper Function: Phone formatting back-end check
+function formatPhoneNumber(phone) {
+    if (!phone) return null;
+    let cleanPhone = phone.trim();
+    if (!cleanPhone.startsWith('+')) {
+        if (cleanPhone.length === 10) {
+            cleanPhone = '+91' + cleanPhone;
+        } else if (cleanPhone.length === 12 && cleanPhone.startsWith('91')) {
+            cleanPhone = '+' + cleanPhone;
+        }
+    }
+    return cleanPhone;
+}
+
 // ==========================================
 // Middleware: JWT Verification
 // ==========================================
@@ -57,31 +71,40 @@ const authenticateToken = (req, res, next) => {
 // 1. Authentication APIs (OTP & JWT)
 // ==========================================
 
-// Send OTP Endpoint
+// Send OTP Endpoint (UPDATED)
 app.post('/api/auth/send-otp', async (req, res) => {
     try {
-        const { phone } = req.body;
+        let { phone } = req.body;
         if (!phone) return res.status(400).json({ error: 'Mobile number required' });
 
-        const otp = '123456'; // Testing OTP (Integrate SMS API here)
+        // Auto-format phone to E.164 (+91XXXXXXXXXX)
+        phone = formatPhoneNumber(phone);
+        
+        if (!phone || phone.length < 13) {
+            return res.status(400).json({ error: 'Invalid mobile number format' });
+        }
+
+        const otp = '123456'; // Testing OTP (Integrate Fast2SMS/Twilio here)
         otpStore[phone] = {
             otp: otp,
             expires: Date.now() + 5 * 60 * 1000 // 5 Minutes validity
         };
 
         console.log(`[OTP SENT] Phone: ${phone}, OTP: ${otp}`);
-        return res.json({ success: true, message: 'OTP Sent Successfully' });
+        return res.json({ success: true, message: 'OTP Sent Successfully', phone: phone });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// Verify OTP & Generate JWT
+// Verify OTP & Generate JWT (UPDATED)
 app.post('/api/auth/verify-otp', async (req, res) => {
     try {
-        const { phone, otp } = req.body;
+        let { phone, otp } = req.body;
         
         if (!phone || !otp) return res.status(400).json({ error: 'Phone and OTP required' });
+
+        phone = formatPhoneNumber(phone);
 
         const record = otpStore[phone];
         if (!record || record.otp !== otp || Date.now() > record.expires) {
@@ -129,10 +152,11 @@ app.post('/api/auth/verify-otp', async (req, res) => {
 // ==========================================
 app.get('/api/profile', async (req, res) => {
     try {
-        const { deviceId, phone } = req.query;
+        let { deviceId, phone } = req.query;
         let query = supabase.from('profiles').select('*');
 
         if (phone) {
+            phone = formatPhoneNumber(phone);
             query = query.eq('phone', phone);
         } else if (deviceId) {
             query = query.eq('device_id', deviceId);
