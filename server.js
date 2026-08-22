@@ -21,9 +21,6 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// OTP Storage (In-Memory Store)
-const otpStore = {}; 
-
 const storage = multer.memoryStorage();
 const upload = multer({
     storage: storage,
@@ -54,10 +51,8 @@ const authenticateToken = (req, res, next) => {
 };
 
 // ==========================================
-// 1. Email / Gmail Authentication APIs (OTP & JWT)
+// 1. Supabase Auth: Send OTP via Email
 // ==========================================
-
-// Send OTP Endpoint (Email based)
 app.post('/api/auth/send-otp', async (req, res) => {
     try {
         const { email } = req.body;
@@ -65,26 +60,36 @@ app.post('/api/auth/send-otp', async (req, res) => {
 
         const cleanEmail = email.trim().toLowerCase();
         
-        // Simple Email Format Validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(cleanEmail)) {
             return res.status(400).json({ error: 'Invalid email address format' });
         }
 
-        const otp = '123456'; // Testing OTP (Production me Nodemailer/Supabase Auth se replace karein)
-        otpStore[cleanEmail] = {
-            otp: otp,
-            expires: Date.now() + 5 * 60 * 1000 // 5 Minutes validity
-        };
+        // Supabase Auth ka built-in OTP sender (Email par real OTP bhejega)
+        const { data, error } = await supabase.auth.signInWithOtp({
+            email: cleanEmail,
+            options: {
+                shouldCreateUser: true
+            }
+        });
 
-        console.log(`[OTP SENT] Email: ${cleanEmail}, OTP: ${otp}`);
-        return res.status(200).json({ success: true, message: 'OTP Sent to Email Successfully', email: cleanEmail });
+        if (error) throw error;
+
+        console.log(`[SUPABASE OTP SENT] Email sent successfully to: ${cleanEmail}`);
+        return res.status(200).json({ 
+            success: true, 
+            message: 'OTP sent to your email successfully via Supabase Auth!', 
+            email: cleanEmail 
+        });
     } catch (err) {
+        console.error("Supabase Send OTP Error:", err);
         res.status(500).json({ error: err.message || 'Error sending OTP' });
     }
 });
 
-// Verify OTP & Generate JWT (Email based)
+// ==========================================
+// 2. Supabase Auth: Verify OTP & Generate JWT
+// ==========================================
 app.post('/api/auth/verify-otp', async (req, res) => {
     try {
         let { email, otp } = req.body;
@@ -92,15 +97,19 @@ app.post('/api/auth/verify-otp', async (req, res) => {
         if (!email || !otp) return res.status(400).json({ error: 'Email and OTP are required' });
 
         const cleanEmail = email.trim().toLowerCase();
-        const record = otpStore[cleanEmail];
 
-        if (!record || record.otp !== otp || Date.now() > record.expires) {
+        // Supabase built-in OTP Verification
+        const { data: authData, error: authError } = await supabase.auth.verifyOtp({
+            email: cleanEmail,
+            token: otp,
+            type: 'email'
+        });
+
+        if (authError) {
             return res.status(400).json({ error: 'Invalid or Expired OTP' });
         }
 
-        delete otpStore[cleanEmail]; // Clear OTP after verification
-
-        // Supabase DB: Fetch or Create User Profile using Email
+        // Supabase DB: Fetch or Create User Profile in 'profiles' table
         let { data: profile } = await supabase
             .from('profiles')
             .select('*')
@@ -123,7 +132,7 @@ app.post('/api/auth/verify-otp', async (req, res) => {
             profile = newProfile;
         }
 
-        // Generate JWT Token (valid for 30 days)
+        // Generate Custom App JWT Token (Valid for 30 days)
         const token = jwt.sign({ id: profile.id, email: profile.email }, JWT_SECRET, { expiresIn: '30d' });
 
         return res.status(200).json({
@@ -131,12 +140,13 @@ app.post('/api/auth/verify-otp', async (req, res) => {
             user: profile
         });
     } catch (err) {
+        console.error("Verification Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
 
 // ==========================================
-// 2. Admin APIs (Track Registered Users / Emails)
+// 3. Admin APIs (Track Registered Users / Emails)
 // ==========================================
 app.get('/api/admin/users', async (req, res) => {
     try {
@@ -158,7 +168,7 @@ app.get('/api/admin/users', async (req, res) => {
 });
 
 // ==========================================
-// 3. Profile APIs
+// 4. Profile APIs
 // ==========================================
 app.get('/api/profile', async (req, res) => {
     try {
@@ -221,7 +231,7 @@ app.put('/api/profile', authenticateToken, async (req, res) => {
 });
 
 // ==========================================
-// 4. Subjects APIs
+// 5. Subjects APIs
 // ==========================================
 app.get('/api/subjects', async (req, res) => {
     try {
@@ -283,10 +293,8 @@ app.delete('/api/subjects/:id', authenticateToken, async (req, res) => {
 });
 
 // ==========================================
-// 5. Notes APIs (Public & Protected)
+// 6. Notes APIs
 // ==========================================
-
-// Public Route: View Notes
 app.get('/api/notes', async (req, res) => {
     try {
         let { page = 1, limit = 10, search = '', subject = '', date = '', deviceId = '' } = req.query;
@@ -353,7 +361,6 @@ app.get('/api/notes', async (req, res) => {
     }
 });
 
-// Protected Route: Create Note
 app.post('/api/notes', authenticateToken, async (req, res) => {
     try {
         const { title, content, subject, userProfilePic, authorDeviceId, isPrivate, isPinned, createdAt } = req.body;
@@ -381,7 +388,6 @@ app.post('/api/notes', authenticateToken, async (req, res) => {
     }
 });
 
-// Protected Route: Update Note
 app.put('/api/notes/:id', authenticateToken, async (req, res) => {
     try {
         const { data: note, error: fetchErr } = await supabase
@@ -418,7 +424,6 @@ app.put('/api/notes/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// Protected Route: Delete Note
 app.delete('/api/notes/:id', authenticateToken, async (req, res) => {
     try {
         const { deviceId } = req.query;
@@ -450,7 +455,6 @@ app.delete('/api/notes/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// Toggle Like
 app.put('/api/notes/:id/like', async (req, res) => {
     try {
         const { deviceId } = req.body;
@@ -494,7 +498,6 @@ app.put('/api/notes/:id/like', async (req, res) => {
     }
 });
 
-// Record View Count
 app.put('/api/notes/:id/view', async (req, res) => {
     try {
         const { deviceId } = req.body;
@@ -527,33 +530,8 @@ app.put('/api/notes/:id/view', async (req, res) => {
     }
 });
 
-// Feed Endpoint
-app.get('/api/feed', async (req, res) => {
-    try {
-        const { data: files, error: filesError } = await supabase
-            .storage
-            .from(BUCKET_NAME)
-            .list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
-
-        if (filesError) throw filesError;
-
-        const mediaList = (files || []).map(file => {
-            const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(file.name);
-            return {
-                name: file.name,
-                url: data.publicUrl,
-                createdAt: file.created_at
-            };
-        });
-
-        res.json({ files: mediaList });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
 // ==========================================
-// 6. File Upload
+// 7. File Upload
 // ==========================================
 app.post('/api/upload', authenticateToken, (req, res) => {
     upload.array('media', 10)(req, res, async (err) => {
@@ -615,4 +593,4 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT} using Supabase Auth`));
