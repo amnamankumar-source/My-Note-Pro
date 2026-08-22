@@ -13,16 +13,13 @@ const BUCKET_NAME = 'my_note_pro';
 const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
-// Fix: Backend par hamesha Service Role Key use karna best hota hai OTP/Auth bypass ke liye agar available ho
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
     console.error("Missing SUPABASE_URL or SUPABASE_KEY in environment variables!");
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false }
-});
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -68,6 +65,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
             return res.status(400).json({ error: 'Invalid email address format' });
         }
 
+        // Supabase Auth ka built-in OTP sender (Email par real OTP bhejega)
         const { data, error } = await supabase.auth.signInWithOtp({
             email: cleanEmail,
             options: {
@@ -90,7 +88,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
 });
 
 // ==========================================
-// 2. Supabase Auth: Verify OTP & Generate JWT (Fixed)
+// 2. Supabase Auth: Verify OTP & Generate JWT
 // ==========================================
 app.post('/api/auth/verify-otp', async (req, res) => {
     try {
@@ -99,35 +97,16 @@ app.post('/api/auth/verify-otp', async (req, res) => {
         if (!email || !otp) return res.status(400).json({ error: 'Email and OTP are required' });
 
         const cleanEmail = email.trim().toLowerCase();
-        const cleanOtp = otp.trim();
 
-        // Try verifying with type 'email' first, if it fails try 'signup' to prevent invalid errors
-        let authData = null;
-        let authError = null;
-
-        let res1 = await supabase.auth.verifyOtp({
+        // Supabase built-in OTP Verification
+        const { data: authData, error: authError } = await supabase.auth.verifyOtp({
             email: cleanEmail,
-            token: cleanOtp,
+            token: otp,
             type: 'email'
         });
 
-        authData = res1.data;
-        authError = res1.error;
-
-        // Fallback to 'signup' type if 'email' type throws an error (common for new users)
         if (authError) {
-            let res2 = await supabase.auth.verifyOtp({
-                email: cleanEmail,
-                token: cleanOtp,
-                type: 'signup'
-            });
-            authData = res2.data;
-            authError = res2.error;
-        }
-
-        if (authError) {
-            console.error("OTP Verification Failed:", authError.message);
-            return res.status(400).json({ error: 'Invalid or Expired OTP. Please check the code.' });
+            return res.status(400).json({ error: 'Invalid or Expired OTP' });
         }
 
         // Supabase DB: Fetch or Create User Profile in 'profiles' table
