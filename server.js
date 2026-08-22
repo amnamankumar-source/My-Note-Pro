@@ -13,7 +13,6 @@ const BUCKET_NAME = process.env.SUPABASE_BUCKET_NAME || 'my_note_pro';
 const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
-// Service Role Key is recommended for admin/OTP verification
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
@@ -34,7 +33,7 @@ app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(express.static(__dirname));
 
 // ==========================================
-// Middleware: JWT Verification
+// Middleware: JWT Verification (Optional Auth Support)
 // ==========================================
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -49,6 +48,20 @@ const authenticateToken = (req, res, next) => {
         req.user = user;
         next();
     });
+};
+
+// Optional auth reader helper
+const decodeTokenOptional = (req) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        if (token) {
+            return jwt.verify(token, JWT_SECRET);
+        }
+    } catch (e) {
+        return null;
+    }
+    return null;
 };
 
 // ==========================================
@@ -66,17 +79,13 @@ app.post('/api/auth/send-otp', async (req, res) => {
             return res.status(400).json({ error: 'Invalid email address format' });
         }
 
-        // Supabase Auth Email OTP Trigger
         const { data, error } = await supabase.auth.signInWithOtp({
             email: cleanEmail,
-            options: {
-                shouldCreateUser: true
-            }
+            options: { shouldCreateUser: true }
         });
 
         if (error) throw error;
 
-        console.log(`[SUPABASE OTP SENT] Real OTP email sent to: ${cleanEmail}`);
         return res.status(200).json({ 
             success: true, 
             message: 'OTP sent to your email successfully!', 
@@ -89,7 +98,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
 });
 
 // ==========================================
-// 2. Supabase Auth: Verify OTP & Generate JWT (FIXED)
+// 2. Supabase Auth: Verify OTP & Generate JWT
 // ==========================================
 app.post('/api/auth/verify-otp', async (req, res) => {
     try {
@@ -102,14 +111,12 @@ app.post('/api/auth/verify-otp', async (req, res) => {
         const cleanEmail = email.trim().toLowerCase();
         const cleanOtp = otp.toString().trim();
 
-        // 1. Pehle 'email' type se OTP verify karein
         let { data: authData, error: authError } = await supabase.auth.verifyOtp({
             email: cleanEmail,
             token: cleanOtp,
             type: 'email'
         });
 
-        // 2. Fallback checking for 'signup' or 'magiclink' OTP types
         if (authError) {
             const fallbackSignup = await supabase.auth.verifyOtp({
                 email: cleanEmail,
@@ -118,30 +125,26 @@ app.post('/api/auth/verify-otp', async (req, res) => {
             });
 
             if (fallbackSignup.error) {
-                const fallbackMagicLink = await supabase.auth.verifyOtp({
+                const fallbackMagic = await supabase.auth.verifyOtp({
                     email: cleanEmail,
                     token: cleanOtp,
                     type: 'magiclink'
                 });
 
-                if (fallbackMagicLink.error) {
-                    console.error("OTP Verification Failure:", authError.message);
-                    return res.status(400).json({ error: 'Invalid or Expired OTP! Please enter correct code sent to Gmail.' });
+                if (fallbackMagic.error) {
+                    return res.status(400).json({ error: 'Invalid or Expired OTP!' });
                 }
-                authData = fallbackMagicLink.data;
+                authData = fallbackMagic.data;
             } else {
                 authData = fallbackSignup.data;
             }
         }
 
-        // 3. Profiles Table check/create
-        let { data: profile, error: profileError } = await supabase
+        let { data: profile } = await supabase
             .from('profiles')
             .select('*')
             .eq('email', cleanEmail)
             .maybeSingle();
-
-        if (profileError) console.error("Profile Fetch Error:", profileError);
 
         if (!profile) {
             const defaultName = cleanEmail.split('@')[0];
@@ -153,22 +156,16 @@ app.post('/api/auth/verify-otp', async (req, res) => {
                     img: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80" 
                 }])
                 .select()
-                .single();
+                .maybeSingle();
 
-            if (createError) {
-                console.error("Error creating profile in DB:", createError);
-                profile = {
-                    id: authData?.user?.id || 'usr_' + Date.now(),
-                    email: cleanEmail,
-                    name: defaultName,
-                    img: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80"
-                };
-            } else {
-                profile = newProfile;
-            }
+            profile = newProfile || {
+                id: authData?.user?.id || 'usr_' + Date.now(),
+                email: cleanEmail,
+                name: defaultName,
+                img: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80"
+            };
         }
 
-        // JWT token generation
         const token = jwt.sign(
             { id: profile.id, email: profile.email }, 
             JWT_SECRET, 
@@ -188,7 +185,7 @@ app.post('/api/auth/verify-otp', async (req, res) => {
 });
 
 // ==========================================
-// 3. Admin APIs (Track Registered Users / Emails)
+// 3. Admin APIs
 // ==========================================
 app.get('/api/admin/users', async (req, res) => {
     try {
@@ -201,8 +198,8 @@ app.get('/api/admin/users', async (req, res) => {
         if (error) throw error;
 
         res.json({
-            totalUsers: users.length,
-            users: users
+            totalUsers: users ? users.length : 0,
+            users: users || []
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -301,7 +298,7 @@ app.post('/api/subjects', authenticateToken, async (req, res) => {
             .maybeSingle();
 
         if (existing) {
-            return res.status(400).json({ error: "Circle logo with this name already exists!" });
+            return res.status(400).json({ error: "Subject already exists!" });
         }
 
         const { data, error } = await supabase
@@ -335,7 +332,7 @@ app.delete('/api/subjects/:id', authenticateToken, async (req, res) => {
 });
 
 // ==========================================
-// 6. Notes APIs
+// 6. Notes APIs (Public Workspace + Private Filter Fixed)
 // ==========================================
 app.get('/api/notes', async (req, res) => {
     try {
@@ -344,10 +341,19 @@ app.get('/api/notes', async (req, res) => {
         limit = Math.max(1, parseInt(limit));
         const skip = (page - 1) * limit;
 
+        const currentUser = decodeTokenOptional(req);
+
         let query = supabase.from('notes').select('*', { count: 'exact' });
 
         if (deviceId) {
             query = query.not('deleted_for', 'cs', `{${deviceId}}`);
+        }
+
+        // Show Public Notes OR current logged in user's own Private Notes
+        if (currentUser && currentUser.id) {
+            query = query.or(`is_private.eq.false,is_private.is.null,author_user_id.eq.${currentUser.id}`);
+        } else {
+            query = query.or(`is_private.eq.false,is_private.is.null`);
         }
 
         if (search) {
@@ -380,8 +386,8 @@ app.get('/api/notes', async (req, res) => {
                 userProfilePic: note.user_profile_pic || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80",
                 authorDeviceId: note.author_device_id || '',
                 authorUserId: note.author_user_id || null,
-                isPrivate: note.is_private,
-                isPinned: note.is_pinned,
+                isPrivate: note.is_private || false,
+                isPinned: note.is_pinned || false,
                 likes: note.likes || 0,
                 likedBy: likedByArray,
                 views: note.views || 0,
@@ -399,34 +405,47 @@ app.get('/api/notes', async (req, res) => {
             currentPage: page
         });
     } catch (err) {
+        console.error("Fetch Notes Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
 
+// Fixed POST Note endpoint
 app.post('/api/notes', authenticateToken, async (req, res) => {
     try {
         const { title, content, subject, userProfilePic, authorDeviceId, isPrivate, isPinned, createdAt } = req.body;
         
+        const notePayload = {
+            title: title || 'Untitled Note',
+            content: content || '',
+            subject: subject || 'General',
+            user_profile_pic: userProfilePic || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80',
+            author_device_id: authorDeviceId || '',
+            is_private: Boolean(isPrivate),
+            is_pinned: Boolean(isPinned),
+            created_at_formatted: createdAt || new Date().toLocaleString()
+        };
+
+        // Assign author_user_id cleanly to avoid schema errors
+        if (req.user && req.user.id) {
+            notePayload.author_user_id = String(req.user.id);
+        }
+
         const { data, error } = await supabase
             .from('notes')
-            .insert([{
-                title: title || 'Untitled Note',
-                content: content || '',
-                subject: subject || 'General',
-                user_profile_pic: userProfilePic || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80',
-                author_device_id: authorDeviceId || '',
-                author_user_id: req.user.id,
-                is_private: isPrivate || false,
-                is_pinned: isPinned || false,
-                created_at_formatted: createdAt || new Date().toLocaleString()
-            }])
+            .insert([notePayload])
             .select()
             .single();
 
-        if (error) throw error;
+        if (error) {
+            console.error("Supabase Save Note DB Error:", error);
+            throw error;
+        }
+
         res.status(201).json({ ...data, _id: data.id, author: req.user.id });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error("Save Note Error:", err);
+        res.status(500).json({ error: err.message || "Failed to save note" });
     }
 });
 
@@ -449,8 +468,8 @@ app.put('/api/notes/:id', authenticateToken, async (req, res) => {
         if (req.body.content !== undefined) updateData.content = req.body.content;
         if (req.body.subject !== undefined) updateData.subject = req.body.subject;
         if (req.body.userProfilePic !== undefined) updateData.user_profile_pic = req.body.userProfilePic;
-        if (req.body.isPrivate !== undefined) updateData.is_private = req.body.isPrivate;
-        if (req.body.isPinned !== undefined) updateData.is_pinned = req.body.isPinned;
+        if (req.body.isPrivate !== undefined) updateData.is_private = Boolean(req.body.isPrivate);
+        if (req.body.isPinned !== undefined) updateData.is_pinned = Boolean(req.body.isPinned);
 
         const { data: updated, error: updateErr } = await supabase
             .from('notes')
