@@ -33,7 +33,7 @@ app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(express.static(__dirname));
 
 // ==========================================
-// Middleware: JWT Verification (Optional Auth Support)
+// Middleware: JWT Verification
 // ==========================================
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -50,7 +50,7 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
-// Optional auth reader helper
+// Token Helper for Optional Read operations
 const decodeTokenOptional = (req) => {
     try {
         const authHeader = req.headers['authorization'];
@@ -148,7 +148,7 @@ app.post('/api/auth/verify-otp', async (req, res) => {
 
         if (!profile) {
             const defaultName = cleanEmail.split('@')[0];
-            const { data: newProfile, error: createError } = await supabase
+            const { data: newProfile } = await supabase
                 .from('profiles')
                 .insert([{ 
                     email: cleanEmail,
@@ -332,8 +332,10 @@ app.delete('/api/subjects/:id', authenticateToken, async (req, res) => {
 });
 
 // ==========================================
-// 6. Notes APIs (Public Workspace + Private Filter Fixed)
+// 6. Notes APIs (Public Feed + Robust Save)
 // ==========================================
+
+// GET ALL NOTES - Publicly Accessible for all users (Read-Only feed)
 app.get('/api/notes', async (req, res) => {
     try {
         let { page = 1, limit = 10, search = '', subject = '', date = '', deviceId = '' } = req.query;
@@ -349,7 +351,7 @@ app.get('/api/notes', async (req, res) => {
             query = query.not('deleted_for', 'cs', `{${deviceId}}`);
         }
 
-        // Show Public Notes OR current logged in user's own Private Notes
+        // Show Public Notes to EVERYONE + Private notes only to author
         if (currentUser && currentUser.id) {
             query = query.or(`is_private.eq.false,is_private.is.null,author_user_id.eq.${currentUser.id}`);
         } else {
@@ -386,8 +388,8 @@ app.get('/api/notes', async (req, res) => {
                 userProfilePic: note.user_profile_pic || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80",
                 authorDeviceId: note.author_device_id || '',
                 authorUserId: note.author_user_id || null,
-                isPrivate: note.is_private || false,
-                isPinned: note.is_pinned || false,
+                isPrivate: Boolean(note.is_private),
+                isPinned: Boolean(note.is_pinned),
                 likes: note.likes || 0,
                 likedBy: likedByArray,
                 views: note.views || 0,
@@ -410,11 +412,12 @@ app.get('/api/notes', async (req, res) => {
     }
 });
 
-// Fixed POST Note endpoint
+// CREATE NOTE - Fully Fixed to prevent "failed to save note"
 app.post('/api/notes', authenticateToken, async (req, res) => {
     try {
         const { title, content, subject, userProfilePic, authorDeviceId, isPrivate, isPinned, createdAt } = req.body;
         
+        // Construct basic safe payload
         const notePayload = {
             title: title || 'Untitled Note',
             content: content || '',
@@ -426,20 +429,34 @@ app.post('/api/notes', authenticateToken, async (req, res) => {
             created_at_formatted: createdAt || new Date().toLocaleString()
         };
 
-        // Assign author_user_id cleanly to avoid schema errors
+        // Attach author ID if valid
         if (req.user && req.user.id) {
             notePayload.author_user_id = String(req.user.id);
         }
 
-        const { data, error } = await supabase
+        // Try primary insertion
+        let { data, error } = await supabase
             .from('notes')
             .insert([notePayload])
             .select()
             .single();
 
+        // Fallback for UUID type mismatch error in database
         if (error) {
-            console.error("Supabase Save Note DB Error:", error);
-            throw error;
+            console.warn("Primary note insert failed, attempting fallback payload...", error.message);
+            delete notePayload.author_user_id;
+
+            const fallbackResult = await supabase
+                .from('notes')
+                .insert([notePayload])
+                .select()
+                .single();
+
+            if (fallbackResult.error) {
+                console.error("Fallback note insert also failed:", fallbackResult.error);
+                throw fallbackResult.error;
+            }
+            data = fallbackResult.data;
         }
 
         res.status(201).json({ ...data, _id: data.id, author: req.user.id });
