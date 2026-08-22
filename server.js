@@ -1,4 +1,4 @@
-require('dotenv').config();
+Require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
@@ -9,18 +9,20 @@ const { createClient } = require('@supabase/supabase-js');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const BUCKET_NAME = process.env.SUPABASE_BUCKET_NAME || 'my_note_pro';
+const BUCKET_NAME = 'my_note_pro';
 const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
-// Service Role Key is recommended for admin/OTP verification
+// Fix: Backend par hamesha Service Role Key use karna best hota hai OTP/Auth bypass ke liye agar available ho
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
     console.error("Missing SUPABASE_URL or SUPABASE_KEY in environment variables!");
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false }
+});
 
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -66,7 +68,6 @@ app.post('/api/auth/send-otp', async (req, res) => {
             return res.status(400).json({ error: 'Invalid email address format' });
         }
 
-        // Supabase Auth Email OTP Trigger
         const { data, error } = await supabase.auth.signInWithOtp({
             email: cleanEmail,
             options: {
@@ -76,72 +77,65 @@ app.post('/api/auth/send-otp', async (req, res) => {
 
         if (error) throw error;
 
-        console.log(`[SUPABASE OTP SENT] Real OTP email sent to: ${cleanEmail}`);
+        console.log(`[SUPABASE OTP SENT] Email sent successfully to: ${cleanEmail}`);
         return res.status(200).json({ 
             success: true, 
-            message: 'OTP sent to your email successfully!', 
+            message: 'OTP sent to your email successfully via Supabase Auth!', 
             email: cleanEmail 
         });
     } catch (err) {
         console.error("Supabase Send OTP Error:", err);
-        return res.status(500).json({ error: err.message || 'Error sending OTP to email' });
+        res.status(500).json({ error: err.message || 'Error sending OTP' });
     }
 });
 
 // ==========================================
-// 2. Supabase Auth: Verify OTP & Generate JWT (FIXED)
+// 2. Supabase Auth: Verify OTP & Generate JWT (Fixed)
 // ==========================================
 app.post('/api/auth/verify-otp', async (req, res) => {
     try {
         let { email, otp } = req.body;
         
-        if (!email || !otp) {
-            return res.status(400).json({ error: 'Email and OTP are required' });
-        }
+        if (!email || !otp) return res.status(400).json({ error: 'Email and OTP are required' });
 
         const cleanEmail = email.trim().toLowerCase();
-        const cleanOtp = otp.toString().trim();
+        const cleanOtp = otp.trim();
 
-        // 1. Pehle 'email' type se OTP verify karein
-        let { data: authData, error: authError } = await supabase.auth.verifyOtp({
+        // Try verifying with type 'email' first, if it fails try 'signup' to prevent invalid errors
+        let authData = null;
+        let authError = null;
+
+        let res1 = await supabase.auth.verifyOtp({
             email: cleanEmail,
             token: cleanOtp,
             type: 'email'
         });
 
-        // 2. Fallback checking for 'signup' or 'magiclink' OTP types
+        authData = res1.data;
+        authError = res1.error;
+
+        // Fallback to 'signup' type if 'email' type throws an error (common for new users)
         if (authError) {
-            const fallbackSignup = await supabase.auth.verifyOtp({
+            let res2 = await supabase.auth.verifyOtp({
                 email: cleanEmail,
                 token: cleanOtp,
                 type: 'signup'
             });
-
-            if (fallbackSignup.error) {
-                const fallbackMagicLink = await supabase.auth.verifyOtp({
-                    email: cleanEmail,
-                    token: cleanOtp,
-                    type: 'magiclink'
-                });
-
-                if (fallbackMagicLink.error) {
-                    console.error("OTP Verification Failure:", authError.message);
-                    return res.status(400).json({ error: 'Invalid or Expired OTP! Please enter correct code sent to Gmail.' });
-                }
-                authData = fallbackMagicLink.data;
-            } else {
-                authData = fallbackSignup.data;
-            }
+            authData = res2.data;
+            authError = res2.error;
         }
 
-        // 3. Profiles Table check/create
-        let { data: profile, error: profileError } = await supabase
+        if (authError) {
+            console.error("OTP Verification Failed:", authError.message);
+            return res.status(400).json({ error: 'Invalid or Expired OTP. Please check the code.' });
+        }
+
+        // Supabase DB: Fetch or Create User Profile in 'profiles' table
+        let { data: profile } = await supabase
             .from('profiles')
             .select('*')
             .eq('email', cleanEmail)
             .maybeSingle();
-
-        if (profileError) console.error("Profile Fetch Error:", profileError);
 
         if (!profile) {
             const defaultName = cleanEmail.split('@')[0];
@@ -155,35 +149,20 @@ app.post('/api/auth/verify-otp', async (req, res) => {
                 .select()
                 .single();
 
-            if (createError) {
-                console.error("Error creating profile in DB:", createError);
-                profile = {
-                    id: authData?.user?.id || 'usr_' + Date.now(),
-                    email: cleanEmail,
-                    name: defaultName,
-                    img: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80"
-                };
-            } else {
-                profile = newProfile;
-            }
+            if (createError) throw createError;
+            profile = newProfile;
         }
 
-        // JWT token generation
-        const token = jwt.sign(
-            { id: profile.id, email: profile.email }, 
-            JWT_SECRET, 
-            { expiresIn: '30d' }
-        );
+        // Generate Custom App JWT Token (Valid for 30 days)
+        const token = jwt.sign({ id: profile.id, email: profile.email }, JWT_SECRET, { expiresIn: '30d' });
 
         return res.status(200).json({
-            success: true,
             token: token,
             user: profile
         });
-
     } catch (err) {
         console.error("Verification Error:", err);
-        return res.status(500).json({ error: err.message || 'Server error during OTP verification' });
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -573,55 +552,62 @@ app.put('/api/notes/:id/view', async (req, res) => {
 });
 
 // ==========================================
-// 7. File Upload (Storage)
+// 7. File Upload
 // ==========================================
-app.post('/api/upload', authenticateToken, upload.array('media', 10), async (req, res) => {
-    try {
+app.post('/api/upload', authenticateToken, (req, res) => {
+    upload.array('media', 10)(req, res, async (err) => {
+        if (err) {
+            console.error("Multer Upload Error:", err);
+            return res.status(500).json({ error: err.message || 'Upload failed' });
+        }
+
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ error: 'No files uploaded' });
         }
 
-        const uploadedFiles = [];
+        try {
+            const uploadedFiles = [];
 
-        for (const file of req.files) {
-            const cleanFileName = path.parse(file.originalname).name.replace(/[^a-zA-Z0-9]/g, "_");
-            const ext = path.extname(file.originalname);
-            const filePath = `uploads/${Date.now()}_${cleanFileName}${ext}`;
+            for (const file of req.files) {
+                const cleanFileName = path.parse(file.originalname).name.replace(/[^a-zA-Z0-9]/g, "_");
+                const ext = path.extname(file.originalname);
+                const filePath = `uploads/${Date.now()}_${cleanFileName}${ext}`;
 
-            const { data, error: uploadErr } = await supabase
-                .storage
-                .from(BUCKET_NAME)
-                .upload(filePath, file.buffer, {
-                    contentType: file.mimetype,
-                    upsert: true
+                const { data, error: uploadErr } = await supabase
+                    .storage
+                    .from(BUCKET_NAME)
+                    .upload(filePath, file.buffer, {
+                        contentType: file.mimetype,
+                        upsert: true
+                    });
+
+                if (uploadErr) throw uploadErr;
+
+                const { data: urlData } = supabase
+                    .storage
+                    .from(BUCKET_NAME)
+                    .getPublicUrl(filePath);
+
+                uploadedFiles.push({
+                    url: urlData.publicUrl,
+                    fileType: file.mimetype,
+                    filename: file.originalname,
+                    path: filePath
                 });
+            }
 
-            if (uploadErr) throw uploadErr;
-
-            const { data: urlData } = supabase
-                .storage
-                .from(BUCKET_NAME)
-                .getPublicUrl(filePath);
-
-            uploadedFiles.push({
-                url: urlData.publicUrl,
-                fileType: file.mimetype,
-                filename: file.originalname,
-                path: filePath
+            res.json({
+                message: 'Files uploaded to Supabase Storage successfully',
+                files: uploadedFiles,
+                url: uploadedFiles[0].url,
+                fileType: uploadedFiles[0].fileType,
+                filename: uploadedFiles[0].filename
             });
+        } catch (error) {
+            console.error("Supabase Storage Upload Error:", error);
+            res.status(500).json({ error: error.message || 'Supabase upload failed' });
         }
-
-        res.json({
-            message: 'Files uploaded to Supabase Storage successfully',
-            files: uploadedFiles,
-            url: uploadedFiles[0].url,
-            fileType: uploadedFiles[0].fileType,
-            filename: uploadedFiles[0].filename
-        });
-    } catch (error) {
-        console.error("Supabase Storage Upload Error:", error);
-        res.status(500).json({ error: error.message || 'Supabase upload failed' });
-    }
+    });
 });
 
 app.get('*', (req, res) => {
